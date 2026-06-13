@@ -205,6 +205,9 @@ body {
 }
 
 .inspection-card {
+  position: relative;
+  z-index: 3;
+  touch-action: manipulation;
   width: 100%;
   border: none;
   border-radius: 30px;

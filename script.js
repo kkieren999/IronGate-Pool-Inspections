@@ -94,24 +94,31 @@ function resetScreenForNewInspection() {
   climbabilityCounter = 0;
 }
 
-newInspectionBtn?.addEventListener("click", () => {
+function startNewInspection() {
   resetScreenForNewInspection();
 
   currentInspectionId = makeId();
   inspectionStarted = true;
+  document.body.dataset.createdAt = new Date().toISOString();
 
   const inspectionNumberField = document.querySelector('[name="inspectionNumber"]');
   if (inspectionNumberField) inspectionNumberField.value = generateInspectionNumber();
 
   const dateInput = document.querySelector("#inspectionDate");
-  if (dateInput) dateInput.valueAsDate = new Date();
+  if (dateInput) dateInput.value = todayInputValue();
 
   addFenceSection();
   addClimbabilitySection();
 
-  saveInspection(false);
   showTab("details");
-});
+  saveInspection(false);
+}
+
+newInspectionBtn?.addEventListener("click", startNewInspection);
+newInspectionBtn?.addEventListener("touchend", (event) => {
+  event.preventDefault();
+  startNewInspection();
+}, { passive: false });
 
 function mountPhotoWidget(target) {
   if (!target) return;
@@ -477,10 +484,10 @@ function saveInspection(showAlert = true) {
   if (existingIndex >= 0) inspections[existingIndex] = data;
   else inspections.push(data);
 
-  saveAllInspections(inspections);
+  const savedOk = saveAllInspections(inspections);
   renderInspectionList();
 
-  if (showAlert) alert("Inspection saved on this device.");
+  if (showAlert && savedOk) alert("Inspection saved on this device.");
 }
 
 function restoreFenceSection(card, data) {
