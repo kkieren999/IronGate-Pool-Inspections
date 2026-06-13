@@ -5,12 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IronGate Pool Safety Inspections</title>
   <link rel="stylesheet" href="./styles.css" />
+  <script src="./script.js" defer></script>
 </head>
+
 <body>
   <div class="app-shell">
     <header class="hero">
       <div class="brand">
-        <img class="main-logo" src="./assets/logo/logo-no-text.png" alt="IronGate Pool Inspections Logo" />
+        <img class="main-logo" src="./assets/logo/logo-no-text.png" alt="IronGate logo" />
         <div class="brand-text">
           <h1><span class="iron">Iron</span><span class="gate">Gate</span></h1>
           <p>Pool Safety Inspections</p>
@@ -19,33 +21,40 @@
     </header>
 
     <nav class="tab-bar" aria-label="Inspection Navigation">
-      <a class="tab active" href="#home" data-tab="home">
+      <button class="tab active" type="button" data-tab="home">
         <img src="./assets/icons/home.png" alt="" />
         <span>Home</span>
-      </a>
-      <a class="tab" href="#details" data-tab="details">
+      </button>
+
+      <button class="tab" type="button" data-tab="details">
         <img src="./assets/icons/details.png" alt="" />
         <span>Details</span>
-      </a>
-      <a class="tab" href="#barrier" data-tab="barrier">
+      </button>
+
+      <button class="tab" type="button" data-tab="barrier">
         <img src="./assets/icons/barrier.png" alt="" />
         <span>Barrier</span>
-      </a>
-      <a class="tab" href="#climbability" data-tab="climbability">
+      </button>
+
+      <button class="tab" type="button" data-tab="climbability">
         <img src="./assets/icons/climability.png" alt="" />
         <span>Climbability</span>
-      </a>
-      <a class="tab" href="#gate" data-tab="gate">
+      </button>
+
+      <button class="tab" type="button" data-tab="gate">
         <img src="./assets/icons/gate.png" alt="" />
         <span>Gate</span>
-      </a>
-      <a class="tab" href="#safety" data-tab="safety">
+      </button>
+
+      <button class="tab" type="button" data-tab="safety">
         <img src="./assets/icons/safety.png" alt="" />
         <span>Safety</span>
-      </a>
+      </button>
     </nav>
 
     <main class="content">
+
+      <!-- HOME -->
       <section id="home" class="page home-page active-page">
         <button class="inspection-card" type="button" id="newInspectionBtn">
           <div class="inspection-icon">+</div>
@@ -56,9 +65,12 @@
           <div class="inspection-arrow">→</div>
         </button>
 
-        <div class="home-list-head">
-          <h2>Saved Inspections</h2>
-          <p>Tap an inspection to reopen and continue editing.</p>
+        <div class="home-list-header">
+          <div>
+            <h2>Saved Inspections</h2>
+            <p>Saved on this device/browser only.</p>
+          </div>
+          <button id="refreshListBtn" class="small-action" type="button">Refresh</button>
         </div>
 
         <div id="inspectionList" class="inspection-list"></div>
@@ -66,10 +78,11 @@
         <div id="emptyState" class="empty-state">
           <img class="empty-icon" src="./assets/icons/details.png" alt="" />
           <h3>No Saved Inspections</h3>
-          <p>Start a new inspection and it will appear here automatically.</p>
+          <p>Start a new inspection and it will appear here.</p>
         </div>
       </section>
 
+      <!-- DETAILS -->
       <section id="details" class="page form-page">
         <div class="section-card" data-section="details">
           <div class="section-heading">
@@ -89,7 +102,7 @@
             <div class="form-grid">
               <label class="field">
                 <span>Inspection Number</span>
-                <input data-save name="inspectionNumber" id="inspectionNumber" type="text" placeholder="Auto-generated" readonly />
+                <input data-save name="inspectionNumber" id="inspectionNumber" type="text" placeholder="Auto generated" readonly />
               </label>
 
               <label class="field">
@@ -195,12 +208,13 @@
 
           <div class="button-row">
             <button class="small-btn" id="saveBtn" type="button">Save</button>
-            <button class="small-btn secondary" id="loadBtn" type="button">Load</button>
-            <button class="small-btn danger" id="clearBtn" type="button">Clear</button>
+            <button class="small-btn secondary" id="backHomeBtn" type="button">Home</button>
+            <button class="small-btn danger" id="deleteCurrentBtn" type="button">Delete</button>
           </div>
         </div>
       </section>
 
+      <!-- BARRIER -->
       <section id="barrier" class="page form-page">
         <div class="section-card" data-section="barrier">
           <div class="section-heading">
@@ -220,6 +234,7 @@
         </div>
       </section>
 
+      <!-- CLIMBABILITY -->
       <section id="climbability" class="page form-page">
         <div class="section-card" data-section="climbability">
           <div class="section-heading">
@@ -239,6 +254,7 @@
         </div>
       </section>
 
+      <!-- GATE -->
       <section id="gate" class="page form-page">
         <div class="section-card" data-section="gate">
           <div class="section-heading">
@@ -285,10 +301,15 @@
             </label>
           </div>
 
-          <div class="photo-area" data-photo-area="gate"></div>
+          <div class="photo-widget" data-photo-area="gate">
+            <button class="camera-btn" type="button">+ Evidence Photo</button>
+            <input type="file" accept="image/*" capture="environment" multiple hidden />
+            <div class="photo-grid"></div>
+          </div>
         </div>
       </section>
 
+      <!-- SAFETY -->
       <section id="safety" class="page form-page">
         <div class="section-card" data-section="safety">
           <div class="section-heading">
@@ -342,7 +363,11 @@
             </label>
           </div>
 
-          <div class="photo-area" data-photo-area="safety"></div>
+          <div class="photo-widget" data-photo-area="safety">
+            <button class="camera-btn" type="button">+ Evidence Photo</button>
+            <input type="file" accept="image/*" capture="environment" multiple hidden />
+            <div class="photo-grid"></div>
+          </div>
         </div>
 
         <div class="section-card summary-card">
@@ -360,15 +385,5 @@
       </section>
     </main>
   </div>
-
-  <template id="photoTemplate">
-    <div class="photo-widget">
-      <button class="camera-btn" type="button">+ Evidence Photo</button>
-      <input type="file" accept="image/*" capture="environment" multiple hidden />
-      <div class="photo-grid"></div>
-    </div>
-  </template>
-
-  <script src="./script.js" defer></script>
 </body>
 </html>
