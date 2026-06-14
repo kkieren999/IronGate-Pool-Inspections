@@ -64,21 +64,25 @@ function setLocalInspections(inspections) {
 }
 
 function getInspections() {
-  if (firebaseEnabled) {
-    return firebaseUser ? cloudInspections.slice() : [];
-  }
-  return getLocalInspections();
+  // Secure Firebase build: inspection records are loaded from Firestore only after sign-in.
+  return firebaseUser ? cloudInspections.slice() : [];
 }
 
 function setInspections(inspections) {
-  setLocalInspections(inspections);
-  if (firebaseEnabled && firebaseUser) {
+  if (firebaseUser) {
     cloudInspections = inspections.slice();
   }
 }
 
 function canUseApp() {
-  return !firebaseEnabled || !!firebaseUser;
+  return !!firebaseUser && firebaseDataLoaded;
+}
+
+function redirectToLogin() {
+  var target = "login.html";
+  if (window.location.pathname.indexOf("login.html") === -1) {
+    window.location.replace(target);
+  }
 }
 
 function sanitizeInspectionForCloud(data) {
@@ -1221,17 +1225,12 @@ function ensureAuthUI() {
 
   var authPanel = document.createElement("section");
   authPanel.id = "authPanel";
-  authPanel.className = "auth-panel";
+  authPanel.className = "auth-panel app-auth-panel";
   authPanel.innerHTML =
     '<div class="auth-copy">' +
-      '<strong>Cloud saving</strong>' +
-      '<span id="firebaseStatus">Checking Firebase...</span>' +
+      '<strong>IronGate cloud account</strong>' +
+      '<span id="firebaseStatus">Checking access...</span>' +
     '</div>' +
-    '<form id="loginForm" class="auth-form">' +
-      '<input id="loginEmail" type="email" autocomplete="email" placeholder="Email" />' +
-      '<input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" />' +
-      '<button type="submit">Sign in</button>' +
-    '</form>' +
     '<div id="signedInPanel" class="signed-in-panel" hidden>' +
       '<span id="signedInEmail"></span>' +
       '<button id="signOutBtn" type="button">Sign out</button>' +
@@ -1239,13 +1238,11 @@ function ensureAuthUI() {
 
   appShell.insertBefore(authPanel, appShell.firstChild);
 
-  qs("#loginForm").addEventListener("submit", function (event) {
-    event.preventDefault();
-    signInWithEmail();
-  });
-
   qs("#signOutBtn").addEventListener("click", function () {
-    if (firebaseAuth) firebaseAuth.signOut();
+    if (!firebaseAuth) return;
+    firebaseAuth.signOut().then(function () {
+      window.location.replace("login.html");
+    });
   });
 
   authUiReady = true;
@@ -1261,50 +1258,27 @@ function setFirebaseStatus(message, isError) {
 function updateAuthUI() {
   ensureAuthUI();
 
-  var loginForm = qs("#loginForm");
   var signedInPanel = qs("#signedInPanel");
   var signedInEmail = qs("#signedInEmail");
   var newBtn = qs("#newInspectionBtn");
 
   if (firebaseEnabled && firebaseUser) {
-    if (loginForm) loginForm.hidden = true;
     if (signedInPanel) signedInPanel.hidden = false;
     if (signedInEmail) signedInEmail.textContent = firebaseUser.email || "Signed in";
     setFirebaseStatus(firebaseDataLoaded ? "Signed in and saving online" : "Signed in. Loading inspections...", false);
     document.body.classList.remove("firebase-signed-out");
+    document.body.classList.remove("auth-checking");
     if (newBtn) newBtn.disabled = !firebaseDataLoaded;
   } else if (firebaseEnabled) {
-    if (loginForm) loginForm.hidden = false;
     if (signedInPanel) signedInPanel.hidden = true;
-    setFirebaseStatus("Sign in to save inspections online", false);
-    document.body.classList.add("firebase-signed-out");
+    setFirebaseStatus("Not signed in. Redirecting...", false);
     if (newBtn) newBtn.disabled = true;
+    redirectToLogin();
   } else {
-    if (loginForm) loginForm.hidden = true;
     if (signedInPanel) signedInPanel.hidden = true;
-    setFirebaseStatus(firebaseLoadError || "Firebase not loaded. Saving on this device only.", !!firebaseLoadError);
-    document.body.classList.remove("firebase-signed-out");
-    if (newBtn) newBtn.disabled = false;
+    setFirebaseStatus(firebaseLoadError || "Firebase could not load.", true);
+    if (newBtn) newBtn.disabled = true;
   }
-}
-
-function signInWithEmail() {
-  if (!firebaseAuth) return;
-
-  var email = qs("#loginEmail") ? qs("#loginEmail").value.trim() : "";
-  var password = qs("#loginPassword") ? qs("#loginPassword").value : "";
-
-  if (!email || !password) {
-    alert("Enter your email and password.");
-    return;
-  }
-
-  setFirebaseStatus("Signing in...", false);
-  firebaseAuth.signInWithEmailAndPassword(email, password).catch(function (error) {
-    console.error(error);
-    setFirebaseStatus("Sign in failed", true);
-    alert("Sign in failed: " + error.message);
-  });
 }
 
 function initFirebase() {
@@ -1312,8 +1286,9 @@ function initFirebase() {
 
   if (!window.firebase || !window.firebase.initializeApp) {
     firebaseEnabled = false;
-    firebaseLoadError = "Firebase scripts could not load. Saving on this device only.";
+    firebaseLoadError = "Firebase scripts could not load. Open login.html from a local server or hosted site.";
     updateAuthUI();
+    alert(firebaseLoadError);
     return;
   }
 
@@ -1336,9 +1311,6 @@ function initFirebase() {
       if (!firebaseUser) {
         currentInspectionId = null;
         inspectionStarted = false;
-        clearFormForNewInspection();
-        renderInspectionList();
-        showTab("home");
         updateAuthUI();
         return;
       }
@@ -1351,6 +1323,7 @@ function initFirebase() {
     firebaseEnabled = false;
     firebaseLoadError = "Firebase setup failed: " + error.message;
     updateAuthUI();
+    alert(firebaseLoadError);
   }
 }
 
