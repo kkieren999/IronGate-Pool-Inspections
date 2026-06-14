@@ -11,6 +11,30 @@ var downloadDetailsState = [];
 var downloadTextareaState = [];
 var downloadModeActive = false;
 
+
+var FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCAf5QQvK5VrGkveCj8I3pVvctB3383-Nw",
+  authDomain: "irongate-pool-inspections.firebaseapp.com",
+  projectId: "irongate-pool-inspections",
+  storageBucket: "irongate-pool-inspections.firebasestorage.app",
+  messagingSenderId: "700392380285",
+  appId: "1:700392380285:web:99a855fd6bcc70fd22de14",
+  measurementId: "G-X9KMFVCKP6"
+};
+
+var firebaseApp = null;
+var firebaseAuth = null;
+var firebaseDb = null;
+var firebaseUser = null;
+var firebaseEnabled = false;
+var firebaseDataLoaded = false;
+var firebaseLoadError = "";
+var cloudInspections = [];
+var cloudUnsubscribe = null;
+var cloudSaveTimer = null;
+var cloudSavePendingData = null;
+var authUiReady = false;
+
 function qs(selector) {
   return document.querySelector(selector);
 }
@@ -27,7 +51,7 @@ function getTodayDateString() {
   return yyyy + "-" + mm + "-" + dd;
 }
 
-function getInspections() {
+function getLocalInspections() {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   } catch (error) {
@@ -35,8 +59,85 @@ function getInspections() {
   }
 }
 
-function setInspections(inspections) {
+function setLocalInspections(inspections) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(inspections));
+}
+
+function getInspections() {
+  if (firebaseEnabled) {
+    return firebaseUser ? cloudInspections.slice() : [];
+  }
+  return getLocalInspections();
+}
+
+function setInspections(inspections) {
+  setLocalInspections(inspections);
+  if (firebaseEnabled && firebaseUser) {
+    cloudInspections = inspections.slice();
+  }
+}
+
+function canUseApp() {
+  return !firebaseEnabled || !!firebaseUser;
+}
+
+function sanitizeInspectionForCloud(data) {
+  var clean = JSON.parse(JSON.stringify(data || {}));
+
+  // Photos are intentionally kept out of Firestore for this first Firebase build.
+  // Firestore is for the form/checklist data. Photo cloud upload should use Firebase Storage later.
+  clean.photos = {};
+  (clean.fenceSections || []).forEach(function (section) { section.photos = []; });
+  (clean.climbabilitySections || []).forEach(function (section) { section.photos = []; });
+  clean.photoStorageMode = "local-only";
+
+  var status = getInspectionStatus(clean);
+  clean.status = status.status;
+  clean.completedSections = status.completedSections;
+  clean.totalSections = status.totalSections;
+  clean.progressText = status.completedSections + "/" + status.totalSections + " sections complete";
+
+  return clean;
+}
+
+function saveInspectionToCloudNow(data, showAlert) {
+  if (!firebaseEnabled || !firebaseUser || !firebaseDb || !data || !data.id) return;
+
+  var clean = sanitizeInspectionForCloud(data);
+
+  firebaseDb
+    .collection("users")
+    .doc(firebaseUser.uid)
+    .collection("inspections")
+    .doc(clean.id)
+    .set(clean, { merge: true })
+    .then(function () {
+      setFirebaseStatus("Saved online", false);
+      if (showAlert) alert("Inspection saved online.");
+    })
+    .catch(function (error) {
+      console.error(error);
+      setFirebaseStatus("Could not save online. Check Firestore rules.", true);
+      if (showAlert) alert("Could not save online: " + error.message);
+    });
+}
+
+function queueCloudSave(data, showAlert) {
+  if (!firebaseEnabled || !firebaseUser || !firebaseDb || !data || !data.id) return;
+
+  cloudSavePendingData = data;
+  clearTimeout(cloudSaveTimer);
+
+  if (showAlert) {
+    saveInspectionToCloudNow(cloudSavePendingData, true);
+    cloudSavePendingData = null;
+    return;
+  }
+
+  cloudSaveTimer = setTimeout(function () {
+    saveInspectionToCloudNow(cloudSavePendingData, false);
+    cloudSavePendingData = null;
+  }, 800);
 }
 
 function generateId() {
@@ -128,6 +229,11 @@ function clearFormForNewInspection() {
 }
 
 function startNewInspection() {
+  if (!canUseApp()) {
+    alert("Please sign in first so the inspection can be saved online.");
+    return;
+  }
+
   clearFormForNewInspection();
 
   currentInspectionId = generateId();
@@ -230,6 +336,10 @@ function gatherInspectionData() {
 
 function saveCurrentInspection(showAlert) {
   if (!inspectionStarted) return;
+  if (!canUseApp()) {
+    if (showAlert) alert("Please sign in before saving inspections online.");
+    return;
+  }
 
   var data = gatherInspectionData();
   currentInspectionId = data.id;
@@ -246,10 +356,11 @@ function saveCurrentInspection(showAlert) {
   }
 
   setInspections(inspections);
+  queueCloudSave(data, showAlert);
   renderInspectionList();
   refreshSummary();
 
-  if (showAlert) {
+  if (showAlert && !firebaseEnabled) {
     alert("Inspection saved on this device.");
   }
 }
@@ -337,13 +448,27 @@ function openInspection(id) {
 }
 
 function deleteInspection(id) {
-  if (!confirm("Delete this inspection from this device?")) return;
+  if (!confirm("Delete this inspection?")) return;
 
   var inspections = getInspections().filter(function (item) {
     return item.id !== id;
   });
 
   setInspections(inspections);
+  setLocalInspections(getLocalInspections().filter(function (item) { return item.id !== id; }));
+
+  if (firebaseEnabled && firebaseUser && firebaseDb) {
+    firebaseDb
+      .collection("users")
+      .doc(firebaseUser.uid)
+      .collection("inspections")
+      .doc(id)
+      .delete()
+      .catch(function (error) {
+        console.error(error);
+        alert("Could not delete online: " + error.message);
+      });
+  }
 
   if (currentInspectionId === id) {
     currentInspectionId = null;
@@ -1089,6 +1214,176 @@ function bindSaveEvents(root) {
   });
 }
 
+function ensureAuthUI() {
+  if (authUiReady) return;
+  var appShell = qs(".app-shell");
+  if (!appShell) return;
+
+  var authPanel = document.createElement("section");
+  authPanel.id = "authPanel";
+  authPanel.className = "auth-panel";
+  authPanel.innerHTML =
+    '<div class="auth-copy">' +
+      '<strong>Cloud saving</strong>' +
+      '<span id="firebaseStatus">Checking Firebase...</span>' +
+    '</div>' +
+    '<form id="loginForm" class="auth-form">' +
+      '<input id="loginEmail" type="email" autocomplete="email" placeholder="Email" />' +
+      '<input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" />' +
+      '<button type="submit">Sign in</button>' +
+    '</form>' +
+    '<div id="signedInPanel" class="signed-in-panel" hidden>' +
+      '<span id="signedInEmail"></span>' +
+      '<button id="signOutBtn" type="button">Sign out</button>' +
+    '</div>';
+
+  appShell.insertBefore(authPanel, appShell.firstChild);
+
+  qs("#loginForm").addEventListener("submit", function (event) {
+    event.preventDefault();
+    signInWithEmail();
+  });
+
+  qs("#signOutBtn").addEventListener("click", function () {
+    if (firebaseAuth) firebaseAuth.signOut();
+  });
+
+  authUiReady = true;
+}
+
+function setFirebaseStatus(message, isError) {
+  var status = qs("#firebaseStatus");
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle("error", !!isError);
+}
+
+function updateAuthUI() {
+  ensureAuthUI();
+
+  var loginForm = qs("#loginForm");
+  var signedInPanel = qs("#signedInPanel");
+  var signedInEmail = qs("#signedInEmail");
+  var newBtn = qs("#newInspectionBtn");
+
+  if (firebaseEnabled && firebaseUser) {
+    if (loginForm) loginForm.hidden = true;
+    if (signedInPanel) signedInPanel.hidden = false;
+    if (signedInEmail) signedInEmail.textContent = firebaseUser.email || "Signed in";
+    setFirebaseStatus(firebaseDataLoaded ? "Signed in and saving online" : "Signed in. Loading inspections...", false);
+    document.body.classList.remove("firebase-signed-out");
+    if (newBtn) newBtn.disabled = !firebaseDataLoaded;
+  } else if (firebaseEnabled) {
+    if (loginForm) loginForm.hidden = false;
+    if (signedInPanel) signedInPanel.hidden = true;
+    setFirebaseStatus("Sign in to save inspections online", false);
+    document.body.classList.add("firebase-signed-out");
+    if (newBtn) newBtn.disabled = true;
+  } else {
+    if (loginForm) loginForm.hidden = true;
+    if (signedInPanel) signedInPanel.hidden = true;
+    setFirebaseStatus(firebaseLoadError || "Firebase not loaded. Saving on this device only.", !!firebaseLoadError);
+    document.body.classList.remove("firebase-signed-out");
+    if (newBtn) newBtn.disabled = false;
+  }
+}
+
+function signInWithEmail() {
+  if (!firebaseAuth) return;
+
+  var email = qs("#loginEmail") ? qs("#loginEmail").value.trim() : "";
+  var password = qs("#loginPassword") ? qs("#loginPassword").value : "";
+
+  if (!email || !password) {
+    alert("Enter your email and password.");
+    return;
+  }
+
+  setFirebaseStatus("Signing in...", false);
+  firebaseAuth.signInWithEmailAndPassword(email, password).catch(function (error) {
+    console.error(error);
+    setFirebaseStatus("Sign in failed", true);
+    alert("Sign in failed: " + error.message);
+  });
+}
+
+function initFirebase() {
+  ensureAuthUI();
+
+  if (!window.firebase || !window.firebase.initializeApp) {
+    firebaseEnabled = false;
+    firebaseLoadError = "Firebase scripts could not load. Saving on this device only.";
+    updateAuthUI();
+    return;
+  }
+
+  try {
+    firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+    firebaseAuth = firebase.auth();
+    firebaseDb = firebase.firestore();
+    firebaseEnabled = true;
+
+    firebaseAuth.onAuthStateChanged(function (user) {
+      firebaseUser = user || null;
+      firebaseDataLoaded = false;
+      cloudInspections = [];
+
+      if (cloudUnsubscribe) {
+        cloudUnsubscribe();
+        cloudUnsubscribe = null;
+      }
+
+      if (!firebaseUser) {
+        currentInspectionId = null;
+        inspectionStarted = false;
+        clearFormForNewInspection();
+        renderInspectionList();
+        showTab("home");
+        updateAuthUI();
+        return;
+      }
+
+      updateAuthUI();
+      listenToCloudInspections();
+    });
+  } catch (error) {
+    console.error(error);
+    firebaseEnabled = false;
+    firebaseLoadError = "Firebase setup failed: " + error.message;
+    updateAuthUI();
+  }
+}
+
+function listenToCloudInspections() {
+  if (!firebaseUser || !firebaseDb) return;
+
+  setFirebaseStatus("Loading inspections...", false);
+
+  cloudUnsubscribe = firebaseDb
+    .collection("users")
+    .doc(firebaseUser.uid)
+    .collection("inspections")
+    .orderBy("updatedAt", "desc")
+    .onSnapshot(function (snapshot) {
+      cloudInspections = snapshot.docs.map(function (doc) {
+        var data = doc.data() || {};
+        data.id = data.id || doc.id;
+        data.photos = data.photos || {};
+        return data;
+      });
+      firebaseDataLoaded = true;
+      updateAuthUI();
+      renderInspectionList();
+    }, function (error) {
+      console.error(error);
+      firebaseDataLoaded = true;
+      setFirebaseStatus("Could not load online inspections. Check Firestore rules.", true);
+      alert("Could not load online inspections: " + error.message);
+      updateAuthUI();
+      renderInspectionList();
+    });
+}
+
 function init() {
   qs("#newInspectionBtn").onclick = startNewInspection;
   qs("#refreshListBtn").onclick = renderInspectionList;
@@ -1117,6 +1412,7 @@ function init() {
   prepareBlankDropdowns(document);
   bindSaveEvents(document);
   qsa(".photo-widget").forEach(bindPhotoWidget);
+  initFirebase();
 
   renderInspectionList();
   showTab("home");
