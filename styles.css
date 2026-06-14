@@ -1886,3 +1886,18 @@ body.auth-checking .app-shell {
   opacity: 0.6;
   cursor: wait;
 }
+
+/* Required-field guidance: required labels stay red with * until completed */
+.field.required-missing > span,
+.check-field.required-missing > span,
+.toggle-field.required-missing > span {
+  color: var(--danger) !important;
+}
+
+.field.required-missing > span::after,
+.check-field.required-missing > span::after,
+.toggle-field.required-missing > span::after {
+  content: " *";
+  color: var(--danger);
+  font-weight: 900;
+}

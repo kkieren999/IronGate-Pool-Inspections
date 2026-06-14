@@ -263,6 +263,7 @@ function clearFormForNewInspection() {
   retainingWallCounter = 0;
   boundaryCounter = 0;
   gateCounter = 1;
+  updateRequiredFieldMarkers();
 }
 
 
@@ -896,6 +897,161 @@ function inspectionHasMeaningfulData(data) {
   return hasData;
 }
 
+var REQUIRED_STATIC_FIELDS = [
+  "inspectionDate",
+  "inspectorName",
+  "ownerName",
+  "propertyAddress",
+  "inspectionType",
+  "inspectionPurpose",
+  "poolType",
+  "sharedPool",
+  "holds300mmWater",
+  "regulatedPool",
+  "regulatedLand",
+  "multiplePools",
+  "sharedStatusConfirmed",
+  "poolTypeConfirmed",
+  "weatherVisibility",
+  "siteAccessCondition",
+  "barrierLocation",
+  "barrierSurroundsPool",
+  "buildingAccessControlled",
+  "neighbourAccessControlled",
+  "poolAreaFreeOfUnrelatedStructures",
+  "specialPoolFeatureLocation",
+  "specialPoolFeatureType",
+  "poolWallUsedAsBarrier",
+  "poolWallHeightCompliant",
+  "ladderAccessSecured",
+  "pumpFilterClimbableAccess",
+  "holdingTank300mmOrDeeper",
+  "nczOverallLocation",
+  "nczSideOfBarrier",
+  "ncz900Provided",
+  "nczCorrectSide",
+  "nczNoHandholdsFootholds",
+  "nczProjectionsIndentationsCompliant",
+  "nczVegetationNonClimbable",
+  "nczObjectsRemoved",
+  "additionalClearAreaLocation",
+  "additionalClearAreaRequired",
+  "additionalClearAreaMaintained",
+  "effectiveBarrierHeightMaintained",
+  "stepsLedgesRaisedAreasClear",
+  "tapsPowerOutletsAssessed",
+  "raisedGardenBedsAssessed",
+  "gateLocation",
+  "gateType",
+  "gateSwingsAway",
+  "gateSelfClosing",
+  "gateSelfLatching",
+  "gateClosesFromAnyPosition",
+  "gateLatchPreventsReopening",
+  "gateFullArc",
+  "gateCannotBeProppedOpen",
+  "gateGapUnderCompliant",
+  "gateLatchHeightCompliant",
+  "gateLatchShielded",
+  "gateLatchReachThroughGaps",
+  "gateHingesSafe",
+  "gateHardwareSecure",
+  "cprSignPresentSafety",
+  "cprSignVisible",
+  "cprSignWeatherproof",
+  "cprSignMinimumSize",
+  "cprSignContentCompliant",
+  "buildingAccessType",
+  "buildingAccessLocation",
+  "directBuildingAccessControlled",
+  "windowOpeningRestricted",
+  "screenBarsMeshFixed",
+  "fixingsRequireTools",
+  "doorAccessCompliant",
+  "fireExitNotCompromised",
+  "sharpEdgesAbsent",
+  "sharpProjectionsAbsent",
+  "entrapmentSpacesAbsent",
+  "looseBrokenComponentsAbsent",
+  "rustedWeakenedComponentsAbsent",
+  "siteHazardsNoted",
+  "temporaryFencingPresent",
+  "temporaryFenceSecure",
+  "buildingWorkAffectingBarrier",
+  "barrierNotAlteredUnsafely",
+  "minorRepairsMaintenanceNoted",
+  "poolClaimedDecommissioned",
+  "cannotHold300mmWater",
+  "convertedPoolUse",
+  "registerUpdateRequired",
+  "electricalIssueObserved",
+  "bondingConcernNoted",
+  "possibleAsbestosObserved",
+  "fireSafetyIssueObserved",
+  "referralRecommended",
+  "overallInspectionResult",
+  "certificateReadyToIssue",
+  "nonconformityNoticeRequired",
+  "reinspectionRequired",
+  "ownerAdvisedActions"
+];
+
+var REQUIRED_DYNAMIC_GROUPS = [
+  { selector: '.fence-card[data-section="fence"]', fields: ["fenceLocation", "fenceType", "fenceHeight", "fenceGaps"] },
+  { selector: '.climbability-card[data-section="climbabilityItem"]', fields: ["nczLocation", "nczObjectType", "nczCompliant"] },
+  { selector: ".balcony-card", fields: ["balconyLocation", "balconyBarrierCompliant"] },
+  { selector: ".retaining-wall-card", fields: ["retainingWallLocation", "retainingWallCompliant"] },
+  { selector: ".boundary-card", fields: ["boundaryLocation", "boundaryCompliant"] },
+  { selector: ".gate-card", fields: ["gateSectionLocation", "gateSectionType", "gateSectionSwingsAway", "gateSectionSelfClosing", "gateSectionSelfLatching", "gateSectionGapUnderCompliant", "gateSectionLatchHeightCompliant", "gateSectionHardwareSecure"] }
+];
+
+function getFieldElementValue(el) {
+  if (!el) return "";
+  return el.type === "checkbox" ? el.checked : el.value;
+}
+
+function getRequiredFieldContainer(el) {
+  if (!el) return null;
+  return el.closest(".field, .check-field, .toggle-field");
+}
+
+function markRequiredElement(el) {
+  var container = getRequiredFieldContainer(el);
+  if (!container) return;
+
+  var missing = inspectionStarted && !fieldFilled(getFieldElementValue(el));
+  container.classList.add("required-field");
+  container.classList.toggle("required-missing", missing);
+}
+
+function markRequiredFieldByName(scope, name) {
+  if (!scope || !name) return;
+  scope.querySelectorAll('[data-save][name="' + name + '"]').forEach(function (el) {
+    markRequiredElement(el);
+  });
+}
+
+function updateRequiredFieldMarkers() {
+  qsa(".required-field, .required-missing").forEach(function (el) {
+    el.classList.remove("required-field");
+    el.classList.remove("required-missing");
+  });
+
+  if (!inspectionStarted) return;
+
+  REQUIRED_STATIC_FIELDS.forEach(function (name) {
+    markRequiredFieldByName(document, name);
+  });
+
+  REQUIRED_DYNAMIC_GROUPS.forEach(function (group) {
+    qsa(group.selector).forEach(function (card) {
+      group.fields.forEach(function (name) {
+        markRequiredFieldByName(card, name);
+      });
+    });
+  });
+}
+
 
 function startDownloadInspection(id) {
   if (inspectionStarted) {
@@ -1453,7 +1609,52 @@ function safeStorageName(value) {
     .replace(/^-|-$/g, "") || "photo";
 }
 
-function compressImageFile(file) {
+function getPhotoAreaLabel(area) {
+  return String(area || "general")
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, function (match) { return match.toUpperCase(); });
+}
+
+function getCurrentInspectionNumberForStamp() {
+  var el = qs("#inspectionNumber");
+  return el && el.value ? el.value : (currentInspectionId || "Inspection");
+}
+
+function buildPhotoStampLines(area, uploadedAt) {
+  return [
+    formatDateTime(uploadedAt),
+    getCurrentInspectionNumberForStamp(),
+    getPhotoAreaLabel(area),
+    "IronGate Pool Inspections"
+  ];
+}
+
+function drawPhotoStamp(ctx, width, height, lines) {
+  lines = (lines || []).filter(function (line) { return !!String(line || "").trim(); });
+  if (!lines.length) return;
+
+  var scale = Math.max(1, Math.min(width, height) / 900);
+  var fontSize = Math.max(18, Math.round(24 * scale));
+  var padding = Math.round(18 * scale);
+  var lineHeight = Math.round(fontSize * 1.35);
+  var boxHeight = padding * 2 + lineHeight * lines.length;
+  var y = Math.max(0, height - boxHeight);
+
+  ctx.save();
+  ctx.fillStyle = "rgba(3, 40, 106, 0.78)";
+  ctx.fillRect(0, y, width, boxHeight);
+  ctx.font = "700 " + fontSize + "px Arial, sans-serif";
+  ctx.fillStyle = "#ffffff";
+  ctx.textBaseline = "top";
+
+  lines.forEach(function (line, index) {
+    ctx.fillText(String(line), padding, y + padding + index * lineHeight, width - padding * 2);
+  });
+
+  ctx.restore();
+}
+
+function compressImageFile(file, stampLines) {
   return new Promise(function (resolve, reject) {
     if (!file || !file.type || file.type.indexOf("image/") !== 0) {
       reject(new Error("Please choose an image file."));
@@ -1483,6 +1684,7 @@ function compressImageFile(file) {
         canvas.height = height;
         var ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, width, height);
+        drawPhotoStamp(ctx, width, height, stampLines || []);
 
         canvas.toBlob(function (blob) {
           if (!blob) {
@@ -1490,7 +1692,7 @@ function compressImageFile(file) {
             return;
           }
           resolve(blob);
-        }, "image/jpeg", 0.78);
+        }, "image/jpeg", 0.82);
       };
       img.onerror = function () {
         reject(new Error("Could not read image."));
@@ -1519,7 +1721,10 @@ function uploadPhotoFile(file, widget, grid) {
   }
 
   var compressedBlob = null;
-  return compressImageFile(file)
+  var uploadedAt = new Date().toISOString();
+  var stampLines = buildPhotoStampLines(area, uploadedAt);
+
+  return compressImageFile(file, stampLines)
     .then(function (blob) {
       compressedBlob = blob;
       var fileName = Date.now() + "-" + Math.floor(Math.random() * 100000) + "-" + safeStorageName(file.name || "photo") + ".jpg";
@@ -1529,7 +1734,9 @@ function uploadPhotoFile(file, widget, grid) {
         contentType: "image/jpeg",
         customMetadata: {
           originalName: file.name || "",
-          area: area
+          area: area,
+          stampedAt: uploadedAt,
+          stampText: stampLines.join(" | ")
         }
       }).then(function (snapshot) {
         return snapshot.ref.getDownloadURL().then(function (url) {
@@ -1539,7 +1746,8 @@ function uploadPhotoFile(file, widget, grid) {
             area: area,
             name: file.name || fileName,
             size: compressedBlob ? compressedBlob.size : 0,
-            uploadedAt: new Date().toISOString()
+            uploadedAt: uploadedAt,
+            stamped: true
           };
         });
       });
@@ -1709,6 +1917,7 @@ function markFailures() {
 
 function refreshSummary() {
   markFailures();
+  updateRequiredFieldMarkers();
 
   var summary = qs("#failureSummary");
   if (!summary) return;
@@ -1788,11 +1997,13 @@ function bindSaveEvents(root) {
   scope.querySelectorAll("[data-save]").forEach(function (el) {
     el.addEventListener("input", function () {
       if (currentTab !== "home") inspectionStarted = true;
+      updateRequiredFieldMarkers();
       saveCurrentInspection(false);
     });
 
     el.addEventListener("change", function () {
       if (currentTab !== "home") inspectionStarted = true;
+      updateRequiredFieldMarkers();
       saveCurrentInspection(false);
     });
   });
