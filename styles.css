@@ -317,6 +317,7 @@ body {
 }
 
 .saved-inspection-card {
+  position: relative;
   width: 100%;
   border: 1px solid rgba(13, 130, 216, 0.16);
   border-radius: 22px;
@@ -374,6 +375,7 @@ body {
 
 .saved-inspection-actions {
   align-self: start;
+  padding-top: 30px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -400,6 +402,33 @@ body {
   color: white;
   background: linear-gradient(135deg, var(--iron), var(--gate));
   box-shadow: 0 8px 18px rgba(3, 40, 106, 0.12);
+}
+
+.saved-inspection-delete {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--danger);
+  background: #fff3f3;
+  font: inherit;
+  font-size: 1.25rem;
+  font-weight: 900;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(229, 57, 53, 0.12);
+}
+
+.saved-inspection-delete:hover,
+.saved-inspection-delete:focus-visible {
+  color: #ffffff;
+  background: var(--danger);
+  outline: none;
 }
 
 .empty-state {

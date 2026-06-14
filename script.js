@@ -488,7 +488,7 @@ function openInspection(id) {
 }
 
 function deleteInspection(id) {
-  if (!confirm("Delete this inspection?")) return;
+  if (!confirm("Are you sure you want to delete this inspection? This cannot be undone.")) return;
 
   var inspectionToDelete = getInspectionById(id);
   var inspections = getInspections().filter(function (item) {
@@ -552,11 +552,13 @@ function renderInspectionList() {
 
   inspections.forEach(function (inspection) {
     var status = getInspectionStatus(inspection);
-    if (status.status === "Ready") {
-      completed.push({ inspection: inspection, status: status });
-    } else {
-      inProgress.push({ inspection: inspection, status: status });
-    }
+    var isFullyCompleted = status.completedSections === status.totalSections;
+
+	if (isFullyCompleted) {
+	  completed.push({ inspection: inspection, status: status });
+	} else {
+	  inProgress.push({ inspection: inspection, status: status });
+	}
   });
 
   appendInspectionGroup(list, "In Progress Inspections", inProgress, false);
@@ -598,6 +600,7 @@ function createInspectionCard(inspection, status, allowDownload) {
     : "";
 
   card.innerHTML =
+    '<button class="saved-inspection-delete" type="button" aria-label="Delete inspection" title="Delete inspection">×</button>' +
     '<div class="saved-inspection-main">' +
       '<strong>' + escapeHtml(s.number) + '</strong>' +
       '<div class="meta">' +
@@ -619,6 +622,11 @@ function createInspectionCard(inspection, status, allowDownload) {
 
   card.querySelector(".saved-inspection-btn.open").addEventListener("click", function () {
     openInspection(inspection.id);
+  });
+
+  card.querySelector(".saved-inspection-delete").addEventListener("click", function (event) {
+    event.stopPropagation();
+    deleteInspection(inspection.id);
   });
 
   var download = card.querySelector(".saved-inspection-btn.download");
