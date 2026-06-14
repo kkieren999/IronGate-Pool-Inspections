@@ -191,7 +191,13 @@ function showTab(tabName) {
 function updateNavLock() {
   qsa(".tab").forEach(function (tab) {
     var tabName = getTabName(tab);
-    var locked = !inspectionStarted && tabName !== "home";
+
+    // Always allow Home.
+    // Lock every other tab if:
+    // 1. no inspection has been started/opened, OR
+    // 2. the user is currently on the Home screen.
+    var locked = tabName !== "home" && (!inspectionStarted || currentTab === "home");
+
     tab.classList.toggle("locked", locked);
     tab.disabled = locked;
   });
