@@ -4,10 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sign in | IronGate Pool Safety Inspections</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles.css?v=20260614fix2" />
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" defer></script>
-  <script src="./login.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
+  <script src="./login.js?v=20260614fix2" defer></script>
 </head>
 <body class="login-page-body">
   <main class="login-shell" aria-label="IronGate sign in">
@@ -37,6 +38,7 @@
         </label>
 
         <button class="login-primary-btn" type="submit">Sign in</button>
+        <button id="createAccountBtn" class="login-secondary-btn" type="button">Create account</button>
       </form>
 
       <div class="login-divider"><span>or</span></div>
@@ -45,10 +47,16 @@
         Sign in with Google
       </button>
 
+      <div id="pendingBox" class="login-pending-box" hidden>
+        <strong>Account pending approval</strong>
+        <p>Your account has been created, but it needs to be approved in Firebase before you can use the inspection app.</p>
+        <button id="pendingSignOutBtn" class="login-google-btn" type="button">Sign out</button>
+      </div>
+
       <p id="loginStatus" class="login-status">Checking Firebase...</p>
 
       <p class="login-note">
-        No public sign-up is shown. Add allowed users in Firebase Authentication.
+        New accounts can be created, but they stay pending until you approve them in Firebase.
       </p>
     </section>
   </main>

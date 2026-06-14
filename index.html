@@ -4,11 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IronGate Pool Safety Inspections</title>
-  <link rel="stylesheet" href="./styles.css" />
-  <script src="./script.js" defer></script>
+  <link rel="stylesheet" href="./styles.css?v=20260614fix2" />
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js" defer></script>
+  <script src="./script.js?v=20260614fix2" defer></script>
 </head>
 
-<body>
+<body class="auth-checking">
   <div class="app-shell">
     <header class="hero">
       <div class="brand">
@@ -77,7 +81,7 @@
 
         <div id="emptyState" class="empty-state">
           <img class="empty-icon" src="./assets/icons/details.png" alt="" />
-          <h3>No Saved Inspections</h3>
+          <h3>No Inspections</h3>
           <p>Start a new inspection and it will appear here.</p>
         </div>
       </section>
@@ -221,10 +225,7 @@
         </summary>
 
         <div class="details-check-body">
-          <label class="check-field defect-toggle">
-            <input data-save name="poolClassificationDefect" type="checkbox" />
-            <span>Issue identified</span>
-          </label>
+
 
           <div class="form-grid">
             <label class="field">
@@ -420,12 +421,6 @@
       </details>
     </div>
 
-    <!-- ACTION BUTTONS -->
-    <div class="button-row">
-      <button class="small-btn" id="saveBtn" type="button">Save</button>
-      <button class="small-btn secondary" id="backHomeBtn" type="button">Home</button>
-      <button class="small-btn danger" id="deleteCurrentBtn" type="button">Delete</button>
-    </div>
   </div>
 </section>
 
@@ -463,10 +458,7 @@
         </summary>
 
         <div class="barrier-check-body">
-          <label class="check-field defect-toggle">
-            <input data-save name="barrierLocationDefect" type="checkbox" />
-            <span>Non-compliant</span>
-          </label>
+ 
 
           <div class="form-grid">
             <label class="field">
@@ -648,10 +640,7 @@
         </summary>
 
         <div class="barrier-check-body">
-          <label class="check-field defect-toggle">
-            <input data-save name="specialPoolFeatureDefect" type="checkbox" />
-            <span>Non-compliant</span>
-          </label>
+  
 
           <div class="form-grid">
             <label class="field">
@@ -817,10 +806,7 @@
               <h3>Non-Climbable Zone Checks</h3>
             </div>
 
-            <label class="check-field defect-toggle">
-              <input data-save name="nczOverallDefect" type="checkbox" />
-              <span>Non-compliant</span>
-            </label>
+  
 
             <div class="form-grid">
               <label class="field">
@@ -949,10 +935,7 @@
               <h3>Additional Clear Area Checks</h3>
             </div>
 
-            <label class="check-field defect-toggle">
-              <input data-save name="additionalClearAreaDefect" type="checkbox" />
-              <span>Non-compliant</span>
-            </label>
+
 
             <div class="form-grid">
               <label class="field">
@@ -1098,10 +1081,7 @@
               <h3>Gate Checks</h3>
             </div>
 
-            <label class="check-field defect-toggle">
-              <input data-save name="gateDefect" type="checkbox" />
-              <span>Non-compliant</span>
-            </label>
+     
 
             <div class="form-grid">
               <label class="field">
@@ -1321,10 +1301,7 @@
         </summary>
 
         <div class="safety-check-body">
-          <label class="check-field defect-toggle">
-            <input data-save name="cprSignDefect" type="checkbox" />
-            <span>Non-compliant</span>
-          </label>
+
 
           <div class="form-grid">
             <label class="field">
@@ -1403,10 +1380,7 @@
         </summary>
 
         <div class="safety-check-body">
-          <label class="check-field defect-toggle">
-            <input data-save name="buildingAccessDefect" type="checkbox" />
-            <span>Non-compliant</span>
-          </label>
+
 
           <div class="form-grid">
             <label class="field">
@@ -1527,10 +1501,7 @@
         </summary>
 
         <div class="safety-check-body">
-          <label class="check-field defect-toggle">
-            <input data-save name="generalSafetyDefect" type="checkbox" />
-            <span>Non-compliant</span>
-          </label>
+
 
           <div class="form-grid">
             <label class="field">
@@ -1618,10 +1589,7 @@
         </summary>
 
         <div class="safety-check-body">
-          <label class="check-field defect-toggle">
-            <input data-save name="temporaryFencingDefect" type="checkbox" />
-            <span>Non-compliant</span>
-          </label>
+
 
           <div class="form-grid">
             <label class="field">
@@ -1700,10 +1668,7 @@
         </summary>
 
         <div class="safety-check-body">
-          <label class="check-field defect-toggle">
-            <input data-save name="decommissionedPoolDefect" type="checkbox" />
-            <span>Non-compliant</span>
-          </label>
+   
 
           <div class="form-grid">
             <label class="field">
@@ -1773,10 +1738,7 @@
         </summary>
 
         <div class="safety-check-body">
-          <label class="check-field defect-toggle">
-            <input data-save name="electricalAsbestosFireDefect" type="checkbox" />
-            <span>Non-compliant</span>
-          </label>
+   
 
           <div class="form-grid">
             <label class="field">
@@ -1855,10 +1817,7 @@
         </summary>
 
         <div class="safety-check-body">
-          <label class="check-field defect-toggle">
-            <input data-save name="inspectionOutcomeDefect" type="checkbox" />
-            <span>Non-compliant</span>
-          </label>
+  
 
           <div class="form-grid">
             <label class="field">
