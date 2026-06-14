@@ -192,11 +192,10 @@ function updateNavLock() {
   qsa(".tab").forEach(function (tab) {
     var tabName = getTabName(tab);
 
-    // Always allow Home.
-    // Lock every other tab if:
-    // 1. no inspection has been started/opened, OR
-    // 2. the user is currently on the Home screen.
-    var locked = tabName !== "home" && (!inspectionStarted || currentTab === "home");
+    // Home is always available.
+    // All other tabs are locked while sitting on Home,
+    // or if no inspection has been started/opened.
+    var locked = tabName !== "home" && (currentTab === "home" || !inspectionStarted);
 
     tab.classList.toggle("locked", locked);
     tab.disabled = locked;
@@ -1465,12 +1464,17 @@ function init() {
   };
 
   qsa(".tab").forEach(function (tab) {
-    tab.addEventListener("click", function () {
-      var requestedTab = getTabName(tab);
-      if (!inspectionStarted && requestedTab !== "home") return;
-      showTab(requestedTab);
-    });
+  tab.addEventListener("click", function () {
+    var requestedTab = getTabName(tab);
+
+    // If sitting on Home, only allow Home unless the user opens/starts an inspection.
+    if (requestedTab !== "home" && (currentTab === "home" || !inspectionStarted)) {
+      return;
+    }
+
+    showTab(requestedTab);
   });
+});
 
   prepareBlankDropdowns(document);
   bindSaveEvents(document);
