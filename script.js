@@ -28,6 +28,8 @@ var firebaseDb = null;
 var firebaseUser = null;
 var firebaseEnabled = false;
 var firebaseDataLoaded = false;
+var firebaseApprovalChecked = false;
+var firebaseApproved = false;
 var firebaseLoadError = "";
 var cloudInspections = [];
 var cloudUnsubscribe = null;
@@ -65,21 +67,21 @@ function setLocalInspections(inspections) {
 
 function getInspections() {
   // Secure Firebase build: inspection records are loaded from Firestore only after sign-in.
-  return firebaseUser ? cloudInspections.slice() : [];
+  return firebaseUser && firebaseApproved ? cloudInspections.slice() : [];
 }
 
 function setInspections(inspections) {
-  if (firebaseUser) {
+  if (firebaseUser && firebaseApproved) {
     cloudInspections = inspections.slice();
   }
 }
 
 function canUseApp() {
-  return !!firebaseUser && firebaseDataLoaded;
+  return !!firebaseUser && firebaseApproved && firebaseDataLoaded;
 }
 
-function redirectToLogin() {
-  var target = "login.html";
+function redirectToLogin(reason) {
+  var target = "login.html" + (reason ? "?" + reason : "");
   if (window.location.pathname.indexOf("login.html") === -1) {
     window.location.replace(target);
   }
@@ -105,7 +107,7 @@ function sanitizeInspectionForCloud(data) {
 }
 
 function saveInspectionToCloudNow(data, showAlert) {
-  if (!firebaseEnabled || !firebaseUser || !firebaseDb || !data || !data.id) return;
+  if (!firebaseEnabled || !firebaseUser || !firebaseApproved || !firebaseDb || !data || !data.id) return;
 
   var clean = sanitizeInspectionForCloud(data);
 
@@ -127,7 +129,7 @@ function saveInspectionToCloudNow(data, showAlert) {
 }
 
 function queueCloudSave(data, showAlert) {
-  if (!firebaseEnabled || !firebaseUser || !firebaseDb || !data || !data.id) return;
+  if (!firebaseEnabled || !firebaseUser || !firebaseApproved || !firebaseDb || !data || !data.id) return;
 
   cloudSavePendingData = data;
   clearTimeout(cloudSaveTimer);
@@ -1218,6 +1220,51 @@ function bindSaveEvents(root) {
   });
 }
 
+
+function getCurrentUserProfileRef() {
+  if (!firebaseDb || !firebaseUser) return null;
+  return firebaseDb.collection("users").doc(firebaseUser.uid);
+}
+
+function createPendingProfileForCurrentUser() {
+  var ref = getCurrentUserProfileRef();
+  if (!ref || !firebaseUser) return Promise.reject(new Error("No signed-in user."));
+
+  var providerIds = (firebaseUser.providerData || []).map(function (provider) {
+    return provider.providerId;
+  });
+
+  return ref.set({
+    email: firebaseUser.email || "",
+    displayName: firebaseUser.displayName || "",
+    approved: false,
+    role: "pending",
+    providerIds: providerIds,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+}
+
+function ensureCurrentUserProfile() {
+  var ref = getCurrentUserProfileRef();
+  if (!ref) return Promise.reject(new Error("No user profile path."));
+
+  return ref.get().then(function (doc) {
+    if (doc.exists) {
+      return doc.data() || {};
+    }
+
+    return createPendingProfileForCurrentUser().then(function () {
+      return {
+        email: firebaseUser.email || "",
+        displayName: firebaseUser.displayName || "",
+        approved: false,
+        role: "pending"
+      };
+    });
+  });
+}
+
 function ensureAuthUI() {
   if (authUiReady) return;
   var appShell = qs(".app-shell");
@@ -1262,13 +1309,24 @@ function updateAuthUI() {
   var signedInEmail = qs("#signedInEmail");
   var newBtn = qs("#newInspectionBtn");
 
-  if (firebaseEnabled && firebaseUser) {
+  if (firebaseEnabled && firebaseUser && firebaseApproved) {
     if (signedInPanel) signedInPanel.hidden = false;
     if (signedInEmail) signedInEmail.textContent = firebaseUser.email || "Signed in";
-    setFirebaseStatus(firebaseDataLoaded ? "Signed in and saving online" : "Signed in. Loading inspections...", false);
+    setFirebaseStatus(firebaseDataLoaded ? "Signed in and saving online" : "Approved. Loading inspections...", false);
     document.body.classList.remove("firebase-signed-out");
     document.body.classList.remove("auth-checking");
     if (newBtn) newBtn.disabled = !firebaseDataLoaded;
+  } else if (firebaseEnabled && firebaseUser && firebaseApprovalChecked && !firebaseApproved) {
+    if (signedInPanel) signedInPanel.hidden = false;
+    if (signedInEmail) signedInEmail.textContent = firebaseUser.email || "Signed in";
+    setFirebaseStatus("Account pending approval. Redirecting to login page...", true);
+    if (newBtn) newBtn.disabled = true;
+    redirectToLogin("pending=1");
+  } else if (firebaseEnabled && firebaseUser) {
+    if (signedInPanel) signedInPanel.hidden = false;
+    if (signedInEmail) signedInEmail.textContent = firebaseUser.email || "Signed in";
+    setFirebaseStatus("Checking account approval...", false);
+    if (newBtn) newBtn.disabled = true;
   } else if (firebaseEnabled) {
     if (signedInPanel) signedInPanel.hidden = true;
     setFirebaseStatus("Not signed in. Redirecting...", false);
@@ -1301,6 +1359,8 @@ function initFirebase() {
     firebaseAuth.onAuthStateChanged(function (user) {
       firebaseUser = user || null;
       firebaseDataLoaded = false;
+      firebaseApprovalChecked = false;
+      firebaseApproved = false;
       cloudInspections = [];
 
       if (cloudUnsubscribe) {
@@ -1316,7 +1376,31 @@ function initFirebase() {
       }
 
       updateAuthUI();
-      listenToCloudInspections();
+
+      ensureCurrentUserProfile()
+        .then(function (profile) {
+          firebaseApprovalChecked = true;
+          firebaseApproved = !!(profile && profile.approved === true);
+
+          if (!firebaseApproved) {
+            firebaseDataLoaded = true;
+            updateAuthUI();
+            return;
+          }
+
+          updateAuthUI();
+          listenToCloudInspections();
+        })
+        .catch(function (error) {
+          console.error(error);
+          firebaseApprovalChecked = true;
+          firebaseApproved = false;
+          firebaseDataLoaded = true;
+          firebaseLoadError = "Could not check account approval. Check Firestore rules.";
+          setFirebaseStatus(firebaseLoadError, true);
+          alert(firebaseLoadError + "\n" + error.message);
+          updateAuthUI();
+        });
     });
   } catch (error) {
     console.error(error);
@@ -1328,7 +1412,7 @@ function initFirebase() {
 }
 
 function listenToCloudInspections() {
-  if (!firebaseUser || !firebaseDb) return;
+  if (!firebaseUser || !firebaseApproved || !firebaseDb) return;
 
   setFirebaseStatus("Loading inspections...", false);
 
