@@ -2240,11 +2240,22 @@ function listenToCloudInspections() {
 }
 
 function init() {
-  qs("#newInspectionBtn").onclick = startNewInspection;
-  qs("#refreshListBtn").onclick = renderInspectionList;
-  qs("#saveBtn").onclick = function () { saveCurrentInspection(true); };
-  qs("#backHomeBtn").onclick = function () { showTab("home"); };
-  qs("#deleteCurrentBtn").onclick = deleteCurrentInspection;
+  var newInspectionBtn = qs("#newInspectionBtn");
+  if (newInspectionBtn) newInspectionBtn.onclick = startNewInspection;
+
+  var refreshListBtn = qs("#refreshListBtn");
+  if (refreshListBtn) refreshListBtn.onclick = renderInspectionList;
+
+  // These buttons used to exist at the bottom of the Details tab.
+  // They are now optional because the app autosaves and uses the top Home tab.
+  var saveBtn = qs("#saveBtn");
+  if (saveBtn) saveBtn.onclick = function () { saveCurrentInspection(true); };
+
+  var backHomeBtn = qs("#backHomeBtn");
+  if (backHomeBtn) backHomeBtn.onclick = function () { showTab("home"); };
+
+  var deleteCurrentBtn = qs("#deleteCurrentBtn");
+  if (deleteCurrentBtn) deleteCurrentBtn.onclick = deleteCurrentInspection;
 
   var addFenceBtn = qs("#addFenceSectionBtn");
   if (addFenceBtn) addFenceBtn.onclick = function () {

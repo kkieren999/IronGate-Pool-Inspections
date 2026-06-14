@@ -8,7 +8,6 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js" defer></script>
   <script src="./script.js" defer></script>
 </head>
 
@@ -225,7 +224,10 @@
         </summary>
 
         <div class="details-check-body">
-
+          <label class="check-field defect-toggle">
+            <input data-save name="poolClassificationDefect" type="checkbox" />
+            <span>Issue identified</span>
+          </label>
 
           <div class="form-grid">
             <label class="field">
@@ -421,6 +423,12 @@
       </details>
     </div>
 
+    <!-- ACTION BUTTONS -->
+    <div class="button-row">
+      <button class="small-btn" id="saveBtn" type="button">Save</button>
+      <button class="small-btn secondary" id="backHomeBtn" type="button">Home</button>
+      <button class="small-btn danger" id="deleteCurrentBtn" type="button">Delete</button>
+    </div>
   </div>
 </section>
 
@@ -458,7 +466,10 @@
         </summary>
 
         <div class="barrier-check-body">
- 
+          <label class="check-field defect-toggle">
+            <input data-save name="barrierLocationDefect" type="checkbox" />
+            <span>Non-compliant</span>
+          </label>
 
           <div class="form-grid">
             <label class="field">
@@ -640,7 +651,10 @@
         </summary>
 
         <div class="barrier-check-body">
-  
+          <label class="check-field defect-toggle">
+            <input data-save name="specialPoolFeatureDefect" type="checkbox" />
+            <span>Non-compliant</span>
+          </label>
 
           <div class="form-grid">
             <label class="field">
@@ -806,7 +820,10 @@
               <h3>Non-Climbable Zone Checks</h3>
             </div>
 
-  
+            <label class="check-field defect-toggle">
+              <input data-save name="nczOverallDefect" type="checkbox" />
+              <span>Non-compliant</span>
+            </label>
 
             <div class="form-grid">
               <label class="field">
@@ -935,7 +952,10 @@
               <h3>Additional Clear Area Checks</h3>
             </div>
 
-
+            <label class="check-field defect-toggle">
+              <input data-save name="additionalClearAreaDefect" type="checkbox" />
+              <span>Non-compliant</span>
+            </label>
 
             <div class="form-grid">
               <label class="field">
@@ -1081,7 +1101,10 @@
               <h3>Gate Checks</h3>
             </div>
 
-     
+            <label class="check-field defect-toggle">
+              <input data-save name="gateDefect" type="checkbox" />
+              <span>Non-compliant</span>
+            </label>
 
             <div class="form-grid">
               <label class="field">
@@ -1301,7 +1324,10 @@
         </summary>
 
         <div class="safety-check-body">
-
+          <label class="check-field defect-toggle">
+            <input data-save name="cprSignDefect" type="checkbox" />
+            <span>Non-compliant</span>
+          </label>
 
           <div class="form-grid">
             <label class="field">
@@ -1380,7 +1406,10 @@
         </summary>
 
         <div class="safety-check-body">
-
+          <label class="check-field defect-toggle">
+            <input data-save name="buildingAccessDefect" type="checkbox" />
+            <span>Non-compliant</span>
+          </label>
 
           <div class="form-grid">
             <label class="field">
@@ -1501,7 +1530,10 @@
         </summary>
 
         <div class="safety-check-body">
-
+          <label class="check-field defect-toggle">
+            <input data-save name="generalSafetyDefect" type="checkbox" />
+            <span>Non-compliant</span>
+          </label>
 
           <div class="form-grid">
             <label class="field">
@@ -1589,7 +1621,10 @@
         </summary>
 
         <div class="safety-check-body">
-
+          <label class="check-field defect-toggle">
+            <input data-save name="temporaryFencingDefect" type="checkbox" />
+            <span>Non-compliant</span>
+          </label>
 
           <div class="form-grid">
             <label class="field">
@@ -1668,7 +1703,10 @@
         </summary>
 
         <div class="safety-check-body">
-   
+          <label class="check-field defect-toggle">
+            <input data-save name="decommissionedPoolDefect" type="checkbox" />
+            <span>Non-compliant</span>
+          </label>
 
           <div class="form-grid">
             <label class="field">
@@ -1738,7 +1776,10 @@
         </summary>
 
         <div class="safety-check-body">
-   
+          <label class="check-field defect-toggle">
+            <input data-save name="electricalAsbestosFireDefect" type="checkbox" />
+            <span>Non-compliant</span>
+          </label>
 
           <div class="form-grid">
             <label class="field">
@@ -1817,7 +1858,10 @@
         </summary>
 
         <div class="safety-check-body">
-  
+          <label class="check-field defect-toggle">
+            <input data-save name="inspectionOutcomeDefect" type="checkbox" />
+            <span>Non-compliant</span>
+          </label>
 
           <div class="form-grid">
             <label class="field">
