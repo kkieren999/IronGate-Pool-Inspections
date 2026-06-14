@@ -643,16 +643,15 @@ function getInspectionStatus(data) {
   var sections = getSectionCompletion(data);
   var keys = Object.keys(sections);
   var completed = keys.filter(function (key) { return sections[key].complete; }).length;
-  var hasAttention = inspectionNeedsAttention(data);
   var hasData = inspectionHasMeaningfulData(data);
   var status = "In progress";
 
-  if (!hasData && completed === 0) {
-    status = "Not started";
-  } else if (hasAttention) {
-    status = "Needs attention";
-  } else if (completed === keys.length) {
+  // A failed item is still a completed inspection result.
+  // Only missing required fields keep the inspection out of Completed.
+  if (completed === keys.length) {
     status = "Ready";
+  } else if (!hasData && completed === 0) {
+    status = "Not started";
   }
 
   return {
@@ -864,22 +863,9 @@ function getAllDynamicSections(data) {
 }
 
 function inspectionNeedsAttention(data) {
-  var hasAttention = false;
-
-  function checkFields(fields) {
-    Object.keys(fields || {}).forEach(function (name) {
-      var value = fields[name];
-      if (value === "Fail") hasAttention = true;
-      if (value === true && /defect|noncompliant|nonCompliant/i.test(name)) hasAttention = true;
-    });
-  }
-
-  checkFields(data.fields || {});
-  getAllDynamicSections(data).forEach(function (section) {
-    checkFields(section.fields || {});
-  });
-
-  return hasAttention;
+  // Fail/non-compliant results are valid completed inspection outcomes.
+  // Missing required fields are handled by the section completion checks instead.
+  return false;
 }
 
 

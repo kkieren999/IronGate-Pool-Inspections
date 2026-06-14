@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="./styles.css" />
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
   <script src="./login.js" defer></script>
 </head>
 <body class="login-page-body">
@@ -38,7 +37,6 @@
         </label>
 
         <button class="login-primary-btn" type="submit">Sign in</button>
-        <button id="createAccountBtn" class="login-secondary-btn" type="button">Create account</button>
       </form>
 
       <div class="login-divider"><span>or</span></div>
@@ -47,16 +45,10 @@
         Sign in with Google
       </button>
 
-      <div id="pendingBox" class="login-pending-box" hidden>
-        <strong>Account pending approval</strong>
-        <p>Your account has been created, but it needs to be approved in Firebase before you can use the inspection app.</p>
-        <button id="pendingSignOutBtn" class="login-google-btn" type="button">Sign out</button>
-      </div>
-
       <p id="loginStatus" class="login-status">Checking Firebase...</p>
 
       <p class="login-note">
-        New accounts can be created, but they stay pending until you approve them in Firebase.
+        No public sign-up is shown. Add allowed users in Firebase Authentication.
       </p>
     </section>
   </main>
