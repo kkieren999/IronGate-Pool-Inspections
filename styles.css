@@ -1877,3 +1877,12 @@ body.auth-checking .app-shell {
   line-height: 1.45;
   font-size: 0.9rem;
 }
+
+
+.camera-btn:disabled,
+.login-primary-btn:disabled,
+.login-secondary-btn:disabled,
+.login-google-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}

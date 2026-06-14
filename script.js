@@ -1,12 +1,15 @@
-// IronGate GitHub-safe localStorage rebuild
+// IronGate Firebase cloud rebuild
 // Simple browser-safe JavaScript. No modules. No crypto. No :has() dependency.
-
-var STORAGE_KEY = "irongateInspections_v1";
+// Firestore stores inspection data. Firebase Storage stores evidence photos.
 var currentInspectionId = null;
 var inspectionStarted = false;
 var currentTab = "home";
 var fenceCounter = 0;
 var climbabilityCounter = 0;
+var balconyCounter = 0;
+var retainingWallCounter = 0;
+var boundaryCounter = 0;
+var gateCounter = 1;
 var downloadDetailsState = [];
 var downloadTextareaState = [];
 var downloadModeActive = false;
@@ -25,6 +28,7 @@ var FIREBASE_CONFIG = {
 var firebaseApp = null;
 var firebaseAuth = null;
 var firebaseDb = null;
+var firebaseStorage = null;
 var firebaseUser = null;
 var firebaseEnabled = false;
 var firebaseDataLoaded = false;
@@ -53,17 +57,9 @@ function getTodayDateString() {
   return yyyy + "-" + mm + "-" + dd;
 }
 
-function getLocalInspections() {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-  } catch (error) {
-    return [];
-  }
-}
 
-function setLocalInspections(inspections) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(inspections));
-}
+
+
 
 function getInspections() {
   // Secure Firebase build: inspection records are loaded from Firestore only after sign-in.
@@ -90,12 +86,22 @@ function redirectToLogin(reason) {
 function sanitizeInspectionForCloud(data) {
   var clean = JSON.parse(JSON.stringify(data || {}));
 
-  // Photos are intentionally kept out of Firestore for this first Firebase build.
-  // Firestore is for the form/checklist data. Photo cloud upload should use Firebase Storage later.
-  clean.photos = {};
-  (clean.fenceSections || []).forEach(function (section) { section.photos = []; });
-  (clean.climbabilitySections || []).forEach(function (section) { section.photos = []; });
-  clean.photoStorageMode = "local-only";
+  clean.photos = normalizePhotoCollections(clean.photos || {});
+
+  [
+    "fenceSections",
+    "climbabilitySections",
+    "balconySections",
+    "retainingWallSections",
+    "boundarySections",
+    "gateSections"
+  ].forEach(function (sectionKey) {
+    (clean[sectionKey] || []).forEach(function (section) {
+      section.photos = normalizePhotoArray(section.photos || []);
+    });
+  });
+
+  clean.photoStorageMode = "firebase-storage";
 
   var status = getInspectionStatus(clean);
   clean.status = status.status;
@@ -103,8 +109,12 @@ function sanitizeInspectionForCloud(data) {
   clean.totalSections = status.totalSections;
   clean.progressText = status.completedSections + "/" + status.totalSections + " sections complete";
 
+  if (!clean.createdAt) clean.createdAt = new Date().toISOString();
+  clean.updatedAt = new Date().toISOString();
+
   return clean;
 }
+
 
 function saveInspectionToCloudNow(data, showAlert) {
   if (!firebaseEnabled || !firebaseUser || !firebaseApproved || !firebaseDb || !data || !data.id) return;
@@ -228,8 +238,20 @@ function clearFormForNewInspection() {
     }
   });
 
-  qs("#fenceSections").innerHTML = "";
-  qs("#climbabilitySections").innerHTML = "";
+  [
+    "#fenceSections",
+    "#climbabilitySections",
+    "#balconySections",
+    "#retainingWallSections",
+    "#boundarySections"
+  ].forEach(function (selector) {
+    var el = qs(selector);
+    if (el) el.innerHTML = "";
+  });
+
+  qsa("#gateSectionGroups .gate-card").forEach(function (card) {
+    card.remove();
+  });
 
   qsa(".photo-grid").forEach(function (grid) {
     grid.innerHTML = "";
@@ -237,7 +259,12 @@ function clearFormForNewInspection() {
 
   fenceCounter = 0;
   climbabilityCounter = 0;
+  balconyCounter = 0;
+  retainingWallCounter = 0;
+  boundaryCounter = 0;
+  gateCounter = 1;
 }
+
 
 function startNewInspection() {
   if (!canUseApp()) {
@@ -288,32 +315,14 @@ function gatherNormalFields() {
 }
 
 function gatherFenceSections() {
-  return qsa(".fence-card:not(.climbability-card)").map(function (card) {
-    var fields = {};
-    card.querySelectorAll("[data-save]").forEach(function (el) {
-      fields[el.name] = el.type === "checkbox" ? el.checked : el.value;
-    });
-    var photos = [];
-    card.querySelectorAll(".photo-box img").forEach(function (img) {
-      photos.push(img.src);
-    });
-    return { fields: fields, photos: photos };
-  });
+  return gatherDynamicSections('.fence-card[data-section="fence"]');
 }
 
+
 function gatherClimbabilitySections() {
-  return qsa(".climbability-card").map(function (card) {
-    var fields = {};
-    card.querySelectorAll("[data-save]").forEach(function (el) {
-      fields[el.name] = el.type === "checkbox" ? el.checked : el.value;
-    });
-    var photos = [];
-    card.querySelectorAll(".photo-box img").forEach(function (img) {
-      photos.push(img.src);
-    });
-    return { fields: fields, photos: photos };
-  });
+  return gatherDynamicSections('.climbability-card[data-section="climbabilityItem"]');
 }
+
 
 function gatherSectionPhotos() {
   var photos = {};
@@ -323,13 +332,12 @@ function gatherSectionPhotos() {
     var area = widget.getAttribute("data-photo-area");
     if (!area) return;
 
-    photos[area] = [];
-    widget.querySelectorAll(".photo-box img").forEach(function (img) {
-      photos[area].push(img.src);
-    });
+    var grid = widget.querySelector(".photo-grid");
+    photos[area] = grid ? gatherPhotosFromGrid(grid) : [];
   });
   return photos;
 }
+
 
 function gatherInspectionData() {
   var fields = gatherNormalFields();
@@ -340,10 +348,15 @@ function gatherInspectionData() {
     photos: gatherSectionPhotos(),
     fenceSections: gatherFenceSections(),
     climbabilitySections: gatherClimbabilitySections(),
+    balconySections: gatherDynamicSections('.balcony-card'),
+    retainingWallSections: gatherDynamicSections('.retaining-wall-card'),
+    boundarySections: gatherDynamicSections('.boundary-card'),
+    gateSections: gatherDynamicSections('.gate-card'),
     inspectionStarted: inspectionStarted,
     updatedAt: new Date().toISOString()
   };
 }
+
 
 function saveCurrentInspection(showAlert) {
   if (!inspectionStarted) return;
@@ -370,11 +383,8 @@ function saveCurrentInspection(showAlert) {
   queueCloudSave(data, showAlert);
   renderInspectionList();
   refreshSummary();
-
-  if (showAlert && !firebaseEnabled) {
-    alert("Inspection saved on this device.");
-  }
 }
+
 
 function restoreFields(fields) {
   qsa("[data-save]").forEach(function (el) {
@@ -403,10 +413,11 @@ function restoreCardFields(card, fields) {
 
 function restorePhotosToGrid(grid, photos) {
   if (!grid || !photos) return;
-  photos.forEach(function (src) {
-    addPhotoToGrid(grid, src);
+  normalizePhotoArray(photos).forEach(function (photo) {
+    addPhotoToGrid(grid, photo);
   });
 }
+
 
 function getInspectionById(id) {
   return getInspections().find(function (item) {
@@ -440,6 +451,22 @@ function loadInspectionIntoForm(data) {
     addClimbabilitySection();
   }
 
+  (data.balconySections || []).forEach(function (section) {
+    addBalconySection(section);
+  });
+
+  (data.retainingWallSections || []).forEach(function (section) {
+    addRetainingWallSection(section);
+  });
+
+  (data.boundarySections || []).forEach(function (section) {
+    addBoundarySection(section);
+  });
+
+  (data.gateSections || []).forEach(function (section) {
+    addGateSection(section);
+  });
+
   var photos = data.photos || {};
   Object.keys(photos).forEach(function (areaName) {
     var widget = qs('.photo-widget[data-photo-area="' + areaName + '"]');
@@ -452,6 +479,7 @@ function loadInspectionIntoForm(data) {
   return true;
 }
 
+
 function openInspection(id) {
   var data = getInspectionById(id);
   if (!loadInspectionIntoForm(data)) return;
@@ -461,12 +489,14 @@ function openInspection(id) {
 function deleteInspection(id) {
   if (!confirm("Delete this inspection?")) return;
 
+  var inspectionToDelete = getInspectionById(id);
   var inspections = getInspections().filter(function (item) {
     return item.id !== id;
   });
 
   setInspections(inspections);
-  setLocalInspections(getLocalInspections().filter(function (item) { return item.id !== id; }));
+
+  deleteInspectionPhotosFromStorage(inspectionToDelete);
 
   if (firebaseEnabled && firebaseUser && firebaseDb) {
     firebaseDb
@@ -490,6 +520,7 @@ function deleteInspection(id) {
 
   renderInspectionList();
 }
+
 
 function deleteCurrentInspection() {
   if (!currentInspectionId) return;
@@ -678,8 +709,13 @@ function barrierComplete(data) {
     return fieldsFilled(section.fields || {}, ["fenceLocation", "fenceType", "fenceHeight", "fenceGaps"]);
   });
 
-  return staticComplete && fenceComplete;
+  var optionalDynamicComplete = dynamicSectionsComplete(data.balconySections, ["balconyLocation", "balconyBarrierCompliant"]) &&
+    dynamicSectionsComplete(data.retainingWallSections, ["retainingWallLocation", "retainingWallCompliant"]) &&
+    dynamicSectionsComplete(data.boundarySections, ["boundaryLocation", "boundaryCompliant"]);
+
+  return staticComplete && fenceComplete && optionalDynamicComplete;
 }
+
 
 function climbabilityComplete(data) {
   var f = data.fields || {};
@@ -711,7 +747,7 @@ function climbabilityComplete(data) {
 
 function gateComplete(data) {
   var f = data.fields || {};
-  return fieldsFilled(f, [
+  var staticGateComplete = fieldsFilled(f, [
     "gateLocation",
     "gateType",
     "gateSwingsAway",
@@ -728,7 +764,21 @@ function gateComplete(data) {
     "gateHingesSafe",
     "gateHardwareSecure"
   ]);
+
+  var addedGateSectionsComplete = dynamicSectionsComplete(data.gateSections, [
+    "gateSectionLocation",
+    "gateSectionType",
+    "gateSectionSwingsAway",
+    "gateSectionSelfClosing",
+    "gateSectionSelfLatching",
+    "gateSectionGapUnderCompliant",
+    "gateSectionLatchHeightCompliant",
+    "gateSectionHardwareSecure"
+  ]);
+
+  return staticGateComplete && addedGateSectionsComplete;
 }
+
 
 function safetyComplete(data) {
   var f = data.fields || {};
@@ -786,6 +836,24 @@ function fieldFilled(value) {
   return String(value).trim() !== "";
 }
 
+
+function dynamicSectionsComplete(sections, requiredFields) {
+  if (!sections || !sections.length) return true;
+  return sections.every(function (section) {
+    return fieldsFilled(section.fields || {}, requiredFields);
+  });
+}
+
+function getAllDynamicSections(data) {
+  return []
+    .concat(data.fenceSections || [])
+    .concat(data.climbabilitySections || [])
+    .concat(data.balconySections || [])
+    .concat(data.retainingWallSections || [])
+    .concat(data.boundarySections || [])
+    .concat(data.gateSections || []);
+}
+
 function inspectionNeedsAttention(data) {
   var hasAttention = false;
 
@@ -798,11 +866,13 @@ function inspectionNeedsAttention(data) {
   }
 
   checkFields(data.fields || {});
-  (data.fenceSections || []).forEach(function (section) { checkFields(section.fields || {}); });
-  (data.climbabilitySections || []).forEach(function (section) { checkFields(section.fields || {}); });
+  getAllDynamicSections(data).forEach(function (section) {
+    checkFields(section.fields || {});
+  });
 
   return hasAttention;
 }
+
 
 function inspectionHasMeaningfulData(data) {
   var ignored = {
@@ -819,11 +889,13 @@ function inspectionHasMeaningfulData(data) {
   }
 
   checkFields(data.fields || {});
-  (data.fenceSections || []).forEach(function (section) { checkFields(section.fields || {}); });
-  (data.climbabilitySections || []).forEach(function (section) { checkFields(section.fields || {}); });
+  getAllDynamicSections(data).forEach(function (section) {
+    checkFields(section.fields || {});
+  });
 
   return hasData;
 }
+
 
 function startDownloadInspection(id) {
   if (inspectionStarted) {
@@ -1004,11 +1076,12 @@ function addFenceSection(data) {
 }
 
 function renumberFenceSections() {
-  qsa(".fence-card:not(.climbability-card)").forEach(function (card, index) {
+  qsa('.fence-card[data-section="fence"]').forEach(function (card, index) {
     var h3 = card.querySelector("h3");
     if (h3) h3.textContent = "Fence Section " + (index + 1);
   });
 }
+
 
 function climbabilityTemplate(number) {
   return '' +
@@ -1077,6 +1150,466 @@ function renumberClimbabilitySections() {
   });
 }
 
+function gatherPhotosFromGrid(grid) {
+  if (!grid) return [];
+  return qsaFrom(grid, ".photo-box").map(function (box) {
+    return getPhotoRecordFromBox(box);
+  }).filter(function (photo) {
+    return !!(photo && (photo.url || photo.path));
+  });
+}
+
+function qsaFrom(root, selector) {
+  return Array.prototype.slice.call(root.querySelectorAll(selector));
+}
+
+function gatherDynamicSections(selector) {
+  return qsa(selector).map(function (card) {
+    var fields = {};
+    card.querySelectorAll("[data-save]").forEach(function (el) {
+      fields[el.name] = el.type === "checkbox" ? el.checked : el.value;
+    });
+    return {
+      fields: fields,
+      photos: gatherPhotosFromGrid(card.querySelector(".photo-grid"))
+    };
+  });
+}
+
+function addDynamicSection(options, data) {
+  var list = qs(options.listSelector);
+  if (!list) return;
+
+  options.counter += 1;
+  var number = options.counter;
+
+  var card = document.createElement(options.tagName || "article");
+  card.className = options.className;
+  card.setAttribute("data-section", options.sectionName);
+  card.innerHTML = options.template(number);
+  prepareBlankDropdowns(card);
+
+  if (!data) {
+    card.querySelectorAll("select[data-save]").forEach(function (select) {
+      select.selectedIndex = 0;
+    });
+  }
+
+  card.querySelector(".remove-section-btn").addEventListener("click", function () {
+    var paths = collectPhotoPaths({ photos: {}, tempSections: [{ photos: gatherPhotosFromGrid(card.querySelector(".photo-grid")) }] });
+    deletePhotoPathsFromStorage(paths);
+    card.remove();
+    options.renumber();
+    saveCurrentInspection(false);
+    refreshSummary();
+  });
+
+  bindSaveEvents(card);
+  bindPhotoWidget(card.querySelector(".photo-widget"));
+  list.appendChild(card);
+
+  if (data) {
+    restoreCardFields(card, data.fields || {});
+    restorePhotosToGrid(card.querySelector(".photo-grid"), data.photos || []);
+  }
+
+  refreshSummary();
+}
+
+function balconyTemplate(number) {
+  return '' +
+    '<div class="fence-card-head">' +
+      '<h3>Balcony Check ' + number + '</h3>' +
+      '<button class="remove-section-btn" type="button">Remove</button>' +
+    '</div>' +
+    '<label class="check-field defect-toggle">' +
+      '<input data-save name="balconyNonCompliant" type="checkbox" />' +
+      '<span>Non-compliant</span>' +
+    '</label>' +
+    '<div class="form-grid">' +
+      '<label class="field full"><span>Location</span><input data-save name="balconyLocation" type="text" placeholder="e.g. Balcony overlooking pool area" /></label>' +
+      '<label class="field"><span>Balcony / Deck Type</span><select data-save name="balconyType"><option value=""></option><option>Balcony</option><option>Deck</option><option>Raised platform</option><option>Stairs / landing</option><option>Other</option></select></label>' +
+      '<label class="field"><span>Height / drop assessed</span><select data-save name="balconyHeightAssessed"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Access to pool controlled</span><select data-save name="balconyAccessControlled"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Barrier compliant</span><select data-save name="balconyBarrierCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="balconyComments" placeholder="Notes about balcony, deck, raised platform or access issue..."></textarea></label>' +
+    '</div>' +
+    '<div class="photo-widget" data-photo-area="balcony-' + number + '">' +
+      '<button class="camera-btn" type="button">+ Evidence Photo</button>' +
+      '<input type="file" accept="image/*" capture="environment" multiple hidden />' +
+      '<div class="photo-grid"></div>' +
+    '</div>';
+}
+
+function addBalconySection(data) {
+  addDynamicSection({
+    listSelector: "#balconySections",
+    className: "fence-card balcony-card",
+    sectionName: "balcony",
+    counter: balconyCounter,
+    template: balconyTemplate,
+    renumber: renumberBalconySections
+  }, data);
+  balconyCounter = qsa(".balcony-card").length;
+}
+
+function renumberBalconySections() {
+  qsa(".balcony-card").forEach(function (card, index) {
+    var h3 = card.querySelector("h3");
+    if (h3) h3.textContent = "Balcony Check " + (index + 1);
+  });
+  balconyCounter = qsa(".balcony-card").length;
+}
+
+function retainingWallTemplate(number) {
+  return '' +
+    '<div class="fence-card-head">' +
+      '<h3>Retaining Wall / Level Change ' + number + '</h3>' +
+      '<button class="remove-section-btn" type="button">Remove</button>' +
+    '</div>' +
+    '<label class="check-field defect-toggle">' +
+      '<input data-save name="retainingWallNonCompliant" type="checkbox" />' +
+      '<span>Non-compliant</span>' +
+    '</label>' +
+    '<div class="form-grid">' +
+      '<label class="field full"><span>Location</span><input data-save name="retainingWallLocation" type="text" placeholder="e.g. Rear retaining wall" /></label>' +
+      '<label class="field"><span>Type</span><select data-save name="retainingWallType"><option value=""></option><option>Retaining wall</option><option>Level change</option><option>Steps</option><option>Raised garden bed</option><option>Sloping ground</option><option>Other</option></select></label>' +
+      '<label class="field"><span>Height / level change (mm)</span><input data-save name="retainingWallHeight" type="number" placeholder="500" /></label>' +
+      '<label class="field"><span>Distance from barrier (mm)</span><input data-save name="retainingWallDistance" type="number" placeholder="900" /></label>' +
+      '<label class="field"><span>Compliant</span><select data-save name="retainingWallCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="retainingWallComments" placeholder="Notes about retaining wall, level change, step, raised bed or sloping ground..."></textarea></label>' +
+    '</div>' +
+    '<div class="photo-widget" data-photo-area="retaining-wall-' + number + '">' +
+      '<button class="camera-btn" type="button">+ Evidence Photo</button>' +
+      '<input type="file" accept="image/*" capture="environment" multiple hidden />' +
+      '<div class="photo-grid"></div>' +
+    '</div>';
+}
+
+function addRetainingWallSection(data) {
+  addDynamicSection({
+    listSelector: "#retainingWallSections",
+    className: "fence-card retaining-wall-card",
+    sectionName: "retainingWall",
+    counter: retainingWallCounter,
+    template: retainingWallTemplate,
+    renumber: renumberRetainingWallSections
+  }, data);
+  retainingWallCounter = qsa(".retaining-wall-card").length;
+}
+
+function renumberRetainingWallSections() {
+  qsa(".retaining-wall-card").forEach(function (card, index) {
+    var h3 = card.querySelector("h3");
+    if (h3) h3.textContent = "Retaining Wall / Level Change " + (index + 1);
+  });
+  retainingWallCounter = qsa(".retaining-wall-card").length;
+}
+
+function boundaryTemplate(number) {
+  return '' +
+    '<div class="fence-card-head">' +
+      '<h3>Boundary Section ' + number + '</h3>' +
+      '<button class="remove-section-btn" type="button">Remove</button>' +
+    '</div>' +
+    '<label class="check-field defect-toggle">' +
+      '<input data-save name="boundaryNonCompliant" type="checkbox" />' +
+      '<span>Non-compliant</span>' +
+    '</label>' +
+    '<div class="form-grid">' +
+      '<label class="field full"><span>Location</span><input data-save name="boundaryLocation" type="text" placeholder="e.g. Left boundary fence" /></label>' +
+      '<label class="field"><span>Boundary Side</span><select data-save name="boundarySide"><option value=""></option><option>Front boundary</option><option>Rear boundary</option><option>Left boundary</option><option>Right boundary</option><option>Neighbour side</option><option>Other</option></select></label>' +
+      '<label class="field"><span>Fence Type</span><select data-save name="boundaryFenceType"><option value=""></option><option>Timber</option><option>Colorbond / metal</option><option>Masonry</option><option>Glass</option><option>Aluminium</option><option>Other</option></select></label>' +
+      '<label class="field"><span>Height (mm)</span><input data-save name="boundaryFenceHeight" type="number" placeholder="1800" /></label>' +
+      '<label class="field"><span>Neighbour-side issues assessed</span><select data-save name="boundaryNeighbourSideClear"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Compliant</span><select data-save name="boundaryCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="boundaryComments" placeholder="Notes about boundary fence or neighbour-side issue..."></textarea></label>' +
+    '</div>' +
+    '<div class="photo-widget" data-photo-area="boundary-' + number + '">' +
+      '<button class="camera-btn" type="button">+ Evidence Photo</button>' +
+      '<input type="file" accept="image/*" capture="environment" multiple hidden />' +
+      '<div class="photo-grid"></div>' +
+    '</div>';
+}
+
+function addBoundarySection(data) {
+  addDynamicSection({
+    listSelector: "#boundarySections",
+    className: "fence-card boundary-card",
+    sectionName: "boundary",
+    counter: boundaryCounter,
+    template: boundaryTemplate,
+    renumber: renumberBoundarySections
+  }, data);
+  boundaryCounter = qsa(".boundary-card").length;
+}
+
+function renumberBoundarySections() {
+  qsa(".boundary-card").forEach(function (card, index) {
+    var h3 = card.querySelector("h3");
+    if (h3) h3.textContent = "Boundary Section " + (index + 1);
+  });
+  boundaryCounter = qsa(".boundary-card").length;
+}
+
+function gateTemplate(number) {
+  return '' +
+    '<div class="fence-card-head">' +
+      '<h3>Gate Check ' + number + '</h3>' +
+      '<button class="remove-section-btn" type="button">Remove</button>' +
+    '</div>' +
+    '<label class="check-field defect-toggle">' +
+      '<input data-save name="gateSectionDefect" type="checkbox" />' +
+      '<span>Non-compliant</span>' +
+    '</label>' +
+    '<div class="form-grid">' +
+      '<label class="field full"><span>Gate Location</span><input data-save name="gateSectionLocation" type="text" placeholder="e.g. Side gate" /></label>' +
+      '<label class="field"><span>Gate Type</span><select data-save name="gateSectionType"><option value=""></option><option>Single leaf gate</option><option>Double leaf gate</option><option>Glass gate</option><option>Aluminium gate</option><option>Timber gate</option><option>Mesh / chainwire gate</option><option>Other</option></select></label>' +
+      '<label class="field"><span>Opens away from pool</span><select data-save name="gateSectionSwingsAway"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Self-closes</span><select data-save name="gateSectionSelfClosing"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Self-latches</span><select data-save name="gateSectionSelfLatching"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Gap under gate compliant</span><select data-save name="gateSectionGapUnderCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Latch height compliant</span><select data-save name="gateSectionLatchHeightCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Hardware secure</span><select data-save name="gateSectionHardwareSecure"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="gateSectionComments" placeholder="Notes about additional gate check..."></textarea></label>' +
+    '</div>' +
+    '<div class="photo-widget" data-photo-area="gate-' + number + '">' +
+      '<button class="camera-btn" type="button">+ Evidence Photo</button>' +
+      '<input type="file" accept="image/*" capture="environment" multiple hidden />' +
+      '<div class="photo-grid"></div>' +
+    '</div>';
+}
+
+function addGateSection(data) {
+  addDynamicSection({
+    listSelector: "#gateSectionGroups",
+    className: "fence-card gate-card",
+    sectionName: "gateItem",
+    counter: gateCounter,
+    template: gateTemplate,
+    renumber: renumberGateSections
+  }, data);
+  gateCounter = 1 + qsa(".gate-card").length;
+}
+
+function renumberGateSections() {
+  qsa(".gate-card").forEach(function (card, index) {
+    var h3 = card.querySelector("h3");
+    if (h3) h3.textContent = "Gate Check " + (index + 2);
+  });
+  gateCounter = 1 + qsa(".gate-card").length;
+}
+
+
+function normalizePhotoArray(items) {
+  return (items || []).map(function (item) {
+    return normalizePhotoRecord(item);
+  }).filter(function (item) {
+    return !!(item && (item.url || item.path));
+  });
+}
+
+function normalizePhotoCollections(collections) {
+  var result = {};
+  Object.keys(collections || {}).forEach(function (area) {
+    result[area] = normalizePhotoArray(collections[area]);
+  });
+  return result;
+}
+
+function normalizePhotoRecord(input) {
+  if (!input) return null;
+  if (typeof input === "string") {
+    return { url: input, path: "", uploadedAt: "" };
+  }
+  return {
+    url: input.url || input.src || "",
+    path: input.path || "",
+    area: input.area || "",
+    name: input.name || "",
+    uploadedAt: input.uploadedAt || input.createdAt || "",
+    size: input.size || 0
+  };
+}
+
+function getPhotoRecordFromBox(box) {
+  if (!box) return null;
+  if (box.dataset && box.dataset.photo) {
+    try {
+      return normalizePhotoRecord(JSON.parse(box.dataset.photo));
+    } catch (error) {
+      console.warn("Could not read photo metadata", error);
+    }
+  }
+  var img = box.querySelector("img");
+  return img ? normalizePhotoRecord(img.src) : null;
+}
+
+function safeStorageName(value) {
+  return String(value || "photo")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "") || "photo";
+}
+
+function compressImageFile(file) {
+  return new Promise(function (resolve, reject) {
+    if (!file || !file.type || file.type.indexOf("image/") !== 0) {
+      reject(new Error("Please choose an image file."));
+      return;
+    }
+
+    var reader = new FileReader();
+    reader.onload = function (event) {
+      var img = new Image();
+      img.onload = function () {
+        var maxSide = 1600;
+        var width = img.width;
+        var height = img.height;
+
+        if (width > maxSide || height > maxSide) {
+          if (width > height) {
+            height = Math.round(height * (maxSide / width));
+            width = maxSide;
+          } else {
+            width = Math.round(width * (maxSide / height));
+            height = maxSide;
+          }
+        }
+
+        var canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(function (blob) {
+          if (!blob) {
+            reject(new Error("Could not compress image."));
+            return;
+          }
+          resolve(blob);
+        }, "image/jpeg", 0.78);
+      };
+      img.onerror = function () {
+        reject(new Error("Could not read image."));
+      };
+      img.src = event.target.result;
+    };
+    reader.onerror = function () {
+      reject(new Error("Could not read image file."));
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function uploadPhotoFile(file, widget, grid) {
+  if (!canUseApp() || !firebaseStorage || !currentInspectionId) {
+    alert("Please open or start an inspection before adding photos.");
+    return Promise.resolve();
+  }
+
+  var area = widget.getAttribute("data-photo-area") || "general";
+  var button = widget.querySelector(".camera-btn");
+  var originalText = button ? button.textContent : "";
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Uploading...";
+  }
+
+  var compressedBlob = null;
+  return compressImageFile(file)
+    .then(function (blob) {
+      compressedBlob = blob;
+      var fileName = Date.now() + "-" + Math.floor(Math.random() * 100000) + "-" + safeStorageName(file.name || "photo") + ".jpg";
+      var path = "users/" + firebaseUser.uid + "/inspections/" + currentInspectionId + "/" + safeStorageName(area) + "/" + fileName;
+      var ref = firebaseStorage.ref().child(path);
+      return ref.put(compressedBlob, {
+        contentType: "image/jpeg",
+        customMetadata: {
+          originalName: file.name || "",
+          area: area
+        }
+      }).then(function (snapshot) {
+        return snapshot.ref.getDownloadURL().then(function (url) {
+          return {
+            url: url,
+            path: path,
+            area: area,
+            name: file.name || fileName,
+            size: compressedBlob ? compressedBlob.size : 0,
+            uploadedAt: new Date().toISOString()
+          };
+        });
+      });
+    })
+    .then(function (photo) {
+      addPhotoToGrid(grid, photo);
+      saveCurrentInspection(false);
+    })
+    .catch(function (error) {
+      console.error(error);
+      alert("Could not upload photo: " + error.message);
+    })
+    .then(function () {
+      if (button) {
+        button.disabled = false;
+        button.textContent = originalText;
+      }
+    });
+}
+
+function deletePhotoFromStorage(photo) {
+  photo = normalizePhotoRecord(photo);
+  if (!photo || !photo.path || !firebaseStorage) return Promise.resolve();
+
+  return firebaseStorage.ref().child(photo.path).delete().catch(function (error) {
+    console.warn("Could not delete photo from Storage", error);
+  });
+}
+
+function collectPhotoPaths(data) {
+  var paths = [];
+
+  function addPhoto(photo) {
+    photo = normalizePhotoRecord(photo);
+    if (photo && photo.path) paths.push(photo.path);
+  }
+
+  Object.keys(data && data.photos || {}).forEach(function (area) {
+    normalizePhotoArray(data.photos[area]).forEach(addPhoto);
+  });
+
+  [
+    "fenceSections",
+    "climbabilitySections",
+    "balconySections",
+    "retainingWallSections",
+    "boundarySections",
+    "gateSections",
+    "tempSections"
+  ].forEach(function (sectionKey) {
+    (data && data[sectionKey] || []).forEach(function (section) {
+      normalizePhotoArray(section.photos || []).forEach(addPhoto);
+    });
+  });
+
+  return paths.filter(function (path, index, arr) {
+    return path && arr.indexOf(path) === index;
+  });
+}
+
+function deletePhotoPathsFromStorage(paths) {
+  (paths || []).forEach(function (path) {
+    deletePhotoFromStorage({ path: path });
+  });
+}
+
+function deleteInspectionPhotosFromStorage(data) {
+  deletePhotoPathsFromStorage(collectPhotoPaths(data || {}));
+}
+
 function bindPhotoWidget(widget) {
   if (!widget || widget.getAttribute("data-bound") === "true") return;
 
@@ -1089,44 +1622,68 @@ function bindPhotoWidget(widget) {
   if (!btn || !input || !grid) return;
 
   btn.addEventListener("click", function () {
+    if (!canUseApp() || !currentInspectionId) {
+      alert("Please start or open an inspection before adding photos.");
+      return;
+    }
     input.click();
   });
 
   input.addEventListener("change", function () {
     var files = Array.prototype.slice.call(input.files || []);
+    if (!files.length) return;
+
+    var chain = Promise.resolve();
     files.forEach(function (file) {
-      var reader = new FileReader();
-
-      reader.onload = function (event) {
-        addPhotoToGrid(grid, event.target.result);
-        saveCurrentInspection(false);
-      };
-
-      reader.readAsDataURL(file);
+      chain = chain.then(function () {
+        return uploadPhotoFile(file, widget, grid);
+      });
     });
 
-    input.value = "";
+    chain.then(function () {
+      input.value = "";
+    });
   });
 }
 
-function addPhotoToGrid(grid, src) {
-  if (!grid || !src) return;
+
+function addPhotoToGrid(grid, photoInput) {
+  if (!grid || !photoInput) return;
+
+  var photo = normalizePhotoRecord(photoInput);
+  if (!photo || !photo.url) return;
 
   var box = document.createElement("div");
   box.className = "photo-box";
+  box.dataset.photo = JSON.stringify(photo);
 
-  box.innerHTML =
-    '<img src="' + src + '" alt="inspection photo">' +
-    '<button class="remove-photo" type="button" aria-label="Remove photo">×</button>' +
-    '<div class="timestamp">' + new Date().toLocaleString() + '<br>IronGate Pool Inspections</div>';
+  var img = document.createElement("img");
+  img.src = photo.url;
+  img.alt = "inspection photo";
 
-  box.querySelector(".remove-photo").addEventListener("click", function () {
+  var remove = document.createElement("button");
+  remove.className = "remove-photo";
+  remove.type = "button";
+  remove.setAttribute("aria-label", "Remove photo");
+  remove.textContent = "×";
+
+  var stamp = document.createElement("div");
+  stamp.className = "timestamp";
+  stamp.innerHTML = escapeHtml(formatDateTime(photo.uploadedAt || new Date().toISOString())) + "<br>IronGate Pool Inspections";
+
+  remove.addEventListener("click", function () {
+    if (!confirm("Remove this photo?")) return;
     box.remove();
     saveCurrentInspection(false);
+    deletePhotoFromStorage(photo);
   });
 
+  box.appendChild(img);
+  box.appendChild(remove);
+  box.appendChild(stamp);
   grid.appendChild(box);
 }
+
 
 function getFieldLabel(el) {
   var label = el.closest("label");
@@ -1158,8 +1715,24 @@ function refreshSummary() {
 
   summary.innerHTML = "";
 
-  qsa(".fence-card:not(.climbability-card)").forEach(function (card) {
+  qsa('.fence-card[data-section="fence"]').forEach(function (card) {
     addCardToSummary(card, "Fence Section", 'input[name="fenceLocation"]');
+  });
+
+  qsa(".balcony-card").forEach(function (card) {
+    addCardToSummary(card, "Balcony Check", 'input[name="balconyLocation"]');
+  });
+
+  qsa(".retaining-wall-card").forEach(function (card) {
+    addCardToSummary(card, "Retaining Wall / Level Change", 'input[name="retainingWallLocation"]');
+  });
+
+  qsa(".boundary-card").forEach(function (card) {
+    addCardToSummary(card, "Boundary Section", 'input[name="boundaryLocation"]');
+  });
+
+  qsa(".gate-card").forEach(function (card) {
+    addCardToSummary(card, "Gate Check", 'input[name="gateSectionLocation"]');
   });
 
   qsa(".climbability-card").forEach(function (card) {
@@ -1359,6 +1932,7 @@ function initFirebase() {
     firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
     firebaseAuth = firebase.auth();
     firebaseDb = firebase.firestore();
+    firebaseStorage = firebase.storage ? firebase.storage() : null;
     firebaseEnabled = true;
 
     firebaseAuth.onAuthStateChanged(function (user) {
@@ -1452,29 +2026,60 @@ function init() {
   qs("#saveBtn").onclick = function () { saveCurrentInspection(true); };
   qs("#backHomeBtn").onclick = function () { showTab("home"); };
   qs("#deleteCurrentBtn").onclick = deleteCurrentInspection;
-  qs("#addFenceSectionBtn").onclick = function () {
+
+  var addFenceBtn = qs("#addFenceSectionBtn");
+  if (addFenceBtn) addFenceBtn.onclick = function () {
     if (!inspectionStarted) return;
     addFenceSection();
     saveCurrentInspection(false);
   };
-  qs("#addClimbabilitySectionBtn").onclick = function () {
+
+  var addClimbabilityBtn = qs("#addClimbabilitySectionBtn");
+  if (addClimbabilityBtn) addClimbabilityBtn.onclick = function () {
     if (!inspectionStarted) return;
     addClimbabilitySection();
     saveCurrentInspection(false);
   };
 
+  var addBalconyBtn = qs("#addBalconySectionBtn");
+  if (addBalconyBtn) addBalconyBtn.onclick = function () {
+    if (!inspectionStarted) return;
+    addBalconySection();
+    saveCurrentInspection(false);
+  };
+
+  var addRetainingWallBtn = qs("#addRetainingWallSectionBtn");
+  if (addRetainingWallBtn) addRetainingWallBtn.onclick = function () {
+    if (!inspectionStarted) return;
+    addRetainingWallSection();
+    saveCurrentInspection(false);
+  };
+
+  var addBoundaryBtn = qs("#addBoundarySectionBtn");
+  if (addBoundaryBtn) addBoundaryBtn.onclick = function () {
+    if (!inspectionStarted) return;
+    addBoundarySection();
+    saveCurrentInspection(false);
+  };
+
+  var addGateBtn = qs("#addGateSectionBtn");
+  if (addGateBtn) addGateBtn.onclick = function () {
+    if (!inspectionStarted) return;
+    addGateSection();
+    saveCurrentInspection(false);
+  };
+
   qsa(".tab").forEach(function (tab) {
-  tab.addEventListener("click", function () {
-    var requestedTab = getTabName(tab);
+    tab.addEventListener("click", function () {
+      var requestedTab = getTabName(tab);
 
-    // If sitting on Home, only allow Home unless the user opens/starts an inspection.
-    if (requestedTab !== "home" && (currentTab === "home" || !inspectionStarted)) {
-      return;
-    }
+      if (requestedTab !== "home" && (currentTab === "home" || !inspectionStarted)) {
+        return;
+      }
 
-    showTab(requestedTab);
+      showTab(requestedTab);
+    });
   });
-});
 
   prepareBlankDropdowns(document);
   bindSaveEvents(document);
@@ -1485,5 +2090,6 @@ function init() {
   showTab("home");
   refreshSummary();
 }
+
 
 document.addEventListener("DOMContentLoaded", init);
