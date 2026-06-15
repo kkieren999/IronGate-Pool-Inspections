@@ -9,7 +9,14 @@ var climbabilityCounter = 0;
 var balconyCounter = 0;
 var retainingWallCounter = 0;
 var boundaryCounter = 0;
-var gateCounter = 1;
+var gateCounter = 0;
+var specialPoolFeatureCounter = 0;
+var waterBarrierCounter = 0;
+var barrierWindowCounter = 0;
+var barrierDoorCounter = 0;
+var temporaryFenceCounter = 0;
+var decommissionedPoolCounter = 0;
+var referralCounter = 0;
 var downloadDetailsState = [];
 var downloadTextareaState = [];
 var downloadModeActive = false;
@@ -94,7 +101,14 @@ function sanitizeInspectionForCloud(data) {
     "balconySections",
     "retainingWallSections",
     "boundarySections",
-    "gateSections"
+    "specialPoolFeatureSections",
+    "waterBarrierSections",
+    "barrierWindowSections",
+    "barrierDoorSections",
+    "gateSections",
+    "temporaryFenceSections",
+    "decommissionedPoolSections",
+    "referralSections"
   ].forEach(function (sectionKey) {
     (clean[sectionKey] || []).forEach(function (section) {
       section.photos = normalizePhotoArray(section.photos || []);
@@ -190,6 +204,7 @@ function showTab(tabName) {
     page.classList.toggle("active-page", page.id === tabName);
   });
 
+
   qsa(".tab").forEach(function (tab) {
     tab.classList.toggle("active", getTabName(tab) === tabName);
   });
@@ -199,6 +214,7 @@ function showTab(tabName) {
 }
 
 function updateNavLock() {
+
   qsa(".tab").forEach(function (tab) {
     var tabName = getTabName(tab);
 
@@ -243,7 +259,14 @@ function clearFormForNewInspection() {
     "#climbabilitySections",
     "#balconySections",
     "#retainingWallSections",
-    "#boundarySections"
+    "#boundarySections",
+    "#specialPoolFeatureSections",
+    "#waterBarrierSections",
+    "#barrierWindowSections",
+    "#barrierDoorSections",
+    "#temporaryFenceSections",
+    "#decommissionedPoolSections",
+    "#referralSections"
   ].forEach(function (selector) {
     var el = qs(selector);
     if (el) el.innerHTML = "";
@@ -262,7 +285,14 @@ function clearFormForNewInspection() {
   balconyCounter = 0;
   retainingWallCounter = 0;
   boundaryCounter = 0;
-  gateCounter = 1;
+  gateCounter = 0;
+  specialPoolFeatureCounter = 0;
+  waterBarrierCounter = 0;
+  barrierWindowCounter = 0;
+  barrierDoorCounter = 0;
+  temporaryFenceCounter = 0;
+  decommissionedPoolCounter = 0;
+  referralCounter = 0;
   updateRequiredFieldMarkers();
 }
 
@@ -352,7 +382,14 @@ function gatherInspectionData() {
     balconySections: gatherDynamicSections('.balcony-card'),
     retainingWallSections: gatherDynamicSections('.retaining-wall-card'),
     boundarySections: gatherDynamicSections('.boundary-card'),
+    specialPoolFeatureSections: gatherDynamicSections('.special-pool-feature-card'),
+    waterBarrierSections: gatherDynamicSections('.water-barrier-card'),
+    barrierWindowSections: gatherDynamicSections('.barrier-window-card'),
+    barrierDoorSections: gatherDynamicSections('.barrier-door-card'),
     gateSections: gatherDynamicSections('.gate-card'),
+    temporaryFenceSections: gatherDynamicSections('.temporary-fence-card'),
+    decommissionedPoolSections: gatherDynamicSections('.decommissioned-pool-card'),
+    referralSections: gatherDynamicSections('.referral-card'),
     inspectionStarted: inspectionStarted,
     updatedAt: new Date().toISOString()
   };
@@ -464,8 +501,36 @@ function loadInspectionIntoForm(data) {
     addBoundarySection(section);
   });
 
+  (data.specialPoolFeatureSections || []).forEach(function (section) {
+    addSpecialPoolFeatureSection(section);
+  });
+
+  (data.waterBarrierSections || []).forEach(function (section) {
+    addWaterBarrierSection(section);
+  });
+
+  (data.barrierWindowSections || []).forEach(function (section) {
+    addBarrierWindowSection(section);
+  });
+
+  (data.barrierDoorSections || []).forEach(function (section) {
+    addBarrierDoorSection(section);
+  });
+
   (data.gateSections || []).forEach(function (section) {
     addGateSection(section);
+  });
+
+  (data.temporaryFenceSections || []).forEach(function (section) {
+    addTemporaryFenceSection(section);
+  });
+
+  (data.decommissionedPoolSections || []).forEach(function (section) {
+    addDecommissionedPoolSection(section);
+  });
+
+  (data.referralSections || []).forEach(function (section) {
+    addReferralSection(section);
   });
 
   var photos = data.photos || {};
@@ -702,24 +767,21 @@ function barrierComplete(data) {
     "barrierSurroundsPool",
     "buildingAccessControlled",
     "neighbourAccessControlled",
-    "poolAreaFreeOfUnrelatedStructures",
-    "specialPoolFeatureLocation",
-    "specialPoolFeatureType",
-    "poolWallUsedAsBarrier",
-    "poolWallHeightCompliant",
-    "ladderAccessSecured",
-    "pumpFilterClimbableAccess",
-    "holdingTank300mmOrDeeper"
+    "poolAreaFreeOfUnrelatedStructures"
   ]);
 
   var fenceSections = data.fenceSections || [];
   var fenceComplete = fenceSections.length > 0 && fenceSections.every(function (section) {
-    return fieldsFilled(section.fields || {}, ["fenceLocation", "fenceType", "fenceHeight", "fenceGaps"]);
+    return fieldsFilled(section.fields || {}, ["fenceLocation", "fenceType", "fenceHeight", "fenceGroundClearance", "fenceGaps", "fenceStrengthRigid"]);
   });
 
   var optionalDynamicComplete = dynamicSectionsComplete(data.balconySections, ["balconyLocation", "balconyBarrierCompliant"]) &&
     dynamicSectionsComplete(data.retainingWallSections, ["retainingWallLocation", "retainingWallCompliant"]) &&
-    dynamicSectionsComplete(data.boundarySections, ["boundaryLocation", "boundaryCompliant"]);
+    dynamicSectionsComplete(data.boundarySections, ["boundaryLocation", "boundaryCompliant"]) &&
+    dynamicSectionsComplete(data.specialPoolFeatureSections, ["specialPoolFeatureLocation", "specialPoolFeatureType", "poolWallUsedAsBarrier", "poolWallHeightCompliant", "ladderAccessSecured"]) &&
+    dynamicSectionsComplete(data.waterBarrierSections, ["waterBarrierLocation", "waterBarrierType", "waterBarrierDepth", "waterBarrierCompliant"]) &&
+    dynamicSectionsComplete(data.barrierWindowSections, ["barrierWindowLocation", "barrierWindowOpeningRestricted", "barrierWindowFixingsRequireTools", "barrierWindowCompliant"]) &&
+    dynamicSectionsComplete(data.barrierDoorSections, ["barrierDoorLocation", "barrierDoorType", "barrierDoorSelfClosing", "barrierDoorSelfLatching", "barrierDoorCompliant"]);
 
   return staticComplete && fenceComplete && optionalDynamicComplete;
 }
@@ -754,82 +816,55 @@ function climbabilityComplete(data) {
 }
 
 function gateComplete(data) {
-  var f = data.fields || {};
-  var staticGateComplete = fieldsFilled(f, [
-    "gateLocation",
-    "gateType",
-    "gateSwingsAway",
-    "gateSelfClosing",
-    "gateSelfLatching",
-    "gateClosesFromAnyPosition",
-    "gateLatchPreventsReopening",
-    "gateFullArc",
-    "gateCannotBeProppedOpen",
-    "gateGapUnderCompliant",
-    "gateLatchHeightCompliant",
-    "gateLatchShielded",
-    "gateLatchReachThroughGaps",
-    "gateHingesSafe",
-    "gateHardwareSecure"
-  ]);
-
-  var addedGateSectionsComplete = dynamicSectionsComplete(data.gateSections, [
-    "gateSectionLocation",
-    "gateSectionType",
-    "gateSectionSwingsAway",
-    "gateSectionSelfClosing",
-    "gateSectionSelfLatching",
-    "gateSectionGapUnderCompliant",
-    "gateSectionLatchHeightCompliant",
-    "gateSectionHardwareSecure"
-  ]);
-
-  return staticGateComplete && addedGateSectionsComplete;
+  var gateSections = data.gateSections || [];
+  return gateSections.length > 0 && gateSections.every(function (section) {
+    return fieldsFilled(section.fields || {}, [
+      "gateLocation",
+      "gateType",
+      "gateSwingsAway",
+      "gateSelfClosing",
+      "gateSelfLatching",
+      "gateClosesFromAnyPosition",
+      "gateLatchPreventsReopening",
+      "gateFullArc",
+      "gateCannotBeProppedOpen",
+      "gateGapUnderCompliant",
+      "gateLatchHeightCompliant",
+      "gateLatchShielded",
+      "gateLatchReachThroughGaps",
+      "gateHingesSafe",
+      "gateHardwareSecure"
+    ]);
+  });
 }
 
 
 function safetyComplete(data) {
   var f = data.fields || {};
-  return fieldsFilled(f, [
+  var staticComplete = fieldsFilled(f, [
     "cprSignPresentSafety",
     "cprSignVisible",
     "cprSignWeatherproof",
     "cprSignMinimumSize",
     "cprSignContentCompliant",
-    "buildingAccessType",
-    "buildingAccessLocation",
-    "directBuildingAccessControlled",
-    "windowOpeningRestricted",
-    "screenBarsMeshFixed",
-    "fixingsRequireTools",
-    "doorAccessCompliant",
-    "fireExitNotCompromised",
     "sharpEdgesAbsent",
     "sharpProjectionsAbsent",
     "entrapmentSpacesAbsent",
     "looseBrokenComponentsAbsent",
     "rustedWeakenedComponentsAbsent",
     "siteHazardsNoted",
-    "temporaryFencingPresent",
-    "temporaryFenceSecure",
-    "buildingWorkAffectingBarrier",
-    "barrierNotAlteredUnsafely",
-    "minorRepairsMaintenanceNoted",
-    "poolClaimedDecommissioned",
-    "cannotHold300mmWater",
-    "convertedPoolUse",
-    "registerUpdateRequired",
-    "electricalIssueObserved",
-    "bondingConcernNoted",
-    "possibleAsbestosObserved",
-    "fireSafetyIssueObserved",
-    "referralRecommended",
     "overallInspectionResult",
     "certificateReadyToIssue",
     "nonconformityNoticeRequired",
     "reinspectionRequired",
     "ownerAdvisedActions"
   ]);
+
+  var optionalDynamicComplete = dynamicSectionsComplete(data.temporaryFenceSections, ["temporaryFencingPresent", "temporaryFenceSecure", "buildingWorkAffectingBarrier", "barrierNotAlteredUnsafely"]) &&
+    dynamicSectionsComplete(data.decommissionedPoolSections, ["poolClaimedDecommissioned", "cannotHold300mmWater", "convertedPoolUse", "registerUpdateRequired"]) &&
+    dynamicSectionsComplete(data.referralSections, ["referralType", "referralRecommended", "referralActionNoted"]);
+
+  return staticComplete && optionalDynamicComplete;
 }
 
 function fieldsFilled(fields, names) {
@@ -859,7 +894,14 @@ function getAllDynamicSections(data) {
     .concat(data.balconySections || [])
     .concat(data.retainingWallSections || [])
     .concat(data.boundarySections || [])
-    .concat(data.gateSections || []);
+    .concat(data.specialPoolFeatureSections || [])
+    .concat(data.waterBarrierSections || [])
+    .concat(data.barrierWindowSections || [])
+    .concat(data.barrierDoorSections || [])
+    .concat(data.gateSections || [])
+    .concat(data.temporaryFenceSections || [])
+    .concat(data.decommissionedPoolSections || [])
+    .concat(data.referralSections || []);
 }
 
 function inspectionNeedsAttention(data) {
@@ -990,13 +1032,71 @@ var REQUIRED_STATIC_FIELDS = [
   "ownerAdvisedActions"
 ];
 
+
+
+REQUIRED_STATIC_FIELDS = REQUIRED_STATIC_FIELDS.filter(function (name) {
+  return [
+    "specialPoolFeatureLocation",
+    "specialPoolFeatureType",
+    "poolWallUsedAsBarrier",
+    "poolWallHeightCompliant",
+    "ladderAccessSecured",
+    "pumpFilterClimbableAccess",
+    "holdingTank300mmOrDeeper",
+    "gateLocation",
+    "gateType",
+    "gateSwingsAway",
+    "gateSelfClosing",
+    "gateSelfLatching",
+    "gateClosesFromAnyPosition",
+    "gateLatchPreventsReopening",
+    "gateFullArc",
+    "gateCannotBeProppedOpen",
+    "gateGapUnderCompliant",
+    "gateLatchHeightCompliant",
+    "gateLatchShielded",
+    "gateLatchReachThroughGaps",
+    "gateHingesSafe",
+    "gateHardwareSecure",
+    "buildingAccessType",
+    "buildingAccessLocation",
+    "directBuildingAccessControlled",
+    "windowOpeningRestricted",
+    "screenBarsMeshFixed",
+    "fixingsRequireTools",
+    "doorAccessCompliant",
+    "fireExitNotCompromised",
+    "temporaryFencingPresent",
+    "temporaryFenceSecure",
+    "buildingWorkAffectingBarrier",
+    "barrierNotAlteredUnsafely",
+    "minorRepairsMaintenanceNoted",
+    "poolClaimedDecommissioned",
+    "cannotHold300mmWater",
+    "convertedPoolUse",
+    "registerUpdateRequired",
+    "electricalIssueObserved",
+    "bondingConcernNoted",
+    "possibleAsbestosObserved",
+    "fireSafetyIssueObserved",
+    "referralRecommended"
+  ].indexOf(name) === -1;
+});
+
 var REQUIRED_DYNAMIC_GROUPS = [
-  { selector: '.fence-card[data-section="fence"]', fields: ["fenceLocation", "fenceType", "fenceHeight", "fenceGaps"] },
+  { selector: '.fence-card[data-section="fence"]', fields: ["fenceLocation", "fenceType", "fenceHeight", "fenceGroundClearance", "fenceGaps", "fenceStrengthRigid"] },
   { selector: '.climbability-card[data-section="climbabilityItem"]', fields: ["nczLocation", "nczObjectType", "nczCompliant"] },
   { selector: ".balcony-card", fields: ["balconyLocation", "balconyBarrierCompliant"] },
   { selector: ".retaining-wall-card", fields: ["retainingWallLocation", "retainingWallCompliant"] },
   { selector: ".boundary-card", fields: ["boundaryLocation", "boundaryCompliant"] },
-  { selector: ".gate-card", fields: ["gateSectionLocation", "gateSectionType", "gateSectionSwingsAway", "gateSectionSelfClosing", "gateSectionSelfLatching", "gateSectionGapUnderCompliant", "gateSectionLatchHeightCompliant", "gateSectionHardwareSecure"] }
+  { selector: ".special-pool-feature-card", fields: ["specialPoolFeatureLocation", "specialPoolFeatureType", "poolWallUsedAsBarrier", "poolWallHeightCompliant", "ladderAccessSecured"] },
+  { selector: ".water-barrier-card", fields: ["waterBarrierLocation", "waterBarrierType", "waterBarrierDepth", "waterBarrierCompliant"] },
+  { selector: ".barrier-window-card", fields: ["barrierWindowLocation", "barrierWindowOpeningRestricted", "barrierWindowFixingsRequireTools", "barrierWindowCompliant"] },
+  { selector: ".barrier-door-card", fields: ["barrierDoorLocation", "barrierDoorType", "barrierDoorSelfClosing", "barrierDoorSelfLatching", "barrierDoorCompliant"] },
+  { selector: ".gate-card", fields: ["gateLocation", "gateType", "gateSwingsAway", "gateSelfClosing", "gateSelfLatching", "gateClosesFromAnyPosition", "gateLatchPreventsReopening", "gateFullArc", "gateCannotBeProppedOpen", "gateGapUnderCompliant", "gateLatchHeightCompliant", "gateLatchShielded", "gateLatchReachThroughGaps", "gateHingesSafe", "gateHardwareSecure"] },
+  { selector: ".temporary-fence-card", fields: ["temporaryFencingPresent", "temporaryFenceSecure", "buildingWorkAffectingBarrier", "barrierNotAlteredUnsafely"] },
+  { selector: ".decommissioned-pool-card", fields: ["poolClaimedDecommissioned", "cannotHold300mmWater", "convertedPoolUse", "registerUpdateRequired"] },
+  { selector: ".referral-card", fields: ["referralType", "referralRecommended", "referralActionNoted"] }
 ];
 
 function getFieldElementValue(el) {
@@ -1170,17 +1270,32 @@ function fenceTemplate(number) {
       '<h3>Fence Section ' + number + '</h3>' +
       '<button class="remove-section-btn" type="button">Remove</button>' +
     '</div>' +
-    '<label class="check-field defect-toggle">' +
-      '<input data-save name="fenceNonCompliant" type="checkbox" />' +
-      '<span>Non-compliant</span>' +
-    '</label>' +
-    '<div class="form-grid">' +
-      '<label class="field full"><span>Location</span><input data-save name="fenceLocation" type="text" placeholder="e.g. North side fence" /></label>' +
-      '<label class="field"><span>Fence Type</span><select data-save name="fenceType"><option value="">Select type</option><option>Aluminium</option><option>Glass</option><option>Timber</option><option>Chainwire / mesh</option><option>Masonry</option><option>Other</option></select></label>' +
-      '<label class="field"><span>Height (mm)</span><input data-save name="fenceHeight" type="number" placeholder="1200" /></label>' +
-      '<label class="field"><span>Ground Clearance (mm)</span><input data-save name="fenceGroundClearance" type="number" placeholder="100" /></label>' +
-      '<label class="field"><span>Openings / Gaps Compliant</span><select data-save name="fenceGaps"><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
-      '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="fenceComments" placeholder="Notes, non-compliance details or recommendation..."></textarea></label>' +
+    '<div class="details-group numbered-group">' +
+      '<div class="group-title-row"><span class="group-number">A</span><h3>Identity / Location</h3></div>' +
+      '<div class="form-grid">' +
+        '<label class="field full"><span>Location</span><input data-save name="fenceLocation" type="text" placeholder="e.g. North side fence" /></label>' +
+        '<label class="field"><span>Fence Type</span><select data-save name="fenceType"><option value="">Select type</option><option>Aluminium</option><option>Glass</option><option>Timber</option><option>Chainwire / mesh</option><option>Masonry</option><option>Other</option></select></label>' +
+        '<label class="field"><span>Fence material / finish safe</span><select data-save name="fenceMaterialFinishSafe"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '</div>' +
+    '</div>' +
+    '<div class="details-group numbered-group">' +
+      '<div class="group-title-row"><span class="group-number">B</span><h3>Measurements</h3></div>' +
+      '<div class="form-grid">' +
+        '<label class="field"><span>Effective height (mm)</span><input data-save name="fenceHeight" type="number" placeholder="1200" /></label>' +
+        '<label class="field"><span>Ground clearance (mm)</span><input data-save name="fenceGroundClearance" type="number" placeholder="100" /></label>' +
+        '<label class="field"><span>Openings / gaps compliant</span><select data-save name="fenceGaps"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Mesh / perforated aperture size (mm)</span><input data-save name="fenceApertureSize" type="number" placeholder="If applicable" /></label>' +
+      '</div>' +
+    '</div>' +
+    '<div class="details-group numbered-group">' +
+      '<div class="group-title-row"><span class="group-number">C</span><h3>NCZ / Strength / Condition</h3></div>' +
+      '<div class="form-grid">' +
+        '<label class="field"><span>NCZ clear for this fence run</span><select data-save name="fenceNCZClear"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Projections / indentations compliant</span><select data-save name="fenceProjectionsCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Strength / rigidity acceptable</span><select data-save name="fenceStrengthRigid"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Posts / footings / fixings secure</span><select data-save name="fenceFixingsSecure"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="fenceComments" placeholder="Notes, measurements, non-compliance details or recommendation..."></textarea></label>' +
+      '</div>' +
     '</div>' +
     '<div class="photo-widget" data-photo-area="fence-' + number + '">' +
       '<button class="camera-btn" type="button">+ Evidence Photo</button>' +
@@ -1207,8 +1322,11 @@ function addFenceSection(data) {
   }
 
   card.querySelector(".remove-section-btn").addEventListener("click", function () {
+    var paths = collectPhotoPaths({ photos: {}, tempSections: [{ photos: gatherPhotosFromGrid(card.querySelector(".photo-grid")) }] });
+    deletePhotoPathsFromStorage(paths);
     card.remove();
     renumberFenceSections();
+    updateRequiredFieldMarkers();
     saveCurrentInspection(false);
     refreshSummary();
   });
@@ -1222,6 +1340,7 @@ function addFenceSection(data) {
     restorePhotosToGrid(card.querySelector(".photo-grid"), data.photos || []);
   }
 
+  updateRequiredFieldMarkers();
   refreshSummary();
 }
 
@@ -1236,18 +1355,15 @@ function renumberFenceSections() {
 function climbabilityTemplate(number) {
   return '' +
     '<div class="fence-card-head">' +
-      '<h3>Climbability Check ' + number + '</h3>' +
+      '<h3>NCZ / Climbable Object ' + number + '</h3>' +
       '<button class="remove-section-btn" type="button">Remove</button>' +
     '</div>' +
-    '<label class="check-field defect-toggle">' +
-      '<input data-save name="climbabilityNonCompliant" type="checkbox" />' +
-      '<span>Non-compliant</span>' +
-    '</label>' +
     '<div class="form-grid">' +
       '<label class="field full"><span>Location</span><input data-save name="nczLocation" type="text" placeholder="e.g. Near pump equipment" /></label>' +
-      '<label class="field"><span>Object Type</span><select data-save name="nczObjectType"><option>None observed</option><option>Tree / vegetation</option><option>Pot plant</option><option>Furniture</option><option>Pool equipment</option><option>Retaining wall</option><option>Tap / power outlet</option><option>Other</option></select></label>' +
+      '<label class="field"><span>Object Type</span><select data-save name="nczObjectType"><option value=""></option><option>Tree / vegetation</option><option>Pot plant</option><option>Furniture</option><option>Pool equipment</option><option>Retaining wall</option><option>Tap / power outlet</option><option>Step / ledge</option><option>Other</option></select></label>' +
       '<label class="field"><span>Distance From Barrier (mm)</span><input data-save name="nczDistance" type="number" placeholder="900" /></label>' +
-      '<label class="field"><span>NCZ Compliant</span><select data-save name="nczCompliant"><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Horizontal surface over 10mm?</span><select data-save name="nczHorizontalSurface"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>NCZ Compliant</span><select data-save name="nczCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
       '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="nczComments" placeholder="Notes, non-compliance details or recommendation..."></textarea></label>' +
     '</div>' +
     '<div class="photo-widget" data-photo-area="climbability-' + number + '">' +
@@ -1290,6 +1406,7 @@ function addClimbabilitySection(data) {
     restorePhotosToGrid(card.querySelector(".photo-grid"), data.photos || []);
   }
 
+  updateRequiredFieldMarkers();
   refreshSummary();
 }
 
@@ -1350,6 +1467,7 @@ function addDynamicSection(options, data) {
     deletePhotoPathsFromStorage(paths);
     card.remove();
     options.renumber();
+    updateRequiredFieldMarkers();
     saveCurrentInspection(false);
     refreshSummary();
   });
@@ -1363,6 +1481,7 @@ function addDynamicSection(options, data) {
     restorePhotosToGrid(card.querySelector(".photo-grid"), data.photos || []);
   }
 
+  updateRequiredFieldMarkers();
   refreshSummary();
 }
 
@@ -1372,10 +1491,6 @@ function balconyTemplate(number) {
       '<h3>Balcony Check ' + number + '</h3>' +
       '<button class="remove-section-btn" type="button">Remove</button>' +
     '</div>' +
-    '<label class="check-field defect-toggle">' +
-      '<input data-save name="balconyNonCompliant" type="checkbox" />' +
-      '<span>Non-compliant</span>' +
-    '</label>' +
     '<div class="form-grid">' +
       '<label class="field full"><span>Location</span><input data-save name="balconyLocation" type="text" placeholder="e.g. Balcony overlooking pool area" /></label>' +
       '<label class="field"><span>Balcony / Deck Type</span><select data-save name="balconyType"><option value=""></option><option>Balcony</option><option>Deck</option><option>Raised platform</option><option>Stairs / landing</option><option>Other</option></select></label>' +
@@ -1417,10 +1532,6 @@ function retainingWallTemplate(number) {
       '<h3>Retaining Wall / Level Change ' + number + '</h3>' +
       '<button class="remove-section-btn" type="button">Remove</button>' +
     '</div>' +
-    '<label class="check-field defect-toggle">' +
-      '<input data-save name="retainingWallNonCompliant" type="checkbox" />' +
-      '<span>Non-compliant</span>' +
-    '</label>' +
     '<div class="form-grid">' +
       '<label class="field full"><span>Location</span><input data-save name="retainingWallLocation" type="text" placeholder="e.g. Rear retaining wall" /></label>' +
       '<label class="field"><span>Type</span><select data-save name="retainingWallType"><option value=""></option><option>Retaining wall</option><option>Level change</option><option>Steps</option><option>Raised garden bed</option><option>Sloping ground</option><option>Other</option></select></label>' +
@@ -1462,10 +1573,6 @@ function boundaryTemplate(number) {
       '<h3>Boundary Section ' + number + '</h3>' +
       '<button class="remove-section-btn" type="button">Remove</button>' +
     '</div>' +
-    '<label class="check-field defect-toggle">' +
-      '<input data-save name="boundaryNonCompliant" type="checkbox" />' +
-      '<span>Non-compliant</span>' +
-    '</label>' +
     '<div class="form-grid">' +
       '<label class="field full"><span>Location</span><input data-save name="boundaryLocation" type="text" placeholder="e.g. Left boundary fence" /></label>' +
       '<label class="field"><span>Boundary Side</span><select data-save name="boundarySide"><option value=""></option><option>Front boundary</option><option>Rear boundary</option><option>Left boundary</option><option>Right boundary</option><option>Neighbour side</option><option>Other</option></select></label>' +
@@ -1502,26 +1609,191 @@ function renumberBoundarySections() {
   boundaryCounter = qsa(".boundary-card").length;
 }
 
+
+function specialPoolFeatureTemplate(number) {
+  return '' +
+    '<div class="fence-card-head"><h3>Special Pool Feature Check ' + number + '</h3><button class="remove-section-btn" type="button">Remove</button></div>' +
+    '<div class="form-grid">' +
+      '<label class="field full"><span>Location</span><input data-save name="specialPoolFeatureLocation" type="text" placeholder="e.g. Above-ground pool wall / wet-edge side" /></label>' +
+      '<label class="field"><span>Feature Type</span><select data-save name="specialPoolFeatureType"><option value=""></option><option>Above-ground pool</option><option>Inflatable pool</option><option>Wet-edge pool</option><option>Infinity edge</option><option>Spa wall</option><option>Other</option></select></label>' +
+      '<label class="field"><span>Pool wall used as barrier</span><select data-save name="poolWallUsedAsBarrier"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Pool wall height compliant</span><select data-save name="poolWallHeightCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Ladder / access point secured</span><select data-save name="ladderAccessSecured"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Pump/filter creates climbable access</span><select data-save name="pumpFilterClimbableAccess"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Holding tank 300mm or deeper</span><select data-save name="holdingTank300mmOrDeeper"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
+      '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="specialPoolFeatureComments" placeholder="Notes about above-ground, inflatable, wet-edge, infinity or other special feature..."></textarea></label>' +
+    '</div>' +
+    '<div class="photo-widget" data-photo-area="special-pool-feature-' + number + '"><button class="camera-btn" type="button">+ Evidence Photo</button><input type="file" accept="image/*" capture="environment" multiple hidden /><div class="photo-grid"></div></div>';
+}
+
+function addSpecialPoolFeatureSection(data) {
+  addDynamicSection({ listSelector: "#specialPoolFeatureSections", className: "fence-card special-pool-feature-card", sectionName: "specialPoolFeature", counter: specialPoolFeatureCounter, template: specialPoolFeatureTemplate, renumber: renumberSpecialPoolFeatureSections }, data);
+  specialPoolFeatureCounter = qsa(".special-pool-feature-card").length;
+}
+
+function renumberSpecialPoolFeatureSections() {
+  qsa(".special-pool-feature-card").forEach(function (card, index) { var h3 = card.querySelector("h3"); if (h3) h3.textContent = "Special Pool Feature Check " + (index + 1); });
+  specialPoolFeatureCounter = qsa(".special-pool-feature-card").length;
+}
+
+function waterBarrierTemplate(number) {
+  return '' +
+    '<div class="fence-card-head"><h3>Permanent Body of Water Check ' + number + '</h3><button class="remove-section-btn" type="button">Remove</button></div>' +
+    '<div class="form-grid">' +
+      '<label class="field full"><span>Location</span><input data-save name="waterBarrierLocation" type="text" placeholder="e.g. Canal edge / lake side" /></label>' +
+      '<label class="field"><span>Water body type</span><select data-save name="waterBarrierType"><option value=""></option><option>Canal</option><option>Lake</option><option>River</option><option>Permanent pond</option><option>Other</option></select></label>' +
+      '<label class="field"><span>Depth at pool-area edge (mm)</span><input data-save name="waterBarrierDepth" type="number" placeholder="300" /></label>' +
+      '<label class="field"><span>Compliant as barrier</span><select data-save name="waterBarrierCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="waterBarrierComments" placeholder="Notes about permanent water body, access risks or recommendation..."></textarea></label>' +
+    '</div>' +
+    '<div class="photo-widget" data-photo-area="water-barrier-' + number + '"><button class="camera-btn" type="button">+ Evidence Photo</button><input type="file" accept="image/*" capture="environment" multiple hidden /><div class="photo-grid"></div></div>';
+}
+
+function addWaterBarrierSection(data) {
+  addDynamicSection({ listSelector: "#waterBarrierSections", className: "fence-card water-barrier-card", sectionName: "waterBarrier", counter: waterBarrierCounter, template: waterBarrierTemplate, renumber: renumberWaterBarrierSections }, data);
+  waterBarrierCounter = qsa(".water-barrier-card").length;
+}
+
+function renumberWaterBarrierSections() {
+  qsa(".water-barrier-card").forEach(function (card, index) { var h3 = card.querySelector("h3"); if (h3) h3.textContent = "Permanent Body of Water Check " + (index + 1); });
+  waterBarrierCounter = qsa(".water-barrier-card").length;
+}
+
+function barrierWindowTemplate(number) {
+  return '' +
+    '<div class="fence-card-head"><h3>Window Check ' + number + '</h3><button class="remove-section-btn" type="button">Remove</button></div>' +
+    '<div class="form-grid">' +
+      '<label class="field full"><span>Window Location</span><input data-save name="barrierWindowLocation" type="text" placeholder="e.g. Bedroom window facing pool area" /></label>' +
+      '<label class="field"><span>Opening restricted where required</span><select data-save name="barrierWindowOpeningRestricted"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Screen / bars / mesh fixed correctly</span><select data-save name="barrierWindowScreenBarsMeshFixed"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Fixings require tools to remove</span><select data-save name="barrierWindowFixingsRequireTools"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Compliant</span><select data-save name="barrierWindowCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="barrierWindowComments" placeholder="Notes about window opening, restrictor, bars, mesh, fixings or recommendation..."></textarea></label>' +
+    '</div>' +
+    '<div class="photo-widget" data-photo-area="barrier-window-' + number + '"><button class="camera-btn" type="button">+ Evidence Photo</button><input type="file" accept="image/*" capture="environment" multiple hidden /><div class="photo-grid"></div></div>';
+}
+
+function addBarrierWindowSection(data) {
+  addDynamicSection({ listSelector: "#barrierWindowSections", className: "fence-card barrier-window-card", sectionName: "barrierWindow", counter: barrierWindowCounter, template: barrierWindowTemplate, renumber: renumberBarrierWindowSections }, data);
+  barrierWindowCounter = qsa(".barrier-window-card").length;
+}
+
+function renumberBarrierWindowSections() {
+  qsa(".barrier-window-card").forEach(function (card, index) { var h3 = card.querySelector("h3"); if (h3) h3.textContent = "Window Check " + (index + 1); });
+  barrierWindowCounter = qsa(".barrier-window-card").length;
+}
+
+function barrierDoorTemplate(number) {
+  return '' +
+    '<div class="fence-card-head"><h3>Door / Building Access Check ' + number + '</h3><button class="remove-section-btn" type="button">Remove</button></div>' +
+    '<div class="form-grid">' +
+      '<label class="field full"><span>Location</span><input data-save name="barrierDoorLocation" type="text" placeholder="e.g. Patio sliding door" /></label>' +
+      '<label class="field"><span>Access Type</span><select data-save name="barrierDoorType"><option value=""></option><option>Door</option><option>Sliding door</option><option>Pet door</option><option>Building wall</option><option>Other</option></select></label>' +
+      '<label class="field"><span>Self-closing</span><select data-save name="barrierDoorSelfClosing"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Self-latching</span><select data-save name="barrierDoorSelfLatching"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Direct access controlled</span><select data-save name="barrierDoorCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Fire exit not compromised</span><select data-save name="barrierDoorFireExitSafe"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="barrierDoorComments" placeholder="Notes about door/building access, latch, fire exit or recommendation..."></textarea></label>' +
+    '</div>' +
+    '<div class="photo-widget" data-photo-area="barrier-door-' + number + '"><button class="camera-btn" type="button">+ Evidence Photo</button><input type="file" accept="image/*" capture="environment" multiple hidden /><div class="photo-grid"></div></div>';
+}
+
+function addBarrierDoorSection(data) {
+  addDynamicSection({ listSelector: "#barrierDoorSections", className: "fence-card barrier-door-card", sectionName: "barrierDoor", counter: barrierDoorCounter, template: barrierDoorTemplate, renumber: renumberBarrierDoorSections }, data);
+  barrierDoorCounter = qsa(".barrier-door-card").length;
+}
+
+function renumberBarrierDoorSections() {
+  qsa(".barrier-door-card").forEach(function (card, index) { var h3 = card.querySelector("h3"); if (h3) h3.textContent = "Door / Building Access Check " + (index + 1); });
+  barrierDoorCounter = qsa(".barrier-door-card").length;
+}
+
+function temporaryFenceTemplate(number) {
+  return '' +
+    '<div class="fence-card-head"><h3>Temporary Fencing Check ' + number + '</h3><button class="remove-section-btn" type="button">Remove</button></div>' +
+    '<div class="form-grid">' +
+      '<label class="field"><span>Temporary fencing present if required</span><select data-save name="temporaryFencingPresent"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Temporary fence appears secure</span><select data-save name="temporaryFenceSecure"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Building work affecting barrier noted</span><select data-save name="buildingWorkAffectingBarrier"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Barrier not removed or altered unsafely</span><select data-save name="barrierNotAlteredUnsafely"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Minor repairs / maintenance noted</span><select data-save name="minorRepairsMaintenanceNoted"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
+      '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="temporaryFencingComments" placeholder="Notes about temporary fencing, building work, repairs or maintenance..."></textarea></label>' +
+    '</div>' +
+    '<div class="photo-widget" data-photo-area="temporary-fencing-' + number + '"><button class="camera-btn" type="button">+ Evidence Photo</button><input type="file" accept="image/*" capture="environment" multiple hidden /><div class="photo-grid"></div></div>';
+}
+
+function addTemporaryFenceSection(data) { addDynamicSection({ listSelector: "#temporaryFenceSections", className: "fence-card temporary-fence-card", sectionName: "temporaryFence", counter: temporaryFenceCounter, template: temporaryFenceTemplate, renumber: renumberTemporaryFenceSections }, data); temporaryFenceCounter = qsa(".temporary-fence-card").length; }
+function renumberTemporaryFenceSections() { qsa(".temporary-fence-card").forEach(function (card, index) { var h3 = card.querySelector("h3"); if (h3) h3.textContent = "Temporary Fencing Check " + (index + 1); }); temporaryFenceCounter = qsa(".temporary-fence-card").length; }
+
+function decommissionedPoolTemplate(number) {
+  return '' +
+    '<div class="fence-card-head"><h3>Decommissioned / Converted Pool Check ' + number + '</h3><button class="remove-section-btn" type="button">Remove</button></div>' +
+    '<div class="form-grid">' +
+      '<label class="field"><span>Pool claimed decommissioned</span><select data-save name="poolClaimedDecommissioned"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Cannot hold 300mm or more of water</span><select data-save name="cannotHold300mmWater"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Converted to fishpond / other use</span><select data-save name="convertedPoolUse"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Register update required</span><select data-save name="registerUpdateRequired"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
+      '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="decommissionedPoolComments" placeholder="Notes about decommissioning, destruction, conversion or register update..."></textarea></label>' +
+    '</div>' +
+    '<div class="photo-widget" data-photo-area="decommissioned-pool-' + number + '"><button class="camera-btn" type="button">+ Evidence Photo</button><input type="file" accept="image/*" capture="environment" multiple hidden /><div class="photo-grid"></div></div>';
+}
+
+function addDecommissionedPoolSection(data) { addDynamicSection({ listSelector: "#decommissionedPoolSections", className: "fence-card decommissioned-pool-card", sectionName: "decommissionedPool", counter: decommissionedPoolCounter, template: decommissionedPoolTemplate, renumber: renumberDecommissionedPoolSections }, data); decommissionedPoolCounter = qsa(".decommissioned-pool-card").length; }
+function renumberDecommissionedPoolSections() { qsa(".decommissioned-pool-card").forEach(function (card, index) { var h3 = card.querySelector("h3"); if (h3) h3.textContent = "Decommissioned / Converted Pool Check " + (index + 1); }); decommissionedPoolCounter = qsa(".decommissioned-pool-card").length; }
+
+function referralTemplate(number) {
+  return '' +
+    '<div class="fence-card-head"><h3>Electrical / Asbestos / Fire Referral ' + number + '</h3><button class="remove-section-btn" type="button">Remove</button></div>' +
+    '<div class="form-grid">' +
+      '<label class="field"><span>Referral Type</span><select data-save name="referralType"><option value=""></option><option>Electrical safety</option><option>Bonding / conductive fencing</option><option>Possible asbestos</option><option>Fire safety</option><option>Other specialist referral</option></select></label>' +
+      '<label class="field"><span>Referral recommended</span><select data-save name="referralRecommended"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
+      '<label class="field"><span>Action noted for owner</span><select data-save name="referralActionNoted"><option value=""></option><option>Yes</option><option>No</option><option>N/A</option></select></label>' +
+      '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="referralComments" placeholder="Notes about electrical, asbestos, fire or other referral..."></textarea></label>' +
+    '</div>' +
+    '<div class="photo-widget" data-photo-area="referral-' + number + '"><button class="camera-btn" type="button">+ Evidence Photo</button><input type="file" accept="image/*" capture="environment" multiple hidden /><div class="photo-grid"></div></div>';
+}
+
+function addReferralSection(data) { addDynamicSection({ listSelector: "#referralSections", className: "fence-card referral-card", sectionName: "referral", counter: referralCounter, template: referralTemplate, renumber: renumberReferralSections }, data); referralCounter = qsa(".referral-card").length; }
+function renumberReferralSections() { qsa(".referral-card").forEach(function (card, index) { var h3 = card.querySelector("h3"); if (h3) h3.textContent = "Electrical / Asbestos / Fire Referral " + (index + 1); }); referralCounter = qsa(".referral-card").length; }
+
 function gateTemplate(number) {
   return '' +
     '<div class="fence-card-head">' +
-      '<h3>Gate Check ' + number + '</h3>' +
+      '<h3>Gate ' + number + '</h3>' +
       '<button class="remove-section-btn" type="button">Remove</button>' +
     '</div>' +
-    '<label class="check-field defect-toggle">' +
-      '<input data-save name="gateSectionDefect" type="checkbox" />' +
-      '<span>Non-compliant</span>' +
-    '</label>' +
-    '<div class="form-grid">' +
-      '<label class="field full"><span>Gate Location</span><input data-save name="gateSectionLocation" type="text" placeholder="e.g. Side gate" /></label>' +
-      '<label class="field"><span>Gate Type</span><select data-save name="gateSectionType"><option value=""></option><option>Single leaf gate</option><option>Double leaf gate</option><option>Glass gate</option><option>Aluminium gate</option><option>Timber gate</option><option>Mesh / chainwire gate</option><option>Other</option></select></label>' +
-      '<label class="field"><span>Opens away from pool</span><select data-save name="gateSectionSwingsAway"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
-      '<label class="field"><span>Self-closes</span><select data-save name="gateSectionSelfClosing"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
-      '<label class="field"><span>Self-latches</span><select data-save name="gateSectionSelfLatching"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
-      '<label class="field"><span>Gap under gate compliant</span><select data-save name="gateSectionGapUnderCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
-      '<label class="field"><span>Latch height compliant</span><select data-save name="gateSectionLatchHeightCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
-      '<label class="field"><span>Hardware secure</span><select data-save name="gateSectionHardwareSecure"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
-      '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="gateSectionComments" placeholder="Notes about additional gate check..."></textarea></label>' +
+    '<div class="details-group numbered-group">' +
+      '<div class="group-title-row"><span class="group-number">A</span><h3>Gate identity / location</h3></div>' +
+      '<div class="form-grid">' +
+        '<label class="field full"><span>Gate Location</span><input data-save name="gateLocation" type="text" placeholder="e.g. Side gate" /></label>' +
+        '<label class="field"><span>Gate Type</span><select data-save name="gateType"><option value=""></option><option>Single leaf gate</option><option>Double leaf gate</option><option>Glass gate</option><option>Aluminium gate</option><option>Timber gate</option><option>Mesh / chainwire gate</option><option>Other</option></select></label>' +
+      '</div>' +
+    '</div>' +
+    '<div class="details-group numbered-group">' +
+      '<div class="group-title-row"><span class="group-number">B</span><h3>Operation / latching</h3></div>' +
+      '<div class="form-grid">' +
+        '<label class="field"><span>Opens away from pool</span><select data-save name="gateSwingsAway"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Self-closes</span><select data-save name="gateSelfClosing"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Self-latches</span><select data-save name="gateSelfLatching"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Closes from any open position</span><select data-save name="gateClosesFromAnyPosition"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Latch prevents reopening</span><select data-save name="gateLatchPreventsReopening"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Gate swings freely through full arc</span><select data-save name="gateFullArc"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Gate cannot be propped open</span><select data-save name="gateCannotBeProppedOpen"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+      '</div>' +
+    '</div>' +
+    '<div class="details-group numbered-group">' +
+      '<div class="group-title-row"><span class="group-number">C</span><h3>Gaps / latch / hardware</h3></div>' +
+      '<div class="form-grid">' +
+        '<label class="field"><span>Gap under gate (mm)</span><input data-save name="gateGapUnder" type="number" placeholder="100" /></label>' +
+        '<label class="field"><span>Gap under gate compliant</span><select data-save name="gateGapUnderCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Latch height (mm)</span><input data-save name="gateLatchHeight" type="number" placeholder="1500" /></label>' +
+        '<label class="field"><span>Latch height compliant</span><select data-save name="gateLatchHeightCompliant"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Latch shielded if required</span><select data-save name="gateLatchShielded"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Latch cannot be reached through gaps</span><select data-save name="gateLatchReachThroughGaps"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Hinges safe / not climbable</span><select data-save name="gateHingesSafe"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field"><span>Gate hardware secure and functional</span><select data-save name="gateHardwareSecure"><option value=""></option><option>Pass</option><option>Fail</option><option>N/A</option></select></label>' +
+        '<label class="field full"><span>Comments / Recommendation</span><textarea data-save name="gateComments" placeholder="Notes about gate operation, latch, hinges, hardware, gaps or recommendation..."></textarea></label>' +
+      '</div>' +
     '</div>' +
     '<div class="photo-widget" data-photo-area="gate-' + number + '">' +
       '<button class="camera-btn" type="button">+ Evidence Photo</button>' +
@@ -1539,15 +1811,15 @@ function addGateSection(data) {
     template: gateTemplate,
     renumber: renumberGateSections
   }, data);
-  gateCounter = 1 + qsa(".gate-card").length;
+  gateCounter = qsa(".gate-card").length;
 }
 
 function renumberGateSections() {
   qsa(".gate-card").forEach(function (card, index) {
     var h3 = card.querySelector("h3");
-    if (h3) h3.textContent = "Gate Check " + (index + 2);
+    if (h3) h3.textContent = "Gate " + (index + 1);
   });
-  gateCounter = 1 + qsa(".gate-card").length;
+  gateCounter = qsa(".gate-card").length;
 }
 
 
@@ -1789,7 +2061,14 @@ function collectPhotoPaths(data) {
     "balconySections",
     "retainingWallSections",
     "boundarySections",
+    "specialPoolFeatureSections",
+    "waterBarrierSections",
+    "barrierWindowSections",
+    "barrierDoorSections",
     "gateSections",
+    "temporaryFenceSections",
+    "decommissionedPoolSections",
+    "referralSections",
     "tempSections"
   ].forEach(function (sectionKey) {
     (data && data[sectionKey] || []).forEach(function (section) {
@@ -2283,6 +2562,57 @@ function init() {
     addGateSection();
     saveCurrentInspection(false);
   };
+
+
+  var addSpecialPoolFeatureBtn = qs("#addSpecialPoolFeatureSectionBtn");
+  if (addSpecialPoolFeatureBtn) addSpecialPoolFeatureBtn.onclick = function () {
+    if (!inspectionStarted) return;
+    addSpecialPoolFeatureSection();
+    saveCurrentInspection(false);
+  };
+
+  var addWaterBarrierBtn = qs("#addWaterBarrierSectionBtn");
+  if (addWaterBarrierBtn) addWaterBarrierBtn.onclick = function () {
+    if (!inspectionStarted) return;
+    addWaterBarrierSection();
+    saveCurrentInspection(false);
+  };
+
+  var addBarrierWindowBtn = qs("#addBarrierWindowSectionBtn");
+  if (addBarrierWindowBtn) addBarrierWindowBtn.onclick = function () {
+    if (!inspectionStarted) return;
+    addBarrierWindowSection();
+    saveCurrentInspection(false);
+  };
+
+  var addBarrierDoorBtn = qs("#addBarrierDoorSectionBtn");
+  if (addBarrierDoorBtn) addBarrierDoorBtn.onclick = function () {
+    if (!inspectionStarted) return;
+    addBarrierDoorSection();
+    saveCurrentInspection(false);
+  };
+
+  var addTemporaryFenceBtn = qs("#addTemporaryFenceSectionBtn");
+  if (addTemporaryFenceBtn) addTemporaryFenceBtn.onclick = function () {
+    if (!inspectionStarted) return;
+    addTemporaryFenceSection();
+    saveCurrentInspection(false);
+  };
+
+  var addDecommissionedPoolBtn = qs("#addDecommissionedPoolSectionBtn");
+  if (addDecommissionedPoolBtn) addDecommissionedPoolBtn.onclick = function () {
+    if (!inspectionStarted) return;
+    addDecommissionedPoolSection();
+    saveCurrentInspection(false);
+  };
+
+  var addReferralBtn = qs("#addReferralSectionBtn");
+  if (addReferralBtn) addReferralBtn.onclick = function () {
+    if (!inspectionStarted) return;
+    addReferralSection();
+    saveCurrentInspection(false);
+  };
+
 
   qsa(".tab").forEach(function (tab) {
     tab.addEventListener("click", function () {

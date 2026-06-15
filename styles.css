@@ -1930,3 +1930,26 @@ body.auth-checking .app-shell {
   color: var(--danger);
   font-weight: 900;
 }
+
+
+/* Rebuild: special-case add sections and repeatable cards */
+.helper-text {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.fence-card .details-group {
+  margin-top: 14px;
+}
+
+.fence-card .details-group:first-of-type {
+  margin-top: 0;
+}
+
+.gate-section-body .fence-sections,
+.barrier-check-body .fence-sections,
+.safety-check-body .fence-sections {
+  margin-top: 12px;
+}
