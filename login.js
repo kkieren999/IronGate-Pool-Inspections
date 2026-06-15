@@ -36,6 +36,29 @@ function getUserProfileRef(user) {
   return loginDb.collection("users").doc(user.uid);
 }
 
+function getGooglePhotoUrl(user) {
+  if (user && user.photoURL) return user.photoURL;
+  var providers = user && user.providerData ? user.providerData : [];
+  for (var i = 0; i < providers.length; i += 1) {
+    if (providers[i].providerId === "google.com" && providers[i].photoURL) return providers[i].photoURL;
+  }
+  return "";
+}
+
+function buildInitialInspectorProfile(user) {
+  var googleUrl = getGooglePhotoUrl(user);
+  return {
+    inspectorName: user && user.displayName ? user.displayName : "",
+    licenceNumber: "",
+    inspectorEmail: user && user.email ? user.email : "",
+    inspectorPhone: "",
+    businessName: "",
+    profileIcon: googleUrl
+      ? { type: "google", photoURL: googleUrl, avatarId: "" }
+      : { type: "default", photoURL: "", avatarId: "default" }
+  };
+}
+
 function createPendingProfile(user) {
   var providerIds = (user.providerData || []).map(function (provider) {
     return provider.providerId;
@@ -47,6 +70,8 @@ function createPendingProfile(user) {
     approved: false,
     role: "pending",
     providerIds: providerIds,
+    inspectorProfile: buildInitialInspectorProfile(user),
+    profileCompleted: false,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   }, { merge: true });
@@ -64,7 +89,9 @@ function ensureUserProfile(user) {
         email: user.email || "",
         displayName: user.displayName || "",
         approved: false,
-        role: "pending"
+        role: "pending",
+        inspectorProfile: buildInitialInspectorProfile(user),
+        profileCompleted: false
       };
     });
   });

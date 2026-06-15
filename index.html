@@ -5,12 +5,12 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>IronGate Pool Safety Inspections</title>
-<link href="./styles.css?v=20260615bottomnav2" rel="stylesheet"/>
+<link href="./styles.css?v=20260616profilesettings1" rel="stylesheet"/>
 <script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js"></script>
-<script defer="" src="./script.js?v=20260615bottomnav2"></script>
+<script defer="" src="./script.js?v=20260616profilesettings1"></script>
 </head>
 <body class="auth-checking">
 <div class="app-shell">
@@ -26,6 +26,9 @@
 <p>Pool Safety Inspections</p>
 </div>
 </div>
+<button id="settingsBtn" class="settings-pill" type="button" aria-label="Open settings">
+<span aria-hidden="true">⚙</span>
+</button>
 </header>
 <main class="content">
 <!-- HOME -->
@@ -94,6 +97,18 @@
 <label class="field">
 <span>Licence Number</span>
 <input data-save="" name="licenceNumber" placeholder="QBCC / PSI licence" type="text"/>
+</label>
+<label class="field">
+<span>Inspector Email</span>
+<input data-save="" name="inspectorEmail" placeholder="Inspector email" type="email"/>
+</label>
+<label class="field">
+<span>Inspector Phone</span>
+<input data-save="" name="inspectorPhone" placeholder="Inspector phone" type="tel"/>
+</label>
+<label class="field full">
+<span>Business / Company Name</span>
+<input data-save="" name="businessName" placeholder="Business or company name" type="text"/>
 </label>
 <label class="field">
 <span>Owner / Client Name</span>
@@ -1180,6 +1195,10 @@
 <dl class="summary-details-grid">
 <div><dt>Inspection number</dt><dd id="summaryInspectionNumber">—</dd></div>
 <div><dt>Date</dt><dd id="summaryInspectionDate">—</dd></div>
+<div><dt>Inspector</dt><dd id="summaryInspectorName">—</dd></div>
+<div><dt>Licence</dt><dd id="summaryLicenceNumber">—</dd></div>
+<div><dt>Inspector contact</dt><dd id="summaryInspectorContact">—</dd></div>
+<div><dt>Business</dt><dd id="summaryBusinessName">—</dd></div>
 <div><dt>Client / owner</dt><dd id="summaryOwnerName">—</dd></div>
 <div><dt>Property</dt><dd id="summaryPropertyAddress">—</dd></div>
 <div><dt>Overall result</dt><dd id="summaryOverallResult">—</dd></div>
@@ -1255,6 +1274,132 @@
 <span>Safety</span>
 </button>
 </nav>
+
+<div id="settingsOverlay" class="modal-overlay settings-overlay" hidden>
+  <section class="settings-card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <button id="settingsCloseBtn" class="overlay-close" type="button" aria-label="Close settings">×</button>
+
+    <div id="settingsMainPanel" class="settings-main-panel">
+      <div class="settings-header">
+        <div id="settingsAvatar" class="settings-avatar" aria-hidden="true">IG</div>
+        <div>
+          <h2 id="settingsTitle">Settings</h2>
+          <p id="settingsSignedIn">Signed in as —</p>
+        </div>
+      </div>
+
+      <button id="profileSettingsBtn" class="settings-option" type="button">
+        <span class="settings-option-icon" aria-hidden="true">👤</span>
+        <span>
+          <strong>Profile</strong>
+          <small>Inspector details, licence and profile icon</small>
+        </span>
+        <b aria-hidden="true">›</b>
+      </button>
+
+      <div class="settings-cloud-card">
+        <strong>IronGate Cloud Account</strong>
+        <p id="settingsCloudEmail">—</p>
+        <span id="firebaseStatus">Checking access...</span>
+      </div>
+
+      <button id="settingsSignOutBtn" class="settings-signout-btn" type="button">Sign out</button>
+    </div>
+
+    <form id="profileForm" class="profile-form-panel" hidden>
+      <div class="profile-form-head">
+        <button id="profileBackBtn" class="profile-back-btn" type="button">‹ Settings</button>
+        <div>
+          <h2 id="profileTitle">Inspector Profile</h2>
+          <p id="profileSetupNote">Complete these details once. They will prefill future inspections.</p>
+        </div>
+      </div>
+
+      <div class="profile-avatar-preview-row">
+        <div id="profileAvatarPreview" class="settings-avatar large" aria-hidden="true">IG</div>
+        <div>
+          <strong>Profile icon</strong>
+          <small>Choose a default icon for your inspector account.</small>
+        </div>
+      </div>
+
+      <div class="avatar-choice-grid" role="radiogroup" aria-label="Profile icon options">
+        <label class="avatar-choice" data-avatar-choice="default">
+          <input type="radio" name="profileIconChoice" value="default"/>
+          <span class="avatar-placeholder default-avatar">IG</span>
+          <small>IronGate</small>
+        </label>
+        <label class="avatar-choice" data-avatar-choice="google" id="googleAvatarChoice">
+          <input type="radio" name="profileIconChoice" value="google"/>
+          <span class="avatar-placeholder google-avatar" id="googleAvatarPreview">G</span>
+          <small>Google</small>
+        </label>
+        <label class="avatar-choice" data-avatar-choice="avatar-1">
+          <input type="radio" name="profileIconChoice" value="avatar-1"/>
+          <span class="avatar-placeholder app-avatar avatar-one">A1</span>
+          <small>Option 1</small>
+        </label>
+        <label class="avatar-choice" data-avatar-choice="avatar-2">
+          <input type="radio" name="profileIconChoice" value="avatar-2"/>
+          <span class="avatar-placeholder app-avatar avatar-two">A2</span>
+          <small>Option 2</small>
+        </label>
+        <label class="avatar-choice" data-avatar-choice="avatar-3">
+          <input type="radio" name="profileIconChoice" value="avatar-3"/>
+          <span class="avatar-placeholder app-avatar avatar-three">A3</span>
+          <small>Option 3</small>
+        </label>
+        <label class="avatar-choice" data-avatar-choice="avatar-4">
+          <input type="radio" name="profileIconChoice" value="avatar-4"/>
+          <span class="avatar-placeholder app-avatar avatar-four">A4</span>
+          <small>Option 4</small>
+        </label>
+      </div>
+
+      <div class="profile-form-grid">
+        <label class="login-field">
+          <span>Inspector Name</span>
+          <input id="profileInspectorName" type="text" autocomplete="name" required/>
+        </label>
+        <label class="login-field">
+          <span>Licence Number</span>
+          <input id="profileLicenceNumber" type="text" required/>
+        </label>
+        <label class="login-field">
+          <span>Inspector Email</span>
+          <input id="profileEmail" type="email" autocomplete="email" required/>
+        </label>
+        <label class="login-field">
+          <span>Inspector Phone</span>
+          <input id="profilePhone" type="tel" autocomplete="tel" required/>
+        </label>
+        <label class="login-field full">
+          <span>Business / Company Name</span>
+          <input id="profileBusinessName" type="text" required/>
+        </label>
+      </div>
+
+      <p id="profileStatus" class="profile-status"></p>
+
+      <div class="profile-actions">
+        <button id="profileSaveBtn" class="login-primary-btn" type="submit">Save Profile</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<div id="deleteConfirmOverlay" class="bottom-sheet-overlay" hidden>
+  <section class="delete-sheet" role="dialog" aria-modal="true" aria-labelledby="deleteSheetTitle">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <h2 id="deleteSheetTitle">Delete this inspection?</h2>
+    <p id="deleteSheetText">This will remove the inspection and any saved evidence photos.</p>
+    <div class="delete-sheet-actions">
+      <button id="deleteSheetCancelBtn" class="sheet-secondary-btn" type="button">Keep Editing</button>
+      <button id="deleteSheetConfirmBtn" class="sheet-danger-btn" type="button">Delete Inspection</button>
+    </div>
+  </section>
+</div>
+
 
 </div>
 </body>

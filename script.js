@@ -47,6 +47,12 @@ var cloudUnsubscribe = null;
 var cloudSaveTimer = null;
 var cloudSavePendingData = null;
 var authUiReady = false;
+var currentUserProfile = {};
+var inspectorProfile = null;
+var profileCompleted = false;
+var settingsOverlayMandatory = false;
+var currentInspectorSnapshot = null;
+var pendingDeleteInspectionId = null;
 
 function qs(selector) {
   return document.querySelector(selector);
@@ -80,7 +86,7 @@ function setInspections(inspections) {
 }
 
 function canUseApp() {
-  return !!firebaseUser && firebaseApproved && firebaseDataLoaded;
+  return !!firebaseUser && firebaseApproved && firebaseDataLoaded && profileCompleted;
 }
 
 function redirectToLogin(reason) {
@@ -197,6 +203,442 @@ function getTabName(tab) {
   return tab.getAttribute("data-tab") || "";
 }
 
+function cleanText(value) {
+  return value === undefined || value === null ? "" : String(value).trim();
+}
+
+function clonePlainObject(value) {
+  return JSON.parse(JSON.stringify(value || {}));
+}
+
+function userProviderIds() {
+  return (firebaseUser && firebaseUser.providerData ? firebaseUser.providerData : []).map(function (provider) {
+    return provider.providerId;
+  });
+}
+
+function getGooglePhotoUrl() {
+  if (firebaseUser && firebaseUser.photoURL) return firebaseUser.photoURL;
+
+  var providers = firebaseUser && firebaseUser.providerData ? firebaseUser.providerData : [];
+  for (var i = 0; i < providers.length; i += 1) {
+    if (providers[i].providerId === "google.com" && providers[i].photoURL) {
+      return providers[i].photoURL;
+    }
+  }
+
+  return "";
+}
+
+function getAuthDisplayName() {
+  return firebaseUser && firebaseUser.displayName ? firebaseUser.displayName : "";
+}
+
+function getAuthEmail() {
+  return firebaseUser && firebaseUser.email ? firebaseUser.email : "";
+}
+
+function defaultProfileIcon() {
+  var googleUrl = getGooglePhotoUrl();
+  if (googleUrl) {
+    return { type: "google", photoURL: googleUrl, avatarId: "" };
+  }
+  return { type: "default", photoURL: "", avatarId: "default" };
+}
+
+function normalizeProfileIcon(icon) {
+  var clean = icon || {};
+  var googleUrl = getGooglePhotoUrl();
+
+  if (clean.type === "google" && (clean.photoURL || googleUrl)) {
+    return { type: "google", photoURL: clean.photoURL || googleUrl, avatarId: "" };
+  }
+
+  if (clean.type === "app" && clean.avatarId) {
+    return { type: "app", photoURL: "", avatarId: clean.avatarId };
+  }
+
+  if (clean.type === "default" || clean.avatarId === "default") {
+    return { type: "default", photoURL: "", avatarId: "default" };
+  }
+
+  return defaultProfileIcon();
+}
+
+function valueOrDefault(source, key, fallback) {
+  if (source && Object.prototype.hasOwnProperty.call(source, key)) {
+    return cleanText(source[key]);
+  }
+  return cleanText(fallback);
+}
+
+function normalizeInspectorProfile(profile) {
+  var p = profile || {};
+  return {
+    inspectorName: valueOrDefault(p, "inspectorName", getAuthDisplayName()),
+    licenceNumber: valueOrDefault(p, "licenceNumber", ""),
+    inspectorEmail: valueOrDefault(p, "inspectorEmail", getAuthEmail()),
+    inspectorPhone: valueOrDefault(p, "inspectorPhone", ""),
+    businessName: valueOrDefault(p, "businessName", ""),
+    profileIcon: normalizeProfileIcon(p.profileIcon)
+  };
+}
+
+function isInspectorProfileComplete(profile) {
+  var p = normalizeInspectorProfile(profile);
+  return !!(
+    p.inspectorName &&
+    p.licenceNumber &&
+    p.inspectorEmail &&
+    p.inspectorPhone &&
+    p.businessName &&
+    p.profileIcon &&
+    p.profileIcon.type
+  );
+}
+
+function getEffectiveInspectorProfile() {
+  return normalizeInspectorProfile(inspectorProfile || (currentUserProfile && currentUserProfile.inspectorProfile) || {});
+}
+
+function getProfileIconChoice(profile) {
+  var icon = normalizeProfileIcon((profile || getEffectiveInspectorProfile()).profileIcon);
+  if (icon.type === "google" && getGooglePhotoUrl()) return "google";
+  if (icon.type === "app" && icon.avatarId) return icon.avatarId;
+  return "default";
+}
+
+function buildProfileIconFromChoice(choice) {
+  var googleUrl = getGooglePhotoUrl();
+  if (choice === "google" && googleUrl) {
+    return { type: "google", photoURL: googleUrl, avatarId: "" };
+  }
+  if (choice && choice.indexOf("avatar-") === 0) {
+    return { type: "app", photoURL: "", avatarId: choice };
+  }
+  return { type: "default", photoURL: "", avatarId: "default" };
+}
+
+function avatarLabelForIcon(icon) {
+  var normalized = normalizeProfileIcon(icon);
+  if (normalized.type === "app" && normalized.avatarId) {
+    return normalized.avatarId.replace("avatar-", "A").toUpperCase();
+  }
+  return "IG";
+}
+
+function renderAvatarElement(el, icon) {
+  if (!el) return;
+  var normalized = normalizeProfileIcon(icon);
+  el.innerHTML = "";
+  el.classList.toggle("has-photo", normalized.type === "google" && !!normalized.photoURL);
+
+  if (normalized.type === "google" && normalized.photoURL) {
+    var img = document.createElement("img");
+    img.src = normalized.photoURL;
+    img.alt = "";
+    el.appendChild(img);
+    return;
+  }
+
+  el.textContent = avatarLabelForIcon(normalized);
+}
+
+function updateAvatarChoiceUI(choice) {
+  qsa('.avatar-choice input[name="profileIconChoice"]').forEach(function (input) {
+    input.checked = input.value === choice;
+    var label = input.closest(".avatar-choice");
+    if (label) label.classList.toggle("selected", input.checked);
+  });
+
+  renderAvatarElement(qs("#profileAvatarPreview"), buildProfileIconFromChoice(choice));
+}
+
+function updateGoogleAvatarOption() {
+  var googleChoice = qs("#googleAvatarChoice");
+  var googlePreview = qs("#googleAvatarPreview");
+  var googleUrl = getGooglePhotoUrl();
+
+  if (!googleChoice) return;
+
+  googleChoice.hidden = !googleUrl;
+  if (googlePreview && googleUrl) {
+    googlePreview.innerHTML = "";
+    var img = document.createElement("img");
+    img.src = googleUrl;
+    img.alt = "";
+    googlePreview.appendChild(img);
+  }
+}
+
+function fillProfileForm() {
+  var p = getEffectiveInspectorProfile();
+  updateGoogleAvatarOption();
+
+  var fields = {
+    profileInspectorName: p.inspectorName,
+    profileLicenceNumber: p.licenceNumber,
+    profileEmail: p.inspectorEmail,
+    profilePhone: p.inspectorPhone,
+    profileBusinessName: p.businessName
+  };
+
+  Object.keys(fields).forEach(function (id) {
+    var el = qs("#" + id);
+    if (el) el.value = fields[id] || "";
+  });
+
+  updateAvatarChoiceUI(getProfileIconChoice(p));
+  setProfileStatus("", false);
+}
+
+function readProfileForm() {
+  var choiceInput = qs('input[name="profileIconChoice"]:checked');
+  var choice = choiceInput ? choiceInput.value : "default";
+  return normalizeInspectorProfile({
+    inspectorName: qs("#profileInspectorName") ? qs("#profileInspectorName").value : "",
+    licenceNumber: qs("#profileLicenceNumber") ? qs("#profileLicenceNumber").value : "",
+    inspectorEmail: qs("#profileEmail") ? qs("#profileEmail").value : "",
+    inspectorPhone: qs("#profilePhone") ? qs("#profilePhone").value : "",
+    businessName: qs("#profileBusinessName") ? qs("#profileBusinessName").value : "",
+    profileIcon: buildProfileIconFromChoice(choice)
+  });
+}
+
+function setProfileStatus(message, isError) {
+  var status = qs("#profileStatus");
+  if (!status) return;
+  status.textContent = message || "";
+  status.classList.toggle("error", !!isError);
+}
+
+function showSettingsMainPanel() {
+  if (settingsOverlayMandatory && !profileCompleted) {
+    showProfilePanel(true);
+    return;
+  }
+
+  var main = qs("#settingsMainPanel");
+  var form = qs("#profileForm");
+  if (main) main.hidden = false;
+  if (form) form.hidden = true;
+  updateSettingsDisplay();
+}
+
+function showProfilePanel(mandatory) {
+  settingsOverlayMandatory = !!mandatory;
+  document.body.classList.toggle("profile-required", settingsOverlayMandatory && !profileCompleted);
+
+  var main = qs("#settingsMainPanel");
+  var form = qs("#profileForm");
+  var title = qs("#profileTitle");
+  var note = qs("#profileSetupNote");
+
+  if (main) main.hidden = true;
+  if (form) form.hidden = false;
+  if (title) title.textContent = mandatory ? "Complete Inspector Profile" : "Inspector Profile";
+  if (note) {
+    note.textContent = mandatory
+      ? "Your approved account needs these details before inspections can be started. They will prefill future inspections."
+      : "Update your inspector details. Changes apply to future inspections.";
+  }
+
+  fillProfileForm();
+}
+
+function openSettingsOverlay(showProfileFirst) {
+  var overlay = qs("#settingsOverlay");
+  if (!overlay) return;
+  overlay.hidden = false;
+  settingsOverlayMandatory = !!showProfileFirst && !profileCompleted;
+  document.body.classList.toggle("profile-required", settingsOverlayMandatory);
+
+  if (showProfileFirst) {
+    showProfilePanel(true);
+  } else {
+    showSettingsMainPanel();
+  }
+}
+
+function closeSettingsOverlay() {
+  if (settingsOverlayMandatory && !profileCompleted) return;
+  var overlay = qs("#settingsOverlay");
+  if (overlay) overlay.hidden = true;
+  settingsOverlayMandatory = false;
+  document.body.classList.remove("profile-required");
+}
+
+function requireProfileBeforeAppUse() {
+  if (!firebaseUser || !firebaseApproved || profileCompleted) return;
+  openSettingsOverlay(true);
+}
+
+function saveInspectorProfile(event) {
+  if (event && event.preventDefault) event.preventDefault();
+
+  if (!firebaseDb || !firebaseUser) {
+    setProfileStatus("You must be signed in before saving your profile.", true);
+    return;
+  }
+
+  var clean = readProfileForm();
+  if (!isInspectorProfileComplete(clean)) {
+    setProfileStatus("Fill in every profile field and choose a profile icon.", true);
+    return;
+  }
+
+  var ref = getCurrentUserProfileRef();
+  if (!ref) {
+    setProfileStatus("Could not find your profile document.", true);
+    return;
+  }
+
+  var saveBtn = qs("#profileSaveBtn");
+  if (saveBtn) saveBtn.disabled = true;
+  setProfileStatus("Saving profile...", false);
+
+  ref.set({
+    email: getAuthEmail(),
+    displayName: getAuthDisplayName(),
+    providerIds: userProviderIds(),
+    inspectorProfile: clean,
+    profileCompleted: true,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge: true })
+    .then(function () {
+      inspectorProfile = clean;
+      currentUserProfile = currentUserProfile || {};
+      currentUserProfile.inspectorProfile = clean;
+      currentUserProfile.profileCompleted = true;
+      profileCompleted = true;
+      settingsOverlayMandatory = false;
+      document.body.classList.remove("profile-required");
+      updateAuthUI();
+      setProfileStatus("Profile saved.", false);
+      showSettingsMainPanel();
+    })
+    .catch(function (error) {
+      console.error(error);
+      setProfileStatus("Could not save profile: " + error.message, true);
+    })
+    .then(function () {
+      if (saveBtn) saveBtn.disabled = false;
+    });
+}
+
+function updateSettingsDisplay() {
+  var email = getAuthEmail();
+  var p = getEffectiveInspectorProfile();
+  var signedIn = qs("#settingsSignedIn");
+  var cloudEmail = qs("#settingsCloudEmail");
+  var profileBtn = qs("#profileSettingsBtn small");
+
+  if (signedIn) signedIn.textContent = email ? "Signed in as " + email : "Not signed in";
+  if (cloudEmail) cloudEmail.textContent = email || "Not signed in";
+  if (profileBtn) {
+    profileBtn.textContent = profileCompleted
+      ? (p.inspectorName ? p.inspectorName + " · " + p.licenceNumber : "Inspector details saved")
+      : "Required before inspections can be started";
+  }
+
+  renderAvatarElement(qs("#settingsAvatar"), p.profileIcon);
+}
+
+function signOutCurrentUser() {
+  if (!firebaseAuth) {
+    window.location.replace("login.html");
+    return;
+  }
+
+  firebaseAuth.signOut().then(function () {
+    window.location.replace("login.html");
+  });
+}
+
+function setNamedFieldValue(name, value) {
+  var el = qs('[name="' + name + '"]');
+  if (!el) return;
+  if (el.type === "checkbox") {
+    el.checked = !!value;
+  } else {
+    el.value = value || "";
+  }
+}
+
+function prefillInspectionFromProfile() {
+  var p = getEffectiveInspectorProfile();
+  setNamedFieldValue("inspectorName", p.inspectorName);
+  setNamedFieldValue("licenceNumber", p.licenceNumber);
+  setNamedFieldValue("inspectorEmail", p.inspectorEmail);
+  setNamedFieldValue("inspectorPhone", p.inspectorPhone);
+  setNamedFieldValue("businessName", p.businessName);
+}
+
+function createInspectorSnapshotFromProfile() {
+  var p = getEffectiveInspectorProfile();
+  return {
+    inspectorName: p.inspectorName,
+    licenceNumber: p.licenceNumber,
+    inspectorEmail: p.inspectorEmail,
+    inspectorPhone: p.inspectorPhone,
+    businessName: p.businessName,
+    profileIcon: normalizeProfileIcon(p.profileIcon)
+  };
+}
+
+function normalizeInspectorSnapshot(snapshot, fields) {
+  var source = snapshot || {};
+  var f = fields || {};
+  var base = createInspectorSnapshotFromProfile();
+
+  return {
+    inspectorName: cleanText(source.inspectorName || f.inspectorName || base.inspectorName),
+    licenceNumber: cleanText(source.licenceNumber || f.licenceNumber || base.licenceNumber),
+    inspectorEmail: cleanText(source.inspectorEmail || f.inspectorEmail || base.inspectorEmail),
+    inspectorPhone: cleanText(source.inspectorPhone || f.inspectorPhone || base.inspectorPhone),
+    businessName: cleanText(source.businessName || f.businessName || base.businessName),
+    profileIcon: normalizeProfileIcon(source.profileIcon || base.profileIcon)
+  };
+}
+
+function getInspectorSnapshotForCurrentInspection(fields) {
+  var base = normalizeInspectorSnapshot(currentInspectorSnapshot, fields);
+  var f = fields || {};
+
+  if (Object.prototype.hasOwnProperty.call(f, "inspectorName")) base.inspectorName = cleanText(f.inspectorName);
+  if (Object.prototype.hasOwnProperty.call(f, "licenceNumber")) base.licenceNumber = cleanText(f.licenceNumber);
+  if (Object.prototype.hasOwnProperty.call(f, "inspectorEmail")) base.inspectorEmail = cleanText(f.inspectorEmail);
+  if (Object.prototype.hasOwnProperty.call(f, "inspectorPhone")) base.inspectorPhone = cleanText(f.inspectorPhone);
+  if (Object.prototype.hasOwnProperty.call(f, "businessName")) base.businessName = cleanText(f.businessName);
+
+  return base;
+}
+
+function requestDeleteInspection(id) {
+  if (!id) return;
+  pendingDeleteInspectionId = id;
+  var data = getInspectionById(id);
+  var text = qs("#deleteSheetText");
+  if (text) {
+    var label = data && data.inspectionNumber ? data.inspectionNumber : "this inspection";
+    text.textContent = "This will remove " + label + " and any saved evidence photos.";
+  }
+  var overlay = qs("#deleteConfirmOverlay");
+  if (overlay) overlay.hidden = false;
+}
+
+function closeDeleteInspectionSheet() {
+  pendingDeleteInspectionId = null;
+  var overlay = qs("#deleteConfirmOverlay");
+  if (overlay) overlay.hidden = true;
+}
+
+function confirmPendingDeleteInspection() {
+  var id = pendingDeleteInspectionId;
+  closeDeleteInspectionSheet();
+  if (id) performDeleteInspection(id);
+}
+
 function updateWorkflowBodyClasses(tabName) {
   var onHome = tabName === "home";
   var onSummary = tabName === "summary";
@@ -228,7 +670,7 @@ function showTab(tabName) {
 
 function updateNavLock() {
   qsa(".tab").forEach(function (tab) {
-    var locked = !inspectionStarted;
+    var locked = !inspectionStarted || !profileCompleted;
     tab.classList.toggle("locked", locked);
     tab.disabled = locked;
   });
@@ -304,8 +746,13 @@ function clearFormForNewInspection() {
 
 
 function startNewInspection() {
-  if (!canUseApp()) {
+  if (!firebaseUser || !firebaseApproved || !firebaseDataLoaded) {
     alert("Please sign in first so the inspection can be saved online.");
+    return;
+  }
+
+  if (!profileCompleted) {
+    requireProfileBeforeAppUse();
     return;
   }
 
@@ -313,9 +760,11 @@ function startNewInspection() {
 
   currentInspectionId = generateId();
   inspectionStarted = true;
+  currentInspectorSnapshot = createInspectorSnapshotFromProfile();
 
   qs("#inspectionNumber").value = generateInspectionNumber();
   qs("#inspectionDate").value = getTodayDateString();
+  prefillInspectionFromProfile();
 
   addFenceSection();
   addClimbabilitySection();
@@ -397,6 +846,7 @@ function gatherInspectionData() {
     temporaryFenceSections: gatherDynamicSections('.temporary-fence-card'),
     decommissionedPoolSections: gatherDynamicSections('.decommissioned-pool-card'),
     referralSections: gatherDynamicSections('.referral-card'),
+    inspectorSnapshot: getInspectorSnapshotForCurrentInspection(fields),
     findings: collectFindings(),
     inspectionStarted: inspectionStarted,
     updatedAt: new Date().toISOString()
@@ -480,6 +930,7 @@ function loadInspectionIntoForm(data) {
   inspectionStarted = true;
 
   restoreFields(data.fields || {});
+  currentInspectorSnapshot = normalizeInspectorSnapshot(data.inspectorSnapshot, data.fields || {});
 
   if (data.fenceSections && data.fenceSections.length) {
     data.fenceSections.forEach(function (section) {
@@ -559,14 +1010,21 @@ function loadInspectionIntoForm(data) {
 
 
 function openInspection(id) {
+  if (!profileCompleted) {
+    requireProfileBeforeAppUse();
+    return;
+  }
+
   var data = getInspectionById(id);
   if (!loadInspectionIntoForm(data)) return;
   showTab("details");
 }
 
 function deleteInspection(id) {
-  if (!confirm("Are you sure you want to delete this inspection? This cannot be undone.")) return;
+  requestDeleteInspection(id);
+}
 
+function performDeleteInspection(id) {
   var inspectionToDelete = getInspectionById(id);
   var inspections = getInspections().filter(function (item) {
     return item.id !== id;
@@ -592,6 +1050,7 @@ function deleteInspection(id) {
   if (currentInspectionId === id) {
     currentInspectionId = null;
     inspectionStarted = false;
+    currentInspectorSnapshot = null;
     clearFormForNewInspection();
     showTab("home");
   }
@@ -4395,6 +4854,10 @@ function renderSummaryPage() {
     [
       "summaryInspectionNumber",
       "summaryInspectionDate",
+      "summaryInspectorName",
+      "summaryLicenceNumber",
+      "summaryInspectorContact",
+      "summaryBusinessName",
       "summaryOwnerName",
       "summaryPropertyAddress",
       "summaryOverallResult",
@@ -4417,8 +4880,14 @@ function renderSummaryPage() {
   statusBadge.textContent = status.status;
   statusBadge.className = "summary-status-pill " + status.statusClass;
 
+  var inspector = normalizeInspectorSnapshot(data.inspectorSnapshot, f);
+
   setSummaryText("summaryInspectionNumber", f.inspectionNumber || data.inspectionNumber);
   setSummaryText("summaryInspectionDate", f.inspectionDate);
+  setSummaryText("summaryInspectorName", inspector.inspectorName);
+  setSummaryText("summaryLicenceNumber", inspector.licenceNumber);
+  setSummaryText("summaryInspectorContact", [inspector.inspectorEmail, inspector.inspectorPhone].filter(function (item) { return !!item; }).join(" · "));
+  setSummaryText("summaryBusinessName", inspector.businessName);
   setSummaryText("summaryOwnerName", f.ownerName);
   setSummaryText("summaryPropertyAddress", f.propertyAddress);
   setSummaryText("summaryOverallResult", f.overallInspectionResult);
@@ -4571,6 +5040,8 @@ function createPendingProfileForCurrentUser() {
     approved: false,
     role: "pending",
     providerIds: providerIds,
+    inspectorProfile: normalizeInspectorProfile({}),
+    profileCompleted: false,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   }, { merge: true });
@@ -4590,7 +5061,9 @@ function ensureCurrentUserProfile() {
         email: firebaseUser.email || "",
         displayName: firebaseUser.displayName || "",
         approved: false,
-        role: "pending"
+        role: "pending",
+        inspectorProfile: normalizeInspectorProfile({}),
+        profileCompleted: false
       };
     });
   });
@@ -4598,30 +5071,62 @@ function ensureCurrentUserProfile() {
 
 function ensureAuthUI() {
   if (authUiReady) return;
-  var appShell = qs(".app-shell");
-  if (!appShell) return;
 
-  var authPanel = document.createElement("section");
-  authPanel.id = "authPanel";
-  authPanel.className = "auth-panel app-auth-panel";
-  authPanel.innerHTML =
-    '<div class="auth-copy">' +
-      '<strong>IronGate cloud account</strong>' +
-      '<span id="firebaseStatus">Checking access...</span>' +
-    '</div>' +
-    '<div id="signedInPanel" class="signed-in-panel" hidden>' +
-      '<span id="signedInEmail"></span>' +
-      '<button id="signOutBtn" type="button">Sign out</button>' +
-    '</div>';
+  var settingsBtn = qs("#settingsBtn");
+  if (settingsBtn) {
+    settingsBtn.addEventListener("click", function () {
+      openSettingsOverlay(!!(firebaseUser && firebaseApproved && !profileCompleted));
+    });
+  }
 
-  appShell.insertBefore(authPanel, appShell.firstChild);
+  var settingsCloseBtn = qs("#settingsCloseBtn");
+  if (settingsCloseBtn) settingsCloseBtn.addEventListener("click", closeSettingsOverlay);
 
-  qs("#signOutBtn").addEventListener("click", function () {
-    if (!firebaseAuth) return;
-    firebaseAuth.signOut().then(function () {
-      window.location.replace("login.html");
+  var settingsOverlay = qs("#settingsOverlay");
+  if (settingsOverlay) {
+    settingsOverlay.addEventListener("click", function (event) {
+      if (event.target === settingsOverlay) closeSettingsOverlay();
+    });
+  }
+
+  var profileSettingsBtn = qs("#profileSettingsBtn");
+  if (profileSettingsBtn) {
+    profileSettingsBtn.addEventListener("click", function () {
+      showProfilePanel(false);
+    });
+  }
+
+  var profileBackBtn = qs("#profileBackBtn");
+  if (profileBackBtn) {
+    profileBackBtn.addEventListener("click", function () {
+      showSettingsMainPanel();
+    });
+  }
+
+  var settingsSignOutBtn = qs("#settingsSignOutBtn");
+  if (settingsSignOutBtn) settingsSignOutBtn.addEventListener("click", signOutCurrentUser);
+
+  var profileForm = qs("#profileForm");
+  if (profileForm) profileForm.addEventListener("submit", saveInspectorProfile);
+
+  qsa('.avatar-choice input[name="profileIconChoice"]').forEach(function (input) {
+    input.addEventListener("change", function () {
+      updateAvatarChoiceUI(input.value);
     });
   });
+
+  var deleteCancel = qs("#deleteSheetCancelBtn");
+  if (deleteCancel) deleteCancel.addEventListener("click", closeDeleteInspectionSheet);
+
+  var deleteConfirm = qs("#deleteSheetConfirmBtn");
+  if (deleteConfirm) deleteConfirm.addEventListener("click", confirmPendingDeleteInspection);
+
+  var deleteOverlay = qs("#deleteConfirmOverlay");
+  if (deleteOverlay) {
+    deleteOverlay.addEventListener("click", function (event) {
+      if (event.target === deleteOverlay) closeDeleteInspectionSheet();
+    });
+  }
 
   authUiReady = true;
 }
@@ -4636,36 +5141,40 @@ function setFirebaseStatus(message, isError) {
 function updateAuthUI() {
   ensureAuthUI();
 
-  var signedInPanel = qs("#signedInPanel");
-  var signedInEmail = qs("#signedInEmail");
   var newBtn = qs("#newInspectionBtn");
+  var hasSignedInApprovedUser = !!(firebaseEnabled && firebaseUser && firebaseApproved);
+  var readyForInspections = !!(hasSignedInApprovedUser && firebaseDataLoaded && profileCompleted);
+
+  updateSettingsDisplay();
 
   if (firebaseEnabled && firebaseUser && firebaseApproved) {
-    if (signedInPanel) signedInPanel.hidden = false;
-    if (signedInEmail) signedInEmail.textContent = firebaseUser.email || "Signed in";
-    setFirebaseStatus(firebaseDataLoaded ? "Signed in and saving online" : "Approved. Loading inspections...", false);
+    setFirebaseStatus(firebaseDataLoaded
+      ? (profileCompleted ? "Signed in and saving online" : "Profile required before inspections can start")
+      : "Approved. Loading inspections...", !profileCompleted && firebaseDataLoaded);
     document.body.classList.remove("firebase-signed-out");
     document.body.classList.remove("auth-checking");
-    if (newBtn) newBtn.disabled = !firebaseDataLoaded;
+    document.body.classList.toggle("profile-required", firebaseDataLoaded && !profileCompleted);
+    if (newBtn) newBtn.disabled = !readyForInspections;
+    if (firebaseDataLoaded && !profileCompleted) requireProfileBeforeAppUse();
   } else if (firebaseEnabled && firebaseUser && firebaseApprovalChecked && !firebaseApproved) {
-    if (signedInPanel) signedInPanel.hidden = false;
-    if (signedInEmail) signedInEmail.textContent = firebaseUser.email || "Signed in";
     setFirebaseStatus("Account pending approval. Redirecting to login page...", true);
+    document.body.classList.remove("profile-required");
     if (newBtn) newBtn.disabled = true;
     redirectToLogin("pending=1");
   } else if (firebaseEnabled && firebaseUser) {
-    if (signedInPanel) signedInPanel.hidden = false;
-    if (signedInEmail) signedInEmail.textContent = firebaseUser.email || "Signed in";
     setFirebaseStatus("Checking account approval...", false);
+    document.body.classList.remove("profile-required");
     if (newBtn) newBtn.disabled = true;
   } else if (firebaseEnabled) {
-    if (signedInPanel) signedInPanel.hidden = true;
     setFirebaseStatus("Not signed in. Redirecting...", false);
+    document.body.classList.add("firebase-signed-out");
+    document.body.classList.remove("profile-required");
     if (newBtn) newBtn.disabled = true;
     redirectToLogin();
   } else {
-    if (signedInPanel) signedInPanel.hidden = true;
     setFirebaseStatus(firebaseLoadError || "Firebase could not load.", true);
+    document.body.classList.add("firebase-signed-out");
+    document.body.classList.remove("profile-required");
     if (newBtn) newBtn.disabled = true;
   }
 }
@@ -4693,6 +5202,10 @@ function initFirebase() {
       firebaseDataLoaded = false;
       firebaseApprovalChecked = false;
       firebaseApproved = false;
+      currentUserProfile = {};
+      inspectorProfile = null;
+      profileCompleted = false;
+      currentInspectorSnapshot = null;
       cloudInspections = [];
 
       if (cloudUnsubscribe) {
@@ -4712,6 +5225,9 @@ function initFirebase() {
       ensureCurrentUserProfile()
         .then(function (profile) {
           firebaseApprovalChecked = true;
+          currentUserProfile = profile || {};
+          inspectorProfile = normalizeInspectorProfile(currentUserProfile.inspectorProfile || {});
+          profileCompleted = !!(currentUserProfile.profileCompleted === true && isInspectorProfileComplete(inspectorProfile));
           firebaseApproved = !!(profile && profile.approved === true);
 
           if (!firebaseApproved) {
@@ -4912,6 +5428,11 @@ function init() {
   qsa(".tab").forEach(function (tab) {
     tab.addEventListener("click", function () {
       var requestedTab = getTabName(tab);
+
+      if (!profileCompleted) {
+        requireProfileBeforeAppUse();
+        return;
+      }
 
       if (!inspectionStarted) {
         return;
