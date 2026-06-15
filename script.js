@@ -204,7 +204,6 @@ function showTab(tabName) {
     page.classList.toggle("active-page", page.id === tabName);
   });
 
-
   qsa(".tab").forEach(function (tab) {
     tab.classList.toggle("active", getTabName(tab) === tabName);
   });
@@ -2148,10 +2147,6 @@ function addPhotoToGrid(grid, photoInput) {
   remove.setAttribute("aria-label", "Remove photo");
   remove.textContent = "×";
 
-  var stamp = document.createElement("div");
-  stamp.className = "timestamp";
-  stamp.innerHTML = escapeHtml(formatDateTime(photo.uploadedAt || new Date().toISOString())) + "<br>IronGate Pool Inspections";
-
   remove.addEventListener("click", function () {
     if (!confirm("Remove this photo?")) return;
     box.remove();
@@ -2612,7 +2607,6 @@ function init() {
     addReferralSection();
     saveCurrentInspection(false);
   };
-
 
   qsa(".tab").forEach(function (tab) {
     tab.addEventListener("click", function () {

@@ -1932,7 +1932,7 @@ body.auth-checking .app-shell {
 }
 
 
-/* Rebuild: special-case add sections and repeatable cards */
+/* Phase 1 rebuild: repeatable/special-case cards */
 .helper-text {
   margin: 0 0 14px;
   color: var(--muted);
