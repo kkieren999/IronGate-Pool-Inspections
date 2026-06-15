@@ -312,6 +312,7 @@ function startNewInspection() {
 
   addFenceSection();
   addClimbabilitySection();
+  addGateSection();
 
   saveCurrentInspection(false);
   renderInspectionList();
@@ -517,9 +518,13 @@ function loadInspectionIntoForm(data) {
     addBarrierDoorSection(section);
   });
 
-  (data.gateSections || []).forEach(function (section) {
-    addGateSection(section);
-  });
+  if (data.gateSections && data.gateSections.length) {
+    data.gateSections.forEach(function (section) {
+      addGateSection(section);
+    });
+  } else {
+    addGateSection();
+  }
 
   (data.temporaryFenceSections || []).forEach(function (section) {
     addTemporaryFenceSection(section);
@@ -3003,7 +3008,7 @@ var COMPLIANCE_RULE_BANK = [
 
 function loadComplianceRuleBankFromFile() {
   if (!window.fetch) return;
-  fetch("./rules/qld-pool-safety-2024.json?v=20260615qldrules2", { cache: "no-store" })
+  fetch("./rules/qld-pool-safety-2024.json?v=20260615gate1", { cache: "no-store" })
     .then(function (response) {
       if (!response.ok) throw new Error("Rules file could not be loaded");
       return response.json();
@@ -3951,12 +3956,21 @@ function addGateSection(data) {
     renumber: renumberGateSections
   }, data);
   gateCounter = qsa(".gate-card").length;
+  renumberGateSections();
 }
 
 function renumberGateSections() {
   qsa(".gate-card").forEach(function (card, index) {
     var h3 = card.querySelector("h3");
     if (h3) h3.textContent = "Gate " + (index + 1);
+
+    var removeBtn = card.querySelector(".remove-section-btn");
+    if (removeBtn) {
+      var isDefaultGate = index === 0;
+      removeBtn.hidden = isDefaultGate;
+      removeBtn.disabled = isDefaultGate;
+      removeBtn.setAttribute("aria-hidden", isDefaultGate ? "true" : "false");
+    }
   });
   gateCounter = qsa(".gate-card").length;
 }
