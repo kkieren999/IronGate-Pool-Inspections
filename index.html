@@ -5,16 +5,20 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>IronGate Pool Safety Inspections</title>
-<link href="./styles.css?v=20260615summary1" rel="stylesheet"/>
+<link href="./styles.css?v=20260615bottomnav2" rel="stylesheet"/>
 <script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js"></script>
-<script defer="" src="./script.js?v=20260615summary1"></script>
+<script defer="" src="./script.js?v=20260615bottomnav2"></script>
 </head>
 <body class="auth-checking">
 <div class="app-shell">
 <header class="hero">
+<button id="homeNavBtn" class="home-pill" type="button" aria-label="Return to Home">
+<img alt="" src="./assets/icons/home.png"/>
+<span>Home</span>
+</button>
 <div class="brand">
 <img alt="IronGate logo" class="main-logo" src="./assets/logo/logo-no-text.png"/>
 <div class="brand-text">
@@ -23,34 +27,6 @@
 </div>
 </div>
 </header>
-<nav aria-label="Inspection Navigation" class="tab-bar">
-<button class="tab active" data-tab="home" type="button">
-<img alt="" src="./assets/icons/home.png"/>
-<span>Home</span>
-</button>
-<button class="tab" data-tab="details" type="button">
-<img alt="" src="./assets/icons/details.png"/>
-<span>Details</span>
-</button>
-<button class="tab" data-tab="barrier" type="button">
-<img alt="" src="./assets/icons/barrier.png"/>
-<span>Barrier</span>
-</button>
-<button class="tab" data-tab="climbability" type="button">
-<img alt="" src="./assets/icons/climability.png"/>
-<span>Climbability</span>
-</button>
-<button class="tab" data-tab="gate" type="button">
-<img alt="" src="./assets/icons/gate.png"/>
-<span>Gate</span>
-</button>
-<button class="tab" data-tab="safety" type="button">
-<img alt="" src="./assets/icons/safety.png"/>
-<span>Safety</span>
-</button>
-
-<button class="tab" data-tab="summary" type="button"><img alt="" src="./assets/icons/summary.png"/><span>Summary</span></button>
-</nav>
 <main class="content">
 <!-- HOME -->
 <section class="page home-page active-page" id="home">
@@ -1250,6 +1226,36 @@
 </section>
 
 </main>
+
+<button id="reviewSummaryBtn" class="review-summary-btn" type="button">
+<img alt="" src="./assets/icons/summary.png"/>
+<span>Review Summary / Download Report</span>
+<strong aria-hidden="true">›</strong>
+</button>
+
+<nav aria-label="Inspection sections" class="tab-bar inspection-bottom-nav">
+<button class="tab" data-tab="details" type="button">
+<img alt="" src="./assets/icons/details.png"/>
+<span>Details</span>
+</button>
+<button class="tab" data-tab="barrier" type="button">
+<img alt="" src="./assets/icons/barrier.png"/>
+<span>Barrier</span>
+</button>
+<button class="tab" data-tab="climbability" type="button">
+<img alt="" src="./assets/icons/climability.png"/>
+<span>NCZ</span>
+</button>
+<button class="tab" data-tab="gate" type="button">
+<img alt="" src="./assets/icons/gate.png"/>
+<span>Gate</span>
+</button>
+<button class="tab" data-tab="safety" type="button">
+<img alt="" src="./assets/icons/safety.png"/>
+<span>Safety</span>
+</button>
+</nav>
+
 </div>
 </body>
 </html>

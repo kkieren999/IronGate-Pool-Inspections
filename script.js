@@ -197,6 +197,15 @@ function getTabName(tab) {
   return tab.getAttribute("data-tab") || "";
 }
 
+function updateWorkflowBodyClasses(tabName) {
+  var onHome = tabName === "home";
+  var onSummary = tabName === "summary";
+
+  document.body.classList.toggle("on-home", onHome);
+  document.body.classList.toggle("on-summary", onSummary);
+  document.body.classList.toggle("inspection-active", !onHome && inspectionStarted);
+}
+
 function showTab(tabName) {
   currentTab = tabName;
 
@@ -212,20 +221,14 @@ function showTab(tabName) {
     refreshSummary();
   }
 
+  updateWorkflowBodyClasses(tabName);
   updateNavLock();
   window.scrollTo(0, 0);
 }
 
 function updateNavLock() {
-
   qsa(".tab").forEach(function (tab) {
-    var tabName = getTabName(tab);
-
-    // Home is always available.
-    // All other tabs are locked while sitting on Home,
-    // or if no inspection has been started/opened.
-    var locked = tabName !== "home" && (currentTab === "home" || !inspectionStarted);
-
+    var locked = !inspectionStarted;
     tab.classList.toggle("locked", locked);
     tab.disabled = locked;
   });
@@ -3012,7 +3015,7 @@ var COMPLIANCE_RULE_BANK = [
 
 function loadComplianceRuleBankFromFile() {
   if (!window.fetch) return;
-  fetch("./rules/qld-pool-safety-2024.json?v=20260615summary1", { cache: "no-store" })
+  fetch("./rules/qld-pool-safety-2024.json?v=20260615bottomnav2", { cache: "no-store" })
     .then(function (response) {
       if (!response.ok) throw new Error("Rules file could not be loaded");
       return response.json();
@@ -4785,17 +4788,23 @@ function init() {
   };
 
   var summaryHomeBtn = qs("#summaryHomeBtn");
-  if (summaryHomeBtn) summaryHomeBtn.onclick = function () { showTab("home"); };
-
-  var summaryDownloadBtn = qs("#summaryDownloadBtn");
-  if (summaryDownloadBtn) summaryDownloadBtn.onclick = function () {
-    if (!currentInspectionId) return;
+  if (summaryHomeBtn) summaryHomeBtn.onclick = function () {
     saveCurrentInspection(false);
-    startDownloadInspection(currentInspectionId);
+    showTab("home");
   };
 
-  var summaryHomeBtn = qs("#summaryHomeBtn");
-  if (summaryHomeBtn) summaryHomeBtn.onclick = function () { showTab("home"); };
+  var homeNavBtn = qs("#homeNavBtn");
+  if (homeNavBtn) homeNavBtn.onclick = function () {
+    saveCurrentInspection(false);
+    showTab("home");
+  };
+
+  var reviewSummaryBtn = qs("#reviewSummaryBtn");
+  if (reviewSummaryBtn) reviewSummaryBtn.onclick = function () {
+    if (!inspectionStarted) return;
+    saveCurrentInspection(false);
+    showTab("summary");
+  };
 
   // These buttons used to exist at the bottom of the Details tab.
   // They are now optional because the app autosaves and uses the top Home tab.
@@ -4904,7 +4913,7 @@ function init() {
     tab.addEventListener("click", function () {
       var requestedTab = getTabName(tab);
 
-      if (requestedTab !== "home" && (currentTab === "home" || !inspectionStarted)) {
+      if (!inspectionStarted) {
         return;
       }
 

@@ -2197,3 +2197,189 @@ body.download-mode .findings-panel {
 body.download-mode .summary-actions {
   display: none !important;
 }
+
+
+/* --------------------------------------------------------------------------
+   Bottom navigation redesign for iPhone portrait workflow
+   Home and Summary are no longer crowded into the section nav.
+   Inspection sections use a fixed 5-item nav; Summary is a primary action.
+---------------------------------------------------------------------------- */
+
+body.on-home .home-pill,
+body.on-home .inspection-bottom-nav,
+body.on-home .review-summary-btn,
+body.auth-checking .home-pill,
+body.auth-checking .inspection-bottom-nav,
+body.auth-checking .review-summary-btn,
+body.firebase-signed-out .home-pill,
+body.firebase-signed-out .inspection-bottom-nav,
+body.firebase-signed-out .review-summary-btn {
+  display: none !important;
+}
+
+body.on-summary .review-summary-btn {
+  display: none !important;
+}
+
+body.inspection-active .content {
+  padding-bottom: calc(190px + env(safe-area-inset-bottom));
+}
+
+.home-pill {
+  position: absolute;
+  left: 16px;
+  top: calc(14px + env(safe-area-inset-top));
+  z-index: 20;
+  min-height: 44px;
+  border: 1px solid rgba(13, 130, 216, 0.18);
+  border-radius: 18px;
+  padding: 9px 13px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--iron);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 850;
+  box-shadow: 0 8px 20px rgba(3, 40, 106, 0.08);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-pill img {
+  width: 23px;
+  height: 23px;
+  object-fit: contain;
+}
+
+.inspection-bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(calc(100% - 24px), 680px);
+  z-index: 1000;
+  margin: 0;
+  padding: 8px 8px 10px;
+  border: 1px solid rgba(13, 130, 216, 0.12);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 14px 34px rgba(3, 40, 106, 0.18);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  overflow: visible;
+}
+
+.inspection-bottom-nav .tab {
+  min-width: 0;
+  min-height: 68px;
+  padding: 6px 2px 8px;
+  gap: 5px;
+  font-size: 0.72rem;
+}
+
+.inspection-bottom-nav .tab img {
+  width: 27px;
+  height: 27px;
+}
+
+.inspection-bottom-nav .tab.active::after {
+  left: 24%;
+  right: 24%;
+  bottom: 0;
+  height: 4px;
+}
+
+.review-summary-btn {
+  position: fixed;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(calc(100% - 40px), 640px);
+  z-index: 999;
+  border: 0;
+  border-radius: 18px;
+  padding: 16px 18px;
+  color: white;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(29, 184, 245, 0.32), transparent 42%),
+    linear-gradient(135deg, var(--gate), var(--iron));
+  box-shadow: 0 16px 34px rgba(3, 40, 106, 0.24);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 14px;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 900;
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.review-summary-btn img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+
+.review-summary-btn strong {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+body.download-mode .home-pill,
+body.download-mode .inspection-bottom-nav,
+body.download-mode .review-summary-btn {
+  display: none !important;
+}
+
+@media (max-width: 560px) {
+  .hero {
+    padding-top: calc(72px + env(safe-area-inset-top));
+  }
+
+  .brand {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .main-logo {
+    width: 96px;
+    min-width: 96px;
+  }
+
+  .brand-text h1 {
+    font-size: 2.15rem;
+  }
+
+  .brand-text p {
+    font-size: 0.66rem;
+    letter-spacing: 1.3px;
+  }
+
+  .inspection-bottom-nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    overflow: visible !important;
+  }
+
+  .inspection-bottom-nav .tab {
+    font-size: 0.7rem;
+  }
+
+  .inspection-bottom-nav .tab img {
+    width: 26px;
+    height: 26px;
+  }
+
+  .review-summary-btn {
+    width: min(calc(100% - 32px), 640px);
+    padding: 15px 16px;
+    font-size: 0.9rem;
+  }
+}

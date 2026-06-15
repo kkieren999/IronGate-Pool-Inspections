@@ -1,0 +1,1929 @@
+{
+  "version": "2026-06-15-qld-rules-v2",
+  "jurisdiction": "Queensland",
+  "ruleSetName": "Queensland Pool Safety Rule Bank - Draft v2",
+  "status": "draft_for_testing",
+  "basis": [
+    "Queensland Development Code MP 3.4 - Swimming pool barriers",
+    "AS 1926.1-2007 as called up/modified by QDC MP 3.4",
+    "AS 1926.2-2007 as called up/modified by QDC MP 3.4",
+    "Queensland pool safety inspector guideline effective 10 June 2024"
+  ],
+  "rules": [
+    {
+      "id": "fence-effective-height-1200",
+      "field": "fenceHeight",
+      "type": "number",
+      "operator": ">=",
+      "threshold": 1200,
+      "itemType": "Fence",
+      "requirement": "Effective barrier height should be at least 1200mm unless another specific barrier requirement applies.",
+      "issueTemplate": "The measured effective barrier height for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "A reduced effective barrier height may make it easier for a young child to climb over the barrier and access the pool area.",
+      "recommendationTemplate": "Rectify this fence section so the effective barrier height satisfies the applicable pool safety standard before a pool safety certificate is issued.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "fence-ground-clearance-100",
+      "field": "fenceGroundClearance",
+      "type": "number",
+      "operator": "<=",
+      "threshold": 100,
+      "itemType": "Fence",
+      "requirement": "Ground clearance should not exceed 100mm.",
+      "issueTemplate": "The recorded ground clearance for {item} was {value}mm, which is above the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "Excessive ground clearance may allow a young child to pass under the barrier.",
+      "recommendationTemplate": "Reduce the ground clearance or rectify the fence/ground level so the clearance satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "fence-aperture-max-100",
+      "field": "fenceApertureSize",
+      "type": "number_optional",
+      "operator": "<=",
+      "threshold": 100,
+      "itemType": "Fence",
+      "requirement": "Perforated or mesh barrier aperture sizes should not exceed 100mm.",
+      "issueTemplate": "The recorded mesh/perforated aperture size for {item} was {value}mm, which is above the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "Large apertures may compromise the barrier by allowing climbing, footholds or access through the barrier.",
+      "recommendationTemplate": "Replace, modify or rectify the mesh/perforated barrier section so the aperture size satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "boundary-height-1800",
+      "field": "boundaryFenceHeight",
+      "type": "number_optional",
+      "operator": ">=",
+      "threshold": 1800,
+      "itemType": "Boundary Fence",
+      "requirement": "Boundary fence height should be at least 1800mm where the boundary fence forms part of the pool barrier.",
+      "issueTemplate": "The recorded boundary fence height for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "A reduced boundary barrier height may allow easier climbing or access from outside the pool area.",
+      "recommendationTemplate": "Rectify the boundary fence so its effective height and non-climbable zone satisfy the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-gap-under-100",
+      "field": "gateGapUnder",
+      "type": "number_optional",
+      "operator": "<=",
+      "threshold": 100,
+      "itemType": "Gate",
+      "requirement": "The gap below a gate should not exceed 100mm.",
+      "issueTemplate": "The recorded gap under {item} was {value}mm, which is above the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "Excessive clearance below a gate may allow a young child to pass under the gate into the pool area.",
+      "recommendationTemplate": "Adjust, repair or replace the gate and/or finished ground level so the gap below the gate satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-latch-height-1500",
+      "field": "gateLatchHeight",
+      "type": "number_optional",
+      "operator": ">=",
+      "threshold": 1500,
+      "itemType": "Gate",
+      "requirement": "Latch release height should generally be at least 1500mm unless compliant shielding or another permitted arrangement applies.",
+      "issueTemplate": "The recorded latch height for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "A low latch may be reachable by a young child and may allow unsupervised access to the pool area.",
+      "recommendationTemplate": "Raise, shield or otherwise rectify the latch release arrangement so it satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-object-distance-900",
+      "field": "nczDistance",
+      "type": "number_optional",
+      "operator": ">=",
+      "threshold": 900,
+      "itemType": "NCZ Object",
+      "requirement": "Climbable objects should not be within the 900mm non-climbable zone where they create a foothold/handhold risk.",
+      "issueTemplate": "The recorded distance from the barrier for {item} was {value}mm, which is within the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "A climbable object within the non-climbable zone may assist a young child to climb the barrier and access the pool area.",
+      "recommendationTemplate": "Remove or permanently relocate the object outside the non-climbable zone, or otherwise rectify the barrier arrangement so it satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "water-barrier-depth-300",
+      "field": "waterBarrierDepth",
+      "type": "number_optional",
+      "operator": ">=",
+      "threshold": 300,
+      "itemType": "Permanent Body of Water",
+      "requirement": "A permanent body of water used as a barrier should have sufficient depth at the relevant pool-area edge.",
+      "issueTemplate": "The recorded water depth for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "Insufficient water depth may mean the water body does not provide an effective barrier to young children.",
+      "recommendationTemplate": "Review and rectify the barrier arrangement so the permanent body of water and associated barrier layout satisfy the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "barrier-surrounds-pool",
+      "field": "barrierSurroundsPool",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Barrier Layout",
+      "requirement": "The barrier should restrict access to the pool area.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "An incomplete or ineffective barrier layout may allow unsupervised access to the pool area.",
+      "recommendationTemplate": "Rectify the barrier layout so access to the pool area is restricted in accordance with the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "barrier-building-access-controlled",
+      "field": "buildingAccessControlled",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Barrier Layout",
+      "requirement": "Direct building access to the pool area must be controlled where it forms part of the pool barrier arrangement.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Uncontrolled building access may allow a young child to enter the pool area without passing through a compliant barrier or gate.",
+      "recommendationTemplate": "Provide or rectify compliant access control to the pool area before a pool safety certificate is issued.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "barrier-neighbour-access-controlled",
+      "field": "neighbourAccessControlled",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Barrier Layout",
+      "requirement": "Access from neighbouring/adjoining property should be controlled where relevant to the barrier arrangement.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Uncontrolled access from an adjoining property may compromise the intended pool barrier.",
+      "recommendationTemplate": "Rectify the adjoining-property access arrangement so the pool area is appropriately isolated.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "barrier-unrelated-structures",
+      "field": "poolAreaFreeOfUnrelatedStructures",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Barrier Layout",
+      "requirement": "The pool area should not contain unrelated structures or items that compromise the barrier arrangement.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Unrelated structures or items may create climbability, access, or supervision risks within the pool area.",
+      "recommendationTemplate": "Remove, relocate or otherwise rectify unrelated structures/items so the pool barrier arrangement remains compliant.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "fence-gaps",
+      "field": "fenceGaps",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Fence",
+      "requirement": "Openings / gaps compliant should be assessed as compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Openings or excessive gaps may allow access through the barrier or create footholds.",
+      "recommendationTemplate": "Rectify the fence section so openings/gaps satisfy the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "fence-nczclear",
+      "field": "fenceNCZClear",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Fence",
+      "requirement": "NCZ clear should be assessed as compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Climbable items or footholds in the non-climbable zone may assist a young child to climb the barrier.",
+      "recommendationTemplate": "Remove climbable items or rectify the barrier/NCZ arrangement so the required non-climbable zone is maintained.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "fence-projectionscompliant",
+      "field": "fenceProjectionsCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Fence",
+      "requirement": "Projections / indentations compliant should be assessed as compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Projections or indentations may provide handholds or footholds for climbing.",
+      "recommendationTemplate": "Remove, modify or shield projections/indentations so they do not compromise the non-climbable zone.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "fence-strengthrigid",
+      "field": "fenceStrengthRigid",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Fence",
+      "requirement": "Strength / rigidity checked should be assessed as compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Loose or flexible barrier components may allow gaps to deform or the barrier to be pushed aside.",
+      "recommendationTemplate": "Repair, reinforce or replace the fence components/posts/fixings so the barrier is stable, rigid and secure.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "fence-fixingssecure",
+      "field": "fenceFixingsSecure",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Fence",
+      "requirement": "Fixings secure should be assessed as compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Loose or missing fixings may reduce the strength and reliability of the barrier.",
+      "recommendationTemplate": "Repair or replace fixings so all fence components are securely fixed and maintained in good condition.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "fence-materialfinishsafe",
+      "field": "fenceMaterialFinishSafe",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Fence",
+      "requirement": "Material / finish safe should be assessed as compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Sharp edges, projections, deterioration or unsafe finishes may create hazards and indicate poor barrier condition.",
+      "recommendationTemplate": "Repair, replace or make safe the affected components so the barrier is in good condition and free of hazardous features.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "special-pool-wall-used-as-barrier",
+      "field": "poolWallUsedAsBarrier",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Special Pool Feature",
+      "requirement": "Where a pool wall is relied on as a barrier, the arrangement must satisfy the applicable barrier requirements.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A pool wall that does not operate as an effective barrier may allow access into the pool.",
+      "recommendationTemplate": "Provide, modify or supplement the barrier arrangement so the pool wall and associated access points satisfy the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "special-pool-wall-height",
+      "field": "poolWallHeightCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Special Pool Feature",
+      "requirement": "A pool wall relied on as a barrier must have compliant effective height and climbability controls.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Insufficient effective height or climbability control may allow a young child to climb into the pool.",
+      "recommendationTemplate": "Rectify the pool wall/barrier arrangement so effective height and non-climbable-zone requirements are satisfied.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "special-ladder-access",
+      "field": "ladderAccessSecured",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Special Pool Feature",
+      "requirement": "Ladders or access points associated with above-ground/inflatable pools should be secured or controlled.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "An unsecured ladder or access point may allow unsupervised entry into the pool.",
+      "recommendationTemplate": "Remove, lock, isolate or otherwise secure the ladder/access point so it does not provide non-compliant access to the pool.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "special-pump-filter-climbable",
+      "field": "pumpFilterClimbableAccess",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Special Pool Feature",
+      "requirement": "Pump/filter equipment should not create climbable access to the pool or barrier.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Equipment positioned near the pool or barrier may act as a foothold or climbing aid.",
+      "recommendationTemplate": "Relocate, shield or otherwise rectify the equipment so it does not create climbable access or compromise the barrier.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "special-holding-tank-depth",
+      "field": "holdingTank300mmOrDeeper",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Special Pool Feature",
+      "requirement": "Water-holding structures capable of holding 300mm or more may require further assessment as a swimming pool or hazard.",
+      "issueTemplate": "{label} for {item} was recorded as Yes.",
+      "riskTemplate": "A water-holding structure 300mm or deeper may create a drowning hazard or may need to be assessed as a regulated pool depending on its use and context.",
+      "recommendationTemplate": "Further assess and, if required, fence, modify, decommission or otherwise rectify the structure so it satisfies Queensland pool safety requirements.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "balcony-access-controlled",
+      "field": "balconyAccessControlled",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Balcony / Deck",
+      "requirement": "Access from a balcony/deck/raised platform to the pool area should be controlled where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Uncontrolled access from a raised platform may compromise the barrier and allow entry to the pool area.",
+      "recommendationTemplate": "Rectify the balcony/deck access arrangement so it does not provide non-compliant access to the pool area.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "balcony-barrier-compliant",
+      "field": "balconyBarrierCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Balcony / Deck",
+      "requirement": "Balcony/deck barriers forming part of the pool barrier must be compliant.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A non-compliant balcony/deck barrier may allow climbing or access into the pool area.",
+      "recommendationTemplate": "Modify, repair or replace the balcony/deck barrier so it satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "retaining-wall-compliant",
+      "field": "retainingWallCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Retaining Wall / Level Change",
+      "requirement": "Retaining walls or level changes forming part of the barrier must be compliant.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A retaining wall or level change may reduce effective barrier height or create climbable access.",
+      "recommendationTemplate": "Rectify the retaining wall/level-change arrangement so effective barrier height and climbability requirements are satisfied.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "boundary-neighbour-clear",
+      "field": "boundaryNeighbourSideClear",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Boundary Fence",
+      "requirement": "Neighbour-side issues affecting the boundary barrier should be assessed and controlled where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Climbable objects or level changes on the boundary side may compromise the effective barrier height or NCZ.",
+      "recommendationTemplate": "Rectify the boundary-fence arrangement or address neighbouring-side climbability issues so the boundary barrier satisfies the applicable standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "boundary-compliant",
+      "field": "boundaryCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Boundary Fence",
+      "requirement": "Boundary fence sections forming part of the pool barrier must be compliant.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A non-compliant boundary fence may allow access over, under or through the barrier.",
+      "recommendationTemplate": "Repair, raise, modify or replace the boundary fence section so it satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "window-opening-restricted",
+      "field": "barrierWindowOpeningRestricted",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Window Forming Part of Barrier",
+      "requirement": "Openable windows forming part of the barrier should be restricted or protected where required.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "An unrestricted window may provide direct access from a building into the pool area.",
+      "recommendationTemplate": "Restrict, secure or protect the window opening so it satisfies the applicable child-resistant window requirements.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "window-screen-bars-fixed",
+      "field": "barrierWindowScreenBarsMeshFixed",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Window Forming Part of Barrier",
+      "requirement": "Screens, bars or mesh used for a barrier window should be fixed securely.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Loose or removable screens/bars may allow a child to access the pool area through the window opening.",
+      "recommendationTemplate": "Secure, repair or replace the screen/bars/mesh so they are fixed and effective for the barrier arrangement.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "window-fixings-tools",
+      "field": "barrierWindowFixingsRequireTools",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Window Forming Part of Barrier",
+      "requirement": "Barrier window fixings should require tools to remove where required.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Fixings that can be removed without tools may allow the restriction to be bypassed.",
+      "recommendationTemplate": "Replace or modify the fixings so the restriction cannot be removed without tools where required.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "window-compliant",
+      "field": "barrierWindowCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Window Forming Part of Barrier",
+      "requirement": "Windows forming part of the barrier must be compliant.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A non-compliant window may provide direct or climbable access to the pool area.",
+      "recommendationTemplate": "Rectify the window arrangement so it satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "door-self-closing",
+      "field": "barrierDoorSelfClosing",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Door / Building Access",
+      "requirement": "Door/building access forming part of the pool barrier should be self-closing where required.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A door that does not self-close may be left open and allow unsupervised access to the pool area.",
+      "recommendationTemplate": "Adjust, repair, replace or otherwise rectify the door/self-closing device so the access point is compliant.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "door-self-latching",
+      "field": "barrierDoorSelfLatching",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Door / Building Access",
+      "requirement": "Door/building access forming part of the pool barrier should be self-latching where required.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A door that does not self-latch may allow unsupervised access to the pool area.",
+      "recommendationTemplate": "Adjust, repair, replace or otherwise rectify the latching arrangement so the access point is compliant.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "door-compliant",
+      "field": "barrierDoorCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Door / Building Access",
+      "requirement": "Door/building access forming part of the barrier must be compliant.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Non-compliant building access may bypass the pool barrier.",
+      "recommendationTemplate": "Rectify the building access arrangement so it does not provide non-compliant access to the pool area.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "door-fire-exit-safe",
+      "field": "barrierDoorFireExitSafe",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Door / Building Access",
+      "requirement": "Fire exit arrangements should not be compromised by pool barrier rectification.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A rectification that compromises a fire exit may create a separate safety risk.",
+      "recommendationTemplate": "Seek appropriate building/fire safety advice and rectify the access arrangement without compromising required fire egress.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-ncz900provided",
+      "field": "ncz900Provided",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "900mm NCZ provided should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Insufficient NCZ may allow a young child to climb the barrier.",
+      "recommendationTemplate": "Rectify the barrier and surrounding area so the required non-climbable zone is provided.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-nczcorrectside",
+      "field": "nczCorrectSide",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "NCZ on correct side of barrier should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "An NCZ on the wrong side may not prevent child access to the pool area.",
+      "recommendationTemplate": "Rectify the barrier arrangement so the NCZ is located on the appropriate side for the barrier type.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-ncznohandholdsfootholds",
+      "field": "nczNoHandholdsFootholds",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "No handholds or footholds in NCZ should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Handholds or footholds may assist a young child to climb the barrier.",
+      "recommendationTemplate": "Remove, shield or modify handholds/footholds so the NCZ remains clear.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-nczprojectionsindentationscompliant",
+      "field": "nczProjectionsIndentationsCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "Projections / indentations compliant should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Projections or indentations may act as handholds or footholds.",
+      "recommendationTemplate": "Modify, remove or shield non-compliant projections/indentations.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-nczvegetationnonclimbable",
+      "field": "nczVegetationNonClimbable",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "Vegetation non-climbable should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Climbable vegetation may provide access over the barrier.",
+      "recommendationTemplate": "Trim, remove or permanently maintain vegetation so it does not compromise the NCZ.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-nczobjectsremoved",
+      "field": "nczObjectsRemoved",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "Objects removed from NCZ should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Objects within the NCZ may act as climbing aids.",
+      "recommendationTemplate": "Remove or permanently relocate objects outside the NCZ.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-nczcompliant",
+      "field": "nczCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "NCZ compliant should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A non-compliant NCZ object or condition may assist climbing of the barrier.",
+      "recommendationTemplate": "Remove, relocate or rectify the object/condition so the NCZ satisfies the applicable standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-additionalclearareamaintained",
+      "field": "additionalClearAreaMaintained",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "Clear area maintained should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Items or level changes in the additional clear area may compromise effective barrier height or climbability.",
+      "recommendationTemplate": "Remove or relocate items and maintain the additional clear area where required.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-effectivebarrierheightmaintained",
+      "field": "effectiveBarrierHeightMaintained",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "Effective barrier height maintained should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Changes in ground level or adjacent features may reduce the effective barrier height.",
+      "recommendationTemplate": "Rectify ground levels, adjacent features or barrier height so effective barrier height is maintained.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-stepsledgesraisedareasclear",
+      "field": "stepsLedgesRaisedAreasClear",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "Steps / ledges / raised areas clear should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Steps, ledges or raised areas may reduce effective height or assist climbing.",
+      "recommendationTemplate": "Remove, relocate, shield or otherwise rectify steps/ledges/raised areas that compromise the barrier.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-tapspoweroutletsassessed",
+      "field": "tapsPowerOutletsAssessed",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "Taps / power outlets assessed should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Taps, power outlets or similar fixtures may act as climbable features.",
+      "recommendationTemplate": "Remove, relocate, shield or otherwise rectify fixtures that compromise the NCZ or additional clear area.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-raisedgardenbedsassessed",
+      "field": "raisedGardenBedsAssessed",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "Raised garden beds assessed should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Raised garden beds may reduce effective height or create climbable access.",
+      "recommendationTemplate": "Modify, remove or otherwise rectify raised garden beds that compromise the barrier.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-horizontal-surface",
+      "field": "nczHorizontalSurface",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "NCZ Object",
+      "requirement": "Substantially horizontal surfaces within the NCZ should not create climbable handholds or footholds.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A horizontal surface within the NCZ may assist climbing over the barrier.",
+      "recommendationTemplate": "Remove, shield or modify the horizontal surface so it does not create a climbable feature within the NCZ.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-swingsaway",
+      "field": "gateSwingsAway",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Gate opens away from pool should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A gate that swings toward the pool may not perform as intended as part of the safety barrier.",
+      "recommendationTemplate": "Rehang, repair or replace the gate so it opens away from the pool area where required.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-selfclosing",
+      "field": "gateSelfClosing",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Gate self-closes should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A gate that does not self-close may remain open and allow unsupervised access to the pool area.",
+      "recommendationTemplate": "Adjust, repair or replace the gate/self-closing device so the gate self-closes from the required open positions.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-selflatching",
+      "field": "gateSelfLatching",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Gate self-latches should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A gate that does not self-latch may allow unsupervised access to the pool area.",
+      "recommendationTemplate": "Adjust, repair or replace the latch so the gate self-latches when it closes.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-closesfromanyposition",
+      "field": "gateClosesFromAnyPosition",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Closes from any open position should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A gate that only closes from some positions may be left partly open.",
+      "recommendationTemplate": "Adjust, repair or replace the gate/self-closing device so it closes from all required open positions.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-latchpreventsreopening",
+      "field": "gateLatchPreventsReopening",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Latch prevents reopening should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A latch that does not hold securely may allow the gate to reopen after closing.",
+      "recommendationTemplate": "Repair, adjust or replace the latch so it securely engages and prevents reopening.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-fullarc",
+      "field": "gateFullArc",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Gate swings freely through full arc should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Obstruction or friction through the gate arc may prevent reliable self-closing/latching.",
+      "recommendationTemplate": "Remove obstructions and adjust/repair the gate so it swings freely through the required arc.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-cannotbeproppedopen",
+      "field": "gateCannotBeProppedOpen",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Gate cannot be propped open should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A gate that can be propped open may leave the pool area unprotected.",
+      "recommendationTemplate": "Remove propping devices/conditions and rectify the gate so it cannot be secured open in a non-compliant manner.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-gapundercompliant",
+      "field": "gateGapUnderCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Gap under gate compliant should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Excessive clearance below a gate may allow a child to pass underneath.",
+      "recommendationTemplate": "Adjust the gate or ground level so the gap below the gate is compliant.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-latchheightcompliant",
+      "field": "gateLatchHeightCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Latch height compliant should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A low or accessible latch may be operated by a young child.",
+      "recommendationTemplate": "Raise, shield or otherwise modify the latch release arrangement so it is compliant.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-latchshielded",
+      "field": "gateLatchShielded",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Latch shielded if required should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "An unshielded latch may be reachable by a young child through or over the gate/barrier.",
+      "recommendationTemplate": "Install or rectify latch shielding where required so the latch release cannot be accessed by a young child.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-latchreachthroughgaps",
+      "field": "gateLatchReachThroughGaps",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Latch cannot be reached through gaps should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Reach-through gaps may allow a child to operate the latch.",
+      "recommendationTemplate": "Reduce, shield or otherwise rectify reach-through gaps near the latch.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-hingessafe",
+      "field": "gateHingesSafe",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Hinges safe / not climbable should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Climbable hinges or hardware may assist climbing of the gate/barrier.",
+      "recommendationTemplate": "Replace, shield or modify hinges/hardware so they do not create climbable features.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-hardwaresecure",
+      "field": "gateHardwareSecure",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Gate hardware secure and functional should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Loose or defective gate hardware may prevent reliable closing, latching or barrier performance.",
+      "recommendationTemplate": "Repair, adjust or replace gate hardware so it is secure and functions correctly.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-cprsignpresentsafety",
+      "field": "cprSignPresentSafety",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "CPR sign present should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Without a CPR sign, required emergency information may not be readily available at the pool.",
+      "recommendationTemplate": "Install a compliant CPR sign in an appropriate visible location.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-cprsignvisible",
+      "field": "cprSignVisible",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "CPR sign visible should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A CPR sign that is not visible from the pool area may not be usable in an emergency.",
+      "recommendationTemplate": "Relocate or install the CPR sign so it is clearly visible from the pool area.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-cprsignweatherproof",
+      "field": "cprSignWeatherproof",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "CPR sign weatherproof should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A damaged or non-weatherproof sign may deteriorate and become unreadable.",
+      "recommendationTemplate": "Replace the CPR sign with a durable/weatherproof compliant sign.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-cprsignminimumsize",
+      "field": "cprSignMinimumSize",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "CPR sign minimum size should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "An undersized sign may not meet the required display standard.",
+      "recommendationTemplate": "Replace the sign with a CPR sign of compliant size and format.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-cprsigncontentcompliant",
+      "field": "cprSignContentCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "CPR sign content compliant should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Incomplete or incorrect CPR information may reduce emergency response effectiveness.",
+      "recommendationTemplate": "Replace the sign with a current compliant CPR sign containing the required information.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-directbuildingaccesscontrolled",
+      "field": "directBuildingAccessControlled",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Direct building access controlled should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Uncontrolled building access may bypass the pool barrier.",
+      "recommendationTemplate": "Rectify building access so it does not provide non-compliant direct access to the pool area.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-windowopeningrestricted",
+      "field": "windowOpeningRestricted",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Window opening restricted where required should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "An unrestricted opening may allow direct access from the building to the pool area.",
+      "recommendationTemplate": "Restrict, secure or otherwise rectify the window opening as required.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-screenbarsmeshfixed",
+      "field": "screenBarsMeshFixed",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Screen / bars / mesh fixed correctly should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Loose or removable screens/bars/mesh may be bypassed.",
+      "recommendationTemplate": "Secure, repair or replace screens/bars/mesh so they are fixed correctly.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-fixingsrequiretools",
+      "field": "fixingsRequireTools",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Fixings require tools to remove should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Fixings removable without tools may allow restrictions to be bypassed.",
+      "recommendationTemplate": "Replace or modify fixings so restrictions cannot be removed without tools where required.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-dooraccesscompliant",
+      "field": "doorAccessCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Door does not provide non-compliant access should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A non-compliant door may provide uncontrolled access to the pool area.",
+      "recommendationTemplate": "Rectify, restrict or remove the non-compliant door access arrangement.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-fireexitnotcompromised",
+      "field": "fireExitNotCompromised",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Fire exit not compromised should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Barrier works that compromise fire egress may create a separate safety risk.",
+      "recommendationTemplate": "Seek appropriate building/fire safety advice and rectify the access arrangement without compromising required egress.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-sharpedgesabsent",
+      "field": "sharpEdgesAbsent",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Sharp edges absent should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Sharp edges may injure pool users and can indicate barrier deterioration.",
+      "recommendationTemplate": "Repair, remove or make safe sharp edges and restore the barrier to good condition.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-sharpprojectionsabsent",
+      "field": "sharpProjectionsAbsent",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Sharp projections absent should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Sharp projections may injure users and may act as climbable features.",
+      "recommendationTemplate": "Remove, shield or make safe sharp projections.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-entrapmentspacesabsent",
+      "field": "entrapmentSpacesAbsent",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Entrapment spaces absent should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Entrapment spaces may create a safety hazard.",
+      "recommendationTemplate": "Rectify the affected component or opening so entrapment hazards are removed.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-loosebrokencomponentsabsent",
+      "field": "looseBrokenComponentsAbsent",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Loose / broken components absent should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Loose or broken components may reduce the effectiveness of the pool barrier.",
+      "recommendationTemplate": "Repair or replace loose/broken components so the barrier is maintained in good condition.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-rustedweakenedcomponentsabsent",
+      "field": "rustedWeakenedComponentsAbsent",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Rusted or weakened components absent should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Corrosion or weakening may reduce barrier strength and reliability.",
+      "recommendationTemplate": "Repair, reinforce or replace rusted/weakened components.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-temporaryfencesecure",
+      "field": "temporaryFenceSecure",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Temporary fence appears secure should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "An insecure temporary fence may fail to restrict access to the pool area.",
+      "recommendationTemplate": "Repair, brace, secure or replace the temporary fencing so it provides an effective barrier.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-barriernotalteredunsafely",
+      "field": "barrierNotAlteredUnsafely",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Barrier not removed or altered unsafely should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Unsafe alteration/removal may compromise the pool barrier.",
+      "recommendationTemplate": "Reinstate or rectify the barrier so it remains compliant during and after works.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-cannothold300mmwater",
+      "field": "cannotHold300mmWater",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Cannot hold 300mm or more of water should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A pool claimed to be decommissioned may still be a swimming pool if it can hold 300mm or more water.",
+      "recommendationTemplate": "Modify, demolish, drain or otherwise decommission the pool so it cannot hold 300mm or more water, or provide compliant pool barriers.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-certificatereadytoissue",
+      "field": "certificateReadyToIssue",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Pool safety certificate ready to issue should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A certificate should not be issued if unresolved compliance items remain.",
+      "recommendationTemplate": "Resolve all outstanding compliance items before issuing a pool safety certificate.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-owneradvisedactions",
+      "field": "ownerAdvisedActions",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Owner advised of required actions should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "The owner/occupier should be advised of required rectification actions.",
+      "recommendationTemplate": "Provide clear written advice to the owner/occupier about the required actions and reinspection pathway.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "site-hazards-observed",
+      "field": "siteHazardsNoted",
+      "type": "select_values",
+      "triggerValues": [
+        "Hazards observed"
+      ],
+      "passValues": [
+        "No hazards observed"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "General Safety",
+      "requirement": "Site hazards should be noted and addressed where observed.",
+      "issueTemplate": "Site hazards were recorded for {item}.",
+      "riskTemplate": "Site hazards may affect safe inspection, access or use of the pool area.",
+      "recommendationTemplate": "Record the hazard details and recommend that the owner/occupier remove, repair or otherwise manage the hazard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "temporary-fencing-present-required",
+      "field": "temporaryFencingPresent",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Temporary Fencing",
+      "requirement": "Temporary fencing should be present and compliant where required.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Missing or ineffective temporary fencing may allow access to a pool during construction or barrier works.",
+      "recommendationTemplate": "Install or rectify temporary fencing so the pool area is restricted until the permanent barrier is compliant.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "building-work-affecting-barrier",
+      "field": "buildingWorkAffectingBarrier",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Temporary Fencing / Building Work",
+      "requirement": "Building work should not compromise the pool barrier.",
+      "issueTemplate": "Building work affecting the barrier was recorded for {item}.",
+      "riskTemplate": "Building work may create gaps, access points or removed sections that compromise the pool barrier.",
+      "recommendationTemplate": "Install temporary controls and rectify/reinstate the barrier so access to the pool area remains restricted.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "minor-repairs-maintenance-noted",
+      "field": "minorRepairsMaintenanceNoted",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Minor Repairs / Maintenance",
+      "requirement": "Minor repairs or maintenance items should be recorded and actioned where relevant.",
+      "issueTemplate": "Minor repairs or maintenance were noted for {item}.",
+      "riskTemplate": "Minor defects can deteriorate and may compromise barrier performance if not addressed.",
+      "recommendationTemplate": "Record the item and arrange repair/maintenance to keep the barrier in good condition.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "register-update-required",
+      "field": "registerUpdateRequired",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Decommissioned / Converted Pool",
+      "requirement": "Pool register updates should be completed where required.",
+      "issueTemplate": "A pool register update was recorded as required for {item}.",
+      "riskTemplate": "Incorrect register information may cause administrative non-compliance or confusion about pool status.",
+      "recommendationTemplate": "Complete any required pool register update or administrative notification after confirming the pool status.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "observed-electricalissueobserved",
+      "field": "electricalIssueObserved",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Referral / Outcome",
+      "requirement": "Electrical safety issue observed should be recorded and actioned where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Yes.",
+      "riskTemplate": "Electrical hazards may create serious safety risks beyond the pool barrier assessment.",
+      "recommendationTemplate": "Advise the owner/occupier to obtain assessment and rectification by a suitably qualified electrical practitioner.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "observed-bondingconcernnoted",
+      "field": "bondingConcernNoted",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Referral / Outcome",
+      "requirement": "Bonding / conductive fencing concern noted should be recorded and actioned where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Yes.",
+      "riskTemplate": "Conductive components or bonding concerns may create an electrical safety risk.",
+      "recommendationTemplate": "Advise the owner/occupier to obtain specialist electrical advice about bonding/conductive components.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "observed-possibleasbestosobserved",
+      "field": "possibleAsbestosObserved",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Referral / Outcome",
+      "requirement": "Possible asbestos material observed should be recorded and actioned where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Yes.",
+      "riskTemplate": "Possible asbestos-containing material may create a health risk if disturbed.",
+      "recommendationTemplate": "Advise the owner/occupier to obtain asbestos assessment and management advice from a suitably qualified person.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "observed-firesafetyissueobserved",
+      "field": "fireSafetyIssueObserved",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Referral / Outcome",
+      "requirement": "Fire safety issue observed should be recorded and actioned where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Yes.",
+      "riskTemplate": "Fire safety issues may create risks beyond the pool barrier assessment.",
+      "recommendationTemplate": "Advise the owner/occupier to obtain appropriate building/fire safety advice.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "observed-referralrecommended",
+      "field": "referralRecommended",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Referral / Outcome",
+      "requirement": "Referral recommended should be recorded and actioned where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Yes.",
+      "riskTemplate": "A specialist referral indicates the issue may be outside the pool safety inspection scope or requires expert assessment.",
+      "recommendationTemplate": "Refer the owner/occupier to an appropriately qualified person or authority and record the referral in the inspection notes.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "observed-nonconformitynoticerequired",
+      "field": "nonconformityNoticeRequired",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Referral / Outcome",
+      "requirement": "Nonconformity notice required should be recorded and actioned where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Yes.",
+      "riskTemplate": "A nonconformity notice indicates unresolved items require rectification before certification.",
+      "recommendationTemplate": "Issue the required notice and clearly identify the rectification actions and reinspection requirements.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "observed-reinspectionrequired",
+      "field": "reinspectionRequired",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Referral / Outcome",
+      "requirement": "Reinspection required should be recorded and actioned where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Yes.",
+      "riskTemplate": "A reinspection is needed to verify rectification before certification.",
+      "recommendationTemplate": "Arrange reinspection after the identified items have been rectified.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "certificate-ready-no",
+      "field": "certificateReadyToIssue",
+      "type": "select_values",
+      "triggerValues": [
+        "No"
+      ],
+      "passValues": [
+        "Yes"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Inspection Outcome",
+      "requirement": "A pool safety certificate should only be issued when the pool barrier is compliant and ready for certification.",
+      "issueTemplate": "Pool safety certificate ready to issue was recorded as No.",
+      "riskTemplate": "This indicates the inspection has unresolved compliance or administrative items before certification.",
+      "recommendationTemplate": "Complete the required rectification, notices and/or reinspection steps before issuing a pool safety certificate.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "owner-advised-actions-no",
+      "field": "ownerAdvisedActions",
+      "type": "select_values",
+      "triggerValues": [
+        "No"
+      ],
+      "passValues": [
+        "Yes"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Inspection Outcome",
+      "requirement": "The owner/occupier should be advised of required actions where rectification is needed.",
+      "issueTemplate": "Owner advised of required actions was recorded as No.",
+      "riskTemplate": "The owner/occupier may not understand the required rectification actions or reinspection pathway.",
+      "recommendationTemplate": "Provide clear written advice to the owner/occupier about the required actions and record that advice in the inspection notes.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "overall-result-fail",
+      "field": "overallInspectionResult",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "Pending"
+      ],
+      "itemType": "Inspection Outcome",
+      "requirement": "The final inspection result should reflect whether the pool barrier is ready for certification.",
+      "issueTemplate": "The overall inspection result was recorded as Fail.",
+      "riskTemplate": "A failed overall result indicates unresolved items remain before a pool safety certificate can be issued.",
+      "recommendationTemplate": "Address all listed issues and complete any required reinspection before issuing a pool safety certificate.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "select-fail-template",
+      "field": "*",
+      "type": "select_fail",
+      "itemType": "Checklist Item",
+      "requirement": "The item should be assessed as compliant or not applicable before a pool safety certificate is issued.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "This condition may reduce the effectiveness of the pool barrier or indicate an item requiring rectification.",
+      "recommendationTemplate": "Rectify this item so it satisfies the applicable pool safety standard before a pool safety certificate is issued.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    }
+  ]
+}
