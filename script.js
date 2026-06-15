@@ -1882,7 +1882,6 @@ function addPhotoToGrid(grid, photoInput) {
 
   box.appendChild(img);
   box.appendChild(remove);
-  box.appendChild(stamp);
   grid.appendChild(box);
 }
 
