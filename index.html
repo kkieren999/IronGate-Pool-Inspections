@@ -1,1907 +1,1929 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IronGate Pool Safety Inspections</title>
-  <link rel="stylesheet" href="./styles.css?v=20260615phase2" />
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js" defer></script>
-  <script src="./script.js?v=20260615phase2" defer></script>
-</head>
-
-<body class="auth-checking">
-  <div class="app-shell">
-    <header class="hero">
-      <div class="brand">
-        <img class="main-logo" src="./assets/logo/logo-no-text.png" alt="IronGate logo" />
-        <div class="brand-text">
-          <h1><span class="iron">Iron</span><span class="gate">Gate</span></h1>
-          <p>Pool Safety Inspections</p>
-        </div>
-      </div>
-    </header>
-
-    <nav class="tab-bar" aria-label="Inspection Navigation">
-      <button class="tab active" type="button" data-tab="home">
-        <img src="./assets/icons/home.png" alt="" />
-        <span>Home</span>
-      </button>
-
-      <button class="tab" type="button" data-tab="details">
-        <img src="./assets/icons/details.png" alt="" />
-        <span>Details</span>
-      </button>
-
-      <button class="tab" type="button" data-tab="barrier">
-        <img src="./assets/icons/barrier.png" alt="" />
-        <span>Barrier</span>
-      </button>
-
-      <button class="tab" type="button" data-tab="climbability">
-        <img src="./assets/icons/climability.png" alt="" />
-        <span>Climbability</span>
-      </button>
-
-      <button class="tab" type="button" data-tab="gate">
-        <img src="./assets/icons/gate.png" alt="" />
-        <span>Gate</span>
-      </button>
-
-      <button class="tab" type="button" data-tab="safety">
-        <img src="./assets/icons/safety.png" alt="" />
-        <span>Safety</span>
-      </button>
-    </nav>
-
-    <main class="content">
-
-      <!-- HOME -->
-      <section id="home" class="page home-page active-page">
-        <button class="inspection-card" type="button" id="newInspectionBtn">
-          <div class="inspection-icon">+</div>
-          <div class="inspection-content">
-            <h2>New Inspection</h2>
-            <p>Create a new pool safety inspection</p>
-          </div>
-          <div class="inspection-arrow">→</div>
-        </button>
-
-        <div class="home-list-header">
-          <div>
-            <h2>Inspections</h2>
-            <p>Continue in-progress work or download completed inspections.</p>
-          </div>
-          <button id="refreshListBtn" class="small-action" type="button">Refresh</button>
-        </div>
-
-        <div id="inspectionList" class="inspection-list"></div>
-
-        <div id="emptyState" class="empty-state">
-          <img class="empty-icon" src="./assets/icons/details.png" alt="" />
-          <h3>No Inspections</h3>
-          <p>Start a new inspection and it will appear here.</p>
-        </div>
-      </section>
-
-     <!-- DETAILS -->
-<section id="details" class="page form-page">
-  <div class="section-card" data-section="details">
-    <div class="section-heading">
-      <img src="./assets/icons/details.png" alt="" />
-      <div>
-        <h2>Details</h2>
-        <p>Inspection setup, property details, pool classification and pre-inspection checks.</p>
-      </div>
-    </div>
-
-    <div class="details-check-list" aria-label="Details check sections">
-
-      <!-- 1. INSPECTION & PROPERTY DETAILS -->
-      <details class="details-check-group">
-        <summary class="details-check-summary">
-          <div class="details-check-title">
-            <span class="group-number">1</span>
-            <div>
-              <h3>Inspection &amp; Property Details</h3>
-              <p>Inspection number, inspector, client, property and pool details.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="details-check-body">
-          <div class="form-grid">
-            <label class="field">
-              <span>Inspection Number</span>
-              <input data-save name="inspectionNumber" id="inspectionNumber" type="text" placeholder="Auto generated" readonly />
-            </label>
-
-            <label class="field">
-              <span>Date</span>
-              <input data-save name="inspectionDate" id="inspectionDate" type="date" />
-            </label>
-
-            <label class="field">
-              <span>Inspector Name</span>
-              <input data-save name="inspectorName" type="text" placeholder="Inspector name" />
-            </label>
-
-            <label class="field">
-              <span>Licence Number</span>
-              <input data-save name="licenceNumber" type="text" placeholder="QBCC / PSI licence" />
-            </label>
-
-            <label class="field">
-              <span>Owner / Client Name</span>
-              <input data-save name="ownerName" type="text" placeholder="Client name" />
-            </label>
-
-            <label class="field">
-              <span>Phone</span>
-              <input data-save name="ownerPhone" type="tel" placeholder="Phone number" />
-            </label>
-
-            <label class="field">
-              <span>Email</span>
-              <input data-save name="ownerEmail" type="email" placeholder="Email address" />
-            </label>
-
-            <label class="field">
-              <span>Inspection Type</span>
-              <select data-save name="inspectionType">
-                <option>Initial inspection</option>
-                <option>Reinspection</option>
-                <option>Follow-up inspection</option>
-                <option>Other</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Inspection Purpose</span>
-              <select data-save name="inspectionPurpose">
-                <option>Owner request</option>
-                <option>Sale</option>
-                <option>Lease</option>
-                <option>Body corporate / shared pool</option>
-                <option>Other</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Pool Type</span>
-              <select data-save name="poolType">
-                <option>In-ground pool</option>
-                <option>Above-ground pool</option>
-                <option>Spa</option>
-                <option>Swim spa</option>
-                <option>Indoor pool</option>
-                <option>Outdoor pool</option>
-                <option>Other</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Shared Pool?</span>
-              <select data-save name="sharedPool">
-                <option>No</option>
-                <option>Yes</option>
-                <option>Unknown</option>
-              </select>
-            </label>
-
-            <label class="field full">
-              <span>Property Address</span>
-              <textarea data-save name="propertyAddress" placeholder="Full property address"></textarea>
-            </label>
-
-            <label class="field full">
-              <span>Inspection Notes</span>
-              <textarea data-save name="inspectionNotes" placeholder="General inspection notes, booking details or client instructions..."></textarea>
-            </label>
-          </div>
-        </div>
-      </details>
-
-      <!-- 2. POOL CLASSIFICATION CHECKS -->
-      <details class="details-check-group">
-        <summary class="details-check-summary">
-          <div class="details-check-title">
-            <span class="group-number">2</span>
-            <div>
-              <h3>Pool Classification Checks</h3>
-              <p>Confirm pool type, regulated pool status and classification details.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="details-check-body">
-
-
-          <div class="form-grid">
-            <label class="field">
-              <span>Can hold 300mm or more of water</span>
-              <select data-save name="holds300mmWater">
-                <option>Yes</option>
-                <option>No</option>
-                <option>Unknown</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Pool is a regulated pool</span>
-              <select data-save name="regulatedPool">
-                <option>Yes</option>
-                <option>No</option>
-                <option>Unknown</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Located on regulated land</span>
-              <select data-save name="regulatedLand">
-                <option>Yes</option>
-                <option>No</option>
-                <option>Unknown</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Multiple pools on property?</span>
-              <select data-save name="multiplePools">
-                <option>No</option>
-                <option>Yes</option>
-                <option>Unknown</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Shared / non-shared confirmed</span>
-              <select data-save name="sharedStatusConfirmed">
-                <option>Yes</option>
-                <option>No</option>
-                <option>Unknown</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Pool type confirmed on site</span>
-              <select data-save name="poolTypeConfirmed">
-                <option>Yes</option>
-                <option>No</option>
-                <option>Unknown</option>
-              </select>
-            </label>
-
-            <label class="field full">
-              <span>Classification Comments / Recommendation</span>
-              <textarea data-save name="poolClassificationComments" placeholder="Notes about pool type, regulated pool status, multiple pools, shared pool status or classification issues..."></textarea>
-            </label>
-          </div>
-        </div>
-      </details>
-
-      <!-- 3. PRE-INSPECTION CHECKS -->
-      <details class="details-check-group">
-        <summary class="details-check-summary">
-          <div class="details-check-title">
-            <span class="group-number">3</span>
-            <div>
-              <h3>Pre-Inspection Checks</h3>
-              <p>Register, access, hazards, approvals, exemptions and relevant facts.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="details-check-body">
-          <div class="toggle-list">
-            <label class="toggle-field">
-              <span>Pool register checked</span>
-              <input data-save name="poolRegisterChecked" type="checkbox" />
-              <i></i>
-            </label>
-
-            <label class="toggle-field">
-              <span>Existing certificate checked</span>
-              <input data-save name="existingCertificateChecked" type="checkbox" />
-              <i></i>
-            </label>
-
-            <label class="toggle-field">
-              <span>Access granted / owner or agent aware</span>
-              <input data-save name="accessGranted" type="checkbox" />
-              <i></i>
-            </label>
-
-            <label class="toggle-field">
-              <span>Site hazards checked before starting</span>
-              <input data-save name="siteHazardsChecked" type="checkbox" />
-              <i></i>
-            </label>
-
-            <label class="toggle-field">
-              <span>Relevant facts obtained before decision</span>
-              <input data-save name="relevantFactsObtained" type="checkbox" />
-              <i></i>
-            </label>
-
-            <label class="toggle-field">
-              <span>Approvals / exemptions / variations checked if provided</span>
-              <input data-save name="approvalsExemptionsChecked" type="checkbox" />
-              <i></i>
-            </label>
-
-            <label class="toggle-field">
-              <span>Previous nonconformity notice checked if applicable</span>
-              <input data-save name="previousNonconformityChecked" type="checkbox" />
-              <i></i>
-            </label>
-          </div>
-
-          <label class="field full notes-field">
-            <span>Pre-inspection Notes</span>
-            <textarea data-save name="preInspectionNotes" placeholder="Access notes, hazards, pool register notes, owner information, approvals, exemptions, variations or other relevant facts..."></textarea>
-          </label>
-        </div>
-      </details>
-
-      <!-- 4. INSPECTION EVIDENCE SETUP -->
-      <details class="details-check-group">
-        <summary class="details-check-summary">
-          <div class="details-check-title">
-            <span class="group-number">4</span>
-            <div>
-              <h3>Inspection Evidence Setup</h3>
-              <p>Weather, access condition, front property photo and pool overview photo.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="details-check-body">
-          <div class="form-grid">
-            <label class="field">
-              <span>Weather / visibility conditions</span>
-              <select data-save name="weatherVisibility">
-                <option>Clear</option>
-                <option>Overcast</option>
-                <option>Rain</option>
-                <option>Poor visibility</option>
-                <option>Other</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Site access condition</span>
-              <select data-save name="siteAccessCondition">
-                <option>Clear access</option>
-                <option>Restricted access</option>
-                <option>Access issue observed</option>
-                <option>Other</option>
-              </select>
-            </label>
-
-            <label class="field full">
-              <span>General Evidence Notes</span>
-              <textarea data-save name="generalEvidenceNotes" placeholder="Notes about photos taken, site access, conditions, visibility or general evidence..."></textarea>
-            </label>
-          </div>
-
-          <div class="photo-widget" data-photo-area="property-front">
-            <button class="camera-btn" type="button">+ Front of Property Photo</button>
-            <input type="file" accept="image/*" capture="environment" multiple hidden />
-            <div class="photo-grid"></div>
-          </div>
-
-          <div class="photo-widget" data-photo-area="pool-overview">
-            <button class="camera-btn" type="button">+ Pool Overview Photo</button>
-            <input type="file" accept="image/*" capture="environment" multiple hidden />
-            <div class="photo-grid"></div>
-          </div>
-        </div>
-      </details>
-    </div>
-
-  </div>
-</section>
-
-
-
-
-
-  <!-- BARRIER -->
-<section id="barrier" class="page form-page">
-  <div class="section-card" data-section="barrier">
-    <div class="section-heading">
-      <img src="./assets/icons/barrier.png" alt="" />
-      <div>
-        <h2>Barrier</h2>
-        <p>Barrier location, fence sections, boundary fences and other physical barrier items.</p>
-      </div>
-    </div>
-
-    <div class="barrier-check-list" aria-label="Barrier check sections">
-
-      <!-- 3. BARRIER LOCATION CHECKS -->
-      <details class="barrier-check-group">
-        <summary class="barrier-check-summary">
-          <div class="barrier-check-title">
-            <span class="group-number">3</span>
-            <div>
-              <h3>Barrier Location Checks</h3>
-              <p>Overall barrier layout, access control and pool area location.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="barrier-check-body">
- 
-
-          <div class="form-grid">
-            <label class="field">
-              <span>Location</span>
-              <select data-save name="barrierLocation">
-                <option value="">Select location</option>
-                <option>Whole pool area</option>
-                <option>Front boundary</option>
-                <option>Rear boundary</option>
-                <option>Left boundary</option>
-                <option>Right boundary</option>
-                <option>House side</option>
-                <option>Patio / deck side</option>
-                <option>Gate area</option>
-                <option>Neighbour side</option>
-                <option>Other / Custom</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Custom Location</span>
-              <input data-save name="barrierLocationCustom" type="text" placeholder="If other, enter location" />
-            </label>
-
-            <label class="field">
-              <span>Barrier surrounds pool area</span>
-              <select data-save name="barrierSurroundsPool">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Direct building access controlled</span>
-              <select data-save name="buildingAccessControlled">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Neighbour access controlled</span>
-              <select data-save name="neighbourAccessControlled">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Pool area free of unrelated structures</span>
-              <select data-save name="poolAreaFreeOfUnrelatedStructures">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field full">
-              <span>Comments / Recommendation</span>
-              <textarea data-save name="barrierLocationComments" placeholder="Notes about the overall barrier layout, access points, building walls, neighbouring property access or other location issues..."></textarea>
-            </label>
-          </div>
-
-          <div class="photo-widget" data-photo-area="barrier-location">
-            <button class="camera-btn" type="button">+ Evidence Photo</button>
-            <input type="file" accept="image/*" capture="environment" multiple hidden />
-            <div class="photo-grid"></div>
-          </div>
-        </div>
-      </details>
-
-      <!-- 4, 7 & 8. FENCE SECTIONS -->
-      <details class="barrier-check-group">
-        <summary class="barrier-check-summary">
-          <div class="barrier-check-title">
-            <span class="group-number">4</span>
-            <div>
-              <h3>Fence Sections</h3>
-              <p>Barrier height, ground clearance, openings and fence construction.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="barrier-check-body">
-          <p class="helper-text">
-            Add each separate fence section around the pool barrier. Use this for barrier height, ground clearance, openings and fence construction checks.
-          </p>
-
-          <div id="fenceSections" class="fence-sections" aria-label="Fence sections"></div>
-
-          <button class="add-section-btn" id="addFenceSectionBtn" type="button">
-            <span>+</span>
-            Add Fence Section
-          </button>
-        </div>
-      </details>
-
-      <!-- 12. BALCONY CHECKS -->
-      <details class="barrier-check-group">
-        <summary class="barrier-check-summary">
-          <div class="barrier-check-title">
-            <span class="group-number">12</span>
-            <div>
-              <h3>Balcony Checks</h3>
-              <p>Balconies, decks or raised platforms that may affect the barrier.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="barrier-check-body">
-          <p class="helper-text">
-            Add balcony checks only where a balcony, deck or raised platform may affect the pool barrier.
-          </p>
-
-          <div id="balconySections" class="fence-sections" aria-label="Balcony checks"></div>
-
-          <button class="add-section-btn" id="addBalconySectionBtn" type="button">
-            <span>+</span>
-            Add Balcony Check
-          </button>
-        </div>
-      </details>
-
-      <!-- 13. RETAINING WALL & LEVEL CHANGE CHECKS -->
-      <details class="barrier-check-group">
-        <summary class="barrier-check-summary">
-          <div class="barrier-check-title">
-            <span class="group-number">13</span>
-            <div>
-              <h3>Retaining Wall &amp; Level-Change Checks</h3>
-              <p>Retaining walls, level changes, steps, raised beds and sloping ground.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="barrier-check-body">
-          <p class="helper-text">
-            Add each retaining wall, level change, step, raised garden bed or sloping-ground issue separately.
-          </p>
-
-          <div id="retainingWallSections" class="fence-sections" aria-label="Retaining wall and level-change checks"></div>
-
-          <button class="add-section-btn" id="addRetainingWallSectionBtn" type="button">
-            <span>+</span>
-            Add Retaining Wall / Level Change
-          </button>
-        </div>
-      </details>
-
-      <!-- 14. ABOVE-GROUND, INFLATABLE, WET-EDGE & INFINITY POOL CHECKS -->
-      <details class="barrier-check-group">
-        <summary class="barrier-check-summary">
-          <div class="barrier-check-title">
-            <span class="group-number">14</span>
-            <div>
-              <h3>Above-Ground, Inflatable, Wet-Edge &amp; Infinity Pool Checks</h3>
-              <p>Special pool features, pool walls, ladders, equipment and holding tanks.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="barrier-check-body">
-  
-
-          <div class="form-grid">
-            <label class="field">
-              <span>Location</span>
-              <select data-save name="specialPoolFeatureLocation">
-                <option value="">Select location</option>
-                <option>Whole pool area</option>
-                <option>Front boundary</option>
-                <option>Rear boundary</option>
-                <option>Left boundary</option>
-                <option>Right boundary</option>
-                <option>Pool edge</option>
-                <option>Pump / equipment area</option>
-                <option>Other / Custom</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Custom Location</span>
-              <input data-save name="specialPoolFeatureLocationCustom" type="text" placeholder="If other, enter location" />
-            </label>
-
-            <label class="field">
-              <span>Feature Type</span>
-              <select data-save name="specialPoolFeatureType">
-                <option>None observed</option>
-                <option>Above-ground pool</option>
-                <option>Inflatable pool</option>
-                <option>Wet-edge pool</option>
-                <option>Infinity-edge pool</option>
-                <option>Other</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Pool wall used as barrier</span>
-              <select data-save name="poolWallUsedAsBarrier">
-                <option>N/A</option>
-                <option>Pass</option>
-                <option>Fail</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Pool wall height compliant</span>
-              <select data-save name="poolWallHeightCompliant">
-                <option>N/A</option>
-                <option>Pass</option>
-                <option>Fail</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Ladder / access point secured</span>
-              <select data-save name="ladderAccessSecured">
-                <option>N/A</option>
-                <option>Pass</option>
-                <option>Fail</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Pump/filter creates climbable access</span>
-              <select data-save name="pumpFilterClimbableAccess">
-                <option>N/A</option>
-                <option>Pass</option>
-                <option>Fail</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Holding tank 300mm or deeper</span>
-              <select data-save name="holdingTank300mmOrDeeper">
-                <option>N/A</option>
-                <option>No</option>
-                <option>Yes</option>
-              </select>
-            </label>
-
-            <label class="field full">
-              <span>Comments / Recommendation</span>
-              <textarea data-save name="specialPoolFeatureComments" placeholder="Notes about above-ground, inflatable, wet-edge or infinity pool features..."></textarea>
-            </label>
-          </div>
-
-          <div class="photo-widget" data-photo-area="special-pool-feature">
-            <button class="camera-btn" type="button">+ Evidence Photo</button>
-            <input type="file" accept="image/*" capture="environment" multiple hidden />
-            <div class="photo-grid"></div>
-          </div>
-        </div>
-      </details>
-
-      <!-- 15. BOUNDARY FENCE & NEIGHBOUR-SIDE CHECKS -->
-      <details class="barrier-check-group">
-        <summary class="barrier-check-summary">
-          <div class="barrier-check-title">
-            <span class="group-number">15</span>
-            <div>
-              <h3>Boundary Fence &amp; Neighbour-Side Checks</h3>
-              <p>Boundary sides, dividing fences and neighbour-side issues.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="barrier-check-body">
-          <p class="helper-text">
-            Add each boundary side separately where the boundary fence forms part of the pool barrier.
-          </p>
-
-          <div id="boundarySections" class="fence-sections" aria-label="Boundary fence and neighbour-side checks"></div>
-
-          <button class="add-section-btn" id="addBoundarySectionBtn" type="button">
-            <span>+</span>
-            Add Boundary Section
-          </button>
-        </div>
-      </details>
-
-    </div>
-  </div>
-</section>
-
-   <!-- CLIMBABILITY -->
-<section id="climbability" class="page form-page">
-  <div class="section-card" data-section="climbability">
-    <div class="section-heading">
-      <img src="./assets/icons/climability.png" alt="" />
-      <div>
-        <h2>Climbability</h2>
-        <p>Non-climbable zones, clear areas, objects, vegetation and foothold risks.</p>
-      </div>
-    </div>
-
-    <!-- CLIMBABILITY SECTION GROUPS -->
-    <div id="climbabilitySectionGroups" class="fence-sections" aria-label="Climbability check groups">
-
-      <!-- CLIMBABILITY SECTION 1 -->
-      <details class="climbability-section-group" open>
-        <summary class="climbability-section-summary">
-          <div class="climbability-section-title">
-            <span class="group-number">1</span>
-            <div>
-              <h3>Climbability Section 1</h3>
-              <p>NCZ, climbable objects and additional clear area checks.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-		  <span class="modern-chevron">▼</span>
-		</span>
-        </summary>
-
-        <div class="climbability-section-body">
-
-          <!-- NON-CLIMBABLE ZONE CHECKS -->
-          <div class="details-group numbered-group">
-            <div class="group-title-row">
-              <span class="group-number">5</span>
-              <h3>Non-Climbable Zone Checks</h3>
-            </div>
-
-  
-
-            <div class="form-grid">
-              <label class="field">
-                <span>NCZ Location</span>
-                <select data-save name="nczOverallLocation">
-                  <option value="">Select location</option>
-                  <option>Whole pool area</option>
-                  <option>Front boundary</option>
-                  <option>Rear boundary</option>
-                  <option>Left boundary</option>
-                  <option>Right boundary</option>
-                  <option>House side</option>
-                  <option>Patio / deck side</option>
-                  <option>Gate area</option>
-                  <option>Pump / equipment area</option>
-                  <option>Neighbour side</option>
-                  <option>Other / Custom</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Custom Location</span>
-                <input data-save name="nczOverallLocationCustom" type="text" placeholder="If other, enter location" />
-              </label>
-
-              <label class="field">
-                <span>NCZ Side of Barrier</span>
-                <select data-save name="nczSideOfBarrier">
-                  <option value="">Select side</option>
-                  <option>Inside pool area</option>
-                  <option>Outside pool area</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>900mm NCZ provided</span>
-                <select data-save name="ncz900Provided">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>NCZ on correct side of barrier</span>
-                <select data-save name="nczCorrectSide">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>No handholds or footholds in NCZ</span>
-                <select data-save name="nczNoHandholdsFootholds">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Projections / indentations compliant</span>
-                <select data-save name="nczProjectionsIndentationsCompliant">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Vegetation non-climbable</span>
-                <select data-save name="nczVegetationNonClimbable">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Objects removed from NCZ</span>
-                <select data-save name="nczObjectsRemoved">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field full">
-                <span>NCZ Comments / Recommendation</span>
-                <textarea data-save name="nczOverallComments" placeholder="Notes about the overall non-climbable zone, side of barrier, climbable features, vegetation or projection issues..."></textarea>
-              </label>
-            </div>
-
-            <div class="photo-widget" data-photo-area="ncz-overall">
-              <button class="camera-btn" type="button">+ Evidence Photo</button>
-              <input type="file" accept="image/*" capture="environment" multiple hidden />
-              <div class="photo-grid"></div>
-            </div>
-          </div>
-
-          <!-- CLIMBABLE OBJECT CHECKS -->
-          <div class="details-group numbered-group">
-            <div class="group-title-row">
-              <span class="group-number">5A</span>
-              <h3>Climbable Object Checks</h3>
-            </div>
-
-            <p class="helper-text">
-              Add each climbable object or NCZ issue separately. Use this for furniture, plants, trees, taps, power outlets, pumps, ledges, steps or other objects near the barrier.
-            </p>
-
-            <div id="climbabilitySections" class="fence-sections" aria-label="Climbability sections"></div>
-
-            <div class="photo-widget" data-photo-area="climbability-objects">
-              <button class="camera-btn" type="button">+ Evidence Photo</button>
-              <input type="file" accept="image/*" capture="environment" multiple hidden />
-              <div class="photo-grid"></div>
-            </div>
-          </div>
-
-          <!-- ADDITIONAL CLEAR AREA CHECKS -->
-          <div class="details-group numbered-group">
-            <div class="group-title-row">
-              <span class="group-number">6</span>
-              <h3>Additional Clear Area Checks</h3>
-            </div>
-
-
-
-            <div class="form-grid">
-              <label class="field">
-                <span>Clear Area Location</span>
-                <select data-save name="additionalClearAreaLocation">
-                  <option value="">Select location</option>
-                  <option>Whole pool area</option>
-                  <option>Front boundary</option>
-                  <option>Rear boundary</option>
-                  <option>Left boundary</option>
-                  <option>Right boundary</option>
-                  <option>House side</option>
-                  <option>Patio / deck side</option>
-                  <option>Gate area</option>
-                  <option>Pump / equipment area</option>
-                  <option>Retaining wall area</option>
-                  <option>Neighbour side</option>
-                  <option>Other / Custom</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Custom Location</span>
-                <input data-save name="additionalClearAreaLocationCustom" type="text" placeholder="If other, enter location" />
-              </label>
-
-              <label class="field">
-                <span>Additional clear area required</span>
-                <select data-save name="additionalClearAreaRequired">
-                  <option>Yes</option>
-                  <option>No</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Clear area maintained</span>
-                <select data-save name="additionalClearAreaMaintained">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Effective barrier height maintained</span>
-                <select data-save name="effectiveBarrierHeightMaintained">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Steps / ledges / raised areas clear</span>
-                <select data-save name="stepsLedgesRaisedAreasClear">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Taps / power outlets assessed</span>
-                <select data-save name="tapsPowerOutletsAssessed">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Raised garden beds assessed</span>
-                <select data-save name="raisedGardenBedsAssessed">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field full">
-                <span>Additional Clear Area Comments / Recommendation</span>
-                <textarea data-save name="additionalClearAreaComments" placeholder="Notes about clear areas, raised surfaces, objects, taps, power outlets, garden beds or anything reducing the effective barrier height..."></textarea>
-              </label>
-            </div>
-
-            <div class="photo-widget" data-photo-area="additional-clear-area">
-              <button class="camera-btn" type="button">+ Evidence Photo</button>
-              <input type="file" accept="image/*" capture="environment" multiple hidden />
-              <div class="photo-grid"></div>
-            </div>
-          </div>
-
-        </div>
-      </details>
-    </div>
-
-    <!-- ADD BUTTON AT BOTTOM -->
-    <button class="add-section-btn" id="addClimbabilitySectionBtn" type="button">
-      <span>+</span>
-      Add Climbability Check
-    </button>
-  </div>
-</section>
-  
-
-     <!-- GATE -->
-<section id="gate" class="page form-page">
-  <div class="section-card" data-section="gate">
-    <div class="section-heading">
-      <img src="./assets/icons/gate.png" alt="" />
-      <div>
-        <h2>Gate</h2>
-        <p>Self-closing, self-latching, latch height, swing direction and gate safety checks.</p>
-      </div>
-    </div>
-
-    <!-- GATE SECTION GROUPS -->
-    <div id="gateSectionGroups" class="fence-sections" aria-label="Gate check groups">
-
-      <!-- GATE SECTION 1 -->
-      <details class="gate-section-group" open>
-        <summary class="gate-section-summary">
-          <div class="gate-section-title">
-            <span class="group-number">1</span>
-            <div>
-              <h3>Gate Section 1</h3>
-              <p>Gate operation, latch, hinges, gaps and safety checks.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="gate-section-body">
-
-          <!-- GATE CHECKS -->
-          <div class="details-group numbered-group">
-            <div class="group-title-row">
-              <span class="group-number">9</span>
-              <h3>Gate Checks</h3>
-            </div>
-
-     
-
-            <div class="form-grid">
-              <label class="field">
-                <span>Gate Location</span>
-                <select data-save name="gateLocation">
-                  <option value="">Select location</option>
-                  <option>Front entry gate</option>
-                  <option>Rear entry gate</option>
-                  <option>Left side gate</option>
-                  <option>Right side gate</option>
-                  <option>House side gate</option>
-                  <option>Patio / deck gate</option>
-                  <option>Boundary gate</option>
-                  <option>Service / maintenance gate</option>
-                  <option>Other / Custom</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Custom Location</span>
-                <input data-save name="gateLocationCustom" type="text" placeholder="If other, enter location" />
-              </label>
-
-              <label class="field">
-                <span>Gate Type</span>
-                <select data-save name="gateType">
-                  <option value="">Select type</option>
-                  <option>Single leaf gate</option>
-                  <option>Double leaf gate</option>
-                  <option>Glass gate</option>
-                  <option>Aluminium gate</option>
-                  <option>Timber gate</option>
-                  <option>Mesh / chainwire gate</option>
-                  <option>Other</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Gate opens away from pool</span>
-                <select data-save name="gateSwingsAway">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Gate self-closes</span>
-                <select data-save name="gateSelfClosing">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Gate self-latches</span>
-                <select data-save name="gateSelfLatching">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Closes from any open position</span>
-                <select data-save name="gateClosesFromAnyPosition">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Latch prevents reopening</span>
-                <select data-save name="gateLatchPreventsReopening">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Gate swings freely through full arc</span>
-                <select data-save name="gateFullArc">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Gate cannot be propped open</span>
-                <select data-save name="gateCannotBeProppedOpen">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Gap under gate (mm)</span>
-                <input data-save name="gateGapUnder" type="number" placeholder="100" />
-              </label>
-
-              <label class="field">
-                <span>Gap under gate compliant</span>
-                <select data-save name="gateGapUnderCompliant">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Latch height (mm)</span>
-                <input data-save name="gateLatchHeight" type="number" placeholder="1500" />
-              </label>
-
-              <label class="field">
-                <span>Latch height compliant</span>
-                <select data-save name="gateLatchHeightCompliant">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Latch shielded if required</span>
-                <select data-save name="gateLatchShielded">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Latch cannot be reached through gaps</span>
-                <select data-save name="gateLatchReachThroughGaps">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Hinges safe / not climbable</span>
-                <select data-save name="gateHingesSafe">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Gate hardware secure and functional</span>
-                <select data-save name="gateHardwareSecure">
-                  <option>Pass</option>
-                  <option>Fail</option>
-                  <option>N/A</option>
-                </select>
-              </label>
-
-              <label class="field full">
-                <span>Comments / Recommendation</span>
-                <textarea data-save name="gateComments" placeholder="Notes about gate operation, latching, latch height, gap under gate, hinges, defects or recommendations..."></textarea>
-              </label>
-            </div>
-
-            <div class="photo-widget" data-photo-area="gate-1">
-              <button class="camera-btn" type="button">+ Evidence Photo</button>
-              <input type="file" accept="image/*" capture="environment" multiple hidden />
-              <div class="photo-grid"></div>
-            </div>
-          </div>
-
-        </div>
-      </details>
-    </div>
-
-    <!-- ADD BUTTON AT BOTTOM -->
-    <button class="add-section-btn" id="addGateSectionBtn" type="button">
-      <span>+</span>
-      Add Gate Check
-    </button>
-  </div>
-</section>
-
-     <!-- SAFETY -->
-<section id="safety" class="page form-page">
-  <div class="section-card" data-section="safety">
-    <div class="section-heading">
-      <img src="./assets/icons/safety.png" alt="" />
-      <div>
-        <h2>Safety</h2>
-        <p>CPR signs, building access, hazards, temporary works and final inspection outcome.</p>
-      </div>
-    </div>
-
-    <div class="safety-check-list" aria-label="Safety check sections">
-
-      <!-- CPR / RESUSCITATION SIGN CHECKS -->
-      <details class="safety-check-group">
-        <summary class="safety-check-summary">
-          <div class="safety-check-title">
-            <span class="group-number">16</span>
-            <div>
-              <h3>CPR / Resuscitation Sign Checks</h3>
-              <p>Sign presence, visibility, durability, size and content.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="safety-check-body">
-
-
-          <div class="form-grid">
-            <label class="field">
-              <span>CPR sign present</span>
-              <select data-save name="cprSignPresentSafety">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Visible from pool area</span>
-              <select data-save name="cprSignVisible">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Weatherproof / durable</span>
-              <select data-save name="cprSignWeatherproof">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Minimum size checked</span>
-              <select data-save name="cprSignMinimumSize">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Content appears compliant</span>
-              <select data-save name="cprSignContentCompliant">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field full">
-              <span>Comments / Recommendation</span>
-              <textarea data-save name="cprSignComments" placeholder="Notes about CPR sign location, visibility, condition, size, content or recommendation..."></textarea>
-            </label>
-          </div>
-
-          <div class="photo-widget" data-photo-area="cpr-sign">
-            <button class="camera-btn" type="button">+ Evidence Photo</button>
-            <input type="file" accept="image/*" capture="environment" multiple hidden />
-            <div class="photo-grid"></div>
-          </div>
-        </div>
-      </details>
-
-      <!-- DOORS, WINDOWS & BUILDING ACCESS CHECKS -->
-      <details class="safety-check-group">
-        <summary class="safety-check-summary">
-          <div class="safety-check-title">
-            <span class="group-number">10</span>
-            <div>
-              <h3>Doors, Windows &amp; Building Access Checks</h3>
-              <p>Building access, windows, doors, screens and fire exits.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="safety-check-body">
-
-
-          <div class="form-grid">
-            <label class="field">
-              <span>Access Type</span>
-              <select data-save name="buildingAccessType">
-                <option value="">Select type</option>
-                <option>Door</option>
-                <option>Window</option>
-                <option>Building wall</option>
-                <option>Sliding door</option>
-                <option>Pet door</option>
-                <option>Other</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Location</span>
-              <select data-save name="buildingAccessLocation">
-                <option value="">Select location</option>
-                <option>House side</option>
-                <option>Patio / deck side</option>
-                <option>Rear wall</option>
-                <option>Side wall</option>
-                <option>Dining area</option>
-                <option>Living area</option>
-                <option>Bedroom</option>
-                <option>Other / Custom</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Custom Location</span>
-              <input data-save name="buildingAccessLocationCustom" type="text" placeholder="If other, enter location" />
-            </label>
-
-            <label class="field">
-              <span>Direct building access controlled</span>
-              <select data-save name="directBuildingAccessControlled">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Window opening restricted where required</span>
-              <select data-save name="windowOpeningRestricted">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Screen / bars / mesh fixed correctly</span>
-              <select data-save name="screenBarsMeshFixed">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Fixings require tools to remove</span>
-              <select data-save name="fixingsRequireTools">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Door does not provide non-compliant access</span>
-              <select data-save name="doorAccessCompliant">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Fire exit not blocked or compromised</span>
-              <select data-save name="fireExitNotCompromised">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field full">
-              <span>Comments / Recommendation</span>
-              <textarea data-save name="buildingAccessComments" placeholder="Notes about doors, windows, building access, restrictions, screens, bars, fire exits or recommendation..."></textarea>
-            </label>
-          </div>
-
-          <div class="photo-widget" data-photo-area="building-access">
-            <button class="camera-btn" type="button">+ Evidence Photo</button>
-            <input type="file" accept="image/*" capture="environment" multiple hidden />
-            <div class="photo-grid"></div>
-          </div>
-        </div>
-      </details>
-
-      <!-- GENERAL SAFETY HAZARD CHECKS -->
-      <details class="safety-check-group">
-        <summary class="safety-check-summary">
-          <div class="safety-check-title">
-            <span class="group-number">17</span>
-            <div>
-              <h3>General Safety Hazard Checks</h3>
-              <p>Sharp edges, projections, entrapment, damage and site hazards.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="safety-check-body">
-
-
-          <div class="form-grid">
-            <label class="field">
-              <span>Sharp edges absent</span>
-              <select data-save name="sharpEdgesAbsent">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Sharp projections absent</span>
-              <select data-save name="sharpProjectionsAbsent">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Entrapment spaces absent</span>
-              <select data-save name="entrapmentSpacesAbsent">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Loose / broken components absent</span>
-              <select data-save name="looseBrokenComponentsAbsent">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Rusted or weakened components absent</span>
-              <select data-save name="rustedWeakenedComponentsAbsent">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Site hazards noted</span>
-              <select data-save name="siteHazardsNoted">
-                <option>No hazards observed</option>
-                <option>Hazards observed</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field full">
-              <span>Comments / Recommendation</span>
-              <textarea data-save name="generalSafetyComments" placeholder="Notes about sharp edges, projections, entrapment spaces, loose parts, rust, site hazards or recommendation..."></textarea>
-            </label>
-          </div>
-
-          <div class="photo-widget" data-photo-area="general-safety">
-            <button class="camera-btn" type="button">+ Evidence Photo</button>
-            <input type="file" accept="image/*" capture="environment" multiple hidden />
-            <div class="photo-grid"></div>
-          </div>
-        </div>
-      </details>
-
-      <!-- TEMPORARY FENCING & BUILDING WORK CHECKS -->
-      <details class="safety-check-group">
-        <summary class="safety-check-summary">
-          <div class="safety-check-title">
-            <span class="group-number">18</span>
-            <div>
-              <h3>Temporary Fencing &amp; Building Work Checks</h3>
-              <p>Temporary barriers, building works, altered barriers and maintenance.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="safety-check-body">
-
-
-          <div class="form-grid">
-            <label class="field">
-              <span>Temporary fencing present if required</span>
-              <select data-save name="temporaryFencingPresent">
-                <option>N/A</option>
-                <option>Pass</option>
-                <option>Fail</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Temporary fence appears secure</span>
-              <select data-save name="temporaryFenceSecure">
-                <option>N/A</option>
-                <option>Pass</option>
-                <option>Fail</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Building work affecting barrier noted</span>
-              <select data-save name="buildingWorkAffectingBarrier">
-                <option>No</option>
-                <option>Yes</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Barrier not removed or altered unsafely</span>
-              <select data-save name="barrierNotAlteredUnsafely">
-                <option>Pass</option>
-                <option>Fail</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Minor repairs / maintenance noted</span>
-              <select data-save name="minorRepairsMaintenanceNoted">
-                <option>No</option>
-                <option>Yes</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field full">
-              <span>Comments / Recommendation</span>
-              <textarea data-save name="temporaryFencingComments" placeholder="Notes about temporary fencing, building work, removed barriers, maintenance or recommendation..."></textarea>
-            </label>
-          </div>
-
-          <div class="photo-widget" data-photo-area="temporary-fencing">
-            <button class="camera-btn" type="button">+ Evidence Photo</button>
-            <input type="file" accept="image/*" capture="environment" multiple hidden />
-            <div class="photo-grid"></div>
-          </div>
-        </div>
-      </details>
-
-      <!-- DECOMMISSIONED / CONVERTED POOL CHECKS -->
-      <details class="safety-check-group">
-        <summary class="safety-check-summary">
-          <div class="safety-check-title">
-            <span class="group-number">19</span>
-            <div>
-              <h3>Decommissioned / Converted Pool Checks</h3>
-              <p>Decommissioned pools, converted use and register updates.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="safety-check-body">
-   
-
-          <div class="form-grid">
-            <label class="field">
-              <span>Pool claimed decommissioned</span>
-              <select data-save name="poolClaimedDecommissioned">
-                <option>No</option>
-                <option>Yes</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Cannot hold 300mm or more of water</span>
-              <select data-save name="cannotHold300mmWater">
-                <option>N/A</option>
-                <option>Pass</option>
-                <option>Fail</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Converted to fishpond / other use</span>
-              <select data-save name="convertedPoolUse">
-                <option>No</option>
-                <option>Yes</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Register update required</span>
-              <select data-save name="registerUpdateRequired">
-                <option>No</option>
-                <option>Yes</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field full">
-              <span>Comments / Recommendation</span>
-              <textarea data-save name="decommissionedPoolComments" placeholder="Notes about decommissioning, converted use, water depth capability, register update or recommendation..."></textarea>
-            </label>
-          </div>
-
-          <div class="photo-widget" data-photo-area="decommissioned-pool">
-            <button class="camera-btn" type="button">+ Evidence Photo</button>
-            <input type="file" accept="image/*" capture="environment" multiple hidden />
-            <div class="photo-grid"></div>
-          </div>
-        </div>
-      </details>
-
-      <!-- ELECTRICAL, ASBESTOS & FIRE SAFETY CHECKS -->
-      <details class="safety-check-group">
-        <summary class="safety-check-summary">
-          <div class="safety-check-title">
-            <span class="group-number">20</span>
-            <div>
-              <h3>Electrical, Asbestos &amp; Fire Safety Checks</h3>
-              <p>Electrical concerns, asbestos, fire safety and referrals.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="safety-check-body">
-   
-
-          <div class="form-grid">
-            <label class="field">
-              <span>Electrical safety issue observed</span>
-              <select data-save name="electricalIssueObserved">
-                <option>No</option>
-                <option>Yes</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Bonding / conductive fencing concern noted</span>
-              <select data-save name="bondingConcernNoted">
-                <option>No</option>
-                <option>Yes</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Possible asbestos material observed</span>
-              <select data-save name="possibleAsbestosObserved">
-                <option>No</option>
-                <option>Yes</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Fire safety issue observed</span>
-              <select data-save name="fireSafetyIssueObserved">
-                <option>No</option>
-                <option>Yes</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Referral recommended</span>
-              <select data-save name="referralRecommended">
-                <option>No</option>
-                <option>Yes</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field full">
-              <span>Comments / Recommendation</span>
-              <textarea data-save name="electricalAsbestosFireComments" placeholder="Notes about electrical safety, bonding, asbestos, fire safety, referrals or recommendation..."></textarea>
-            </label>
-          </div>
-
-          <div class="photo-widget" data-photo-area="electrical-asbestos-fire">
-            <button class="camera-btn" type="button">+ Evidence Photo</button>
-            <input type="file" accept="image/*" capture="environment" multiple hidden />
-            <div class="photo-grid"></div>
-          </div>
-        </div>
-      </details>
-
-      <!-- INSPECTION OUTCOME CHECKS -->
-      <details class="safety-check-group">
-        <summary class="safety-check-summary">
-          <div class="safety-check-title">
-            <span class="group-number">21</span>
-            <div>
-              <h3>Inspection Outcome Checks</h3>
-              <p>Final result, certificate readiness, notices and reinspection.</p>
-            </div>
-          </div>
-
-          <span class="modern-collapse-btn" aria-hidden="true">
-            <span class="modern-chevron">▼</span>
-          </span>
-        </summary>
-
-        <div class="safety-check-body">
-  
-
-          <div class="form-grid">
-            <label class="field">
-              <span>Overall Result</span>
-              <select data-save name="overallInspectionResult">
-                <option>Pending</option>
-                <option>Pass</option>
-                <option>Fail</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Pool safety certificate ready to issue</span>
-              <select data-save name="certificateReadyToIssue">
-                <option>No</option>
-                <option>Yes</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Nonconformity notice required</span>
-              <select data-save name="nonconformityNoticeRequired">
-                <option>No</option>
-                <option>Yes</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Reinspection required</span>
-              <select data-save name="reinspectionRequired">
-                <option>No</option>
-                <option>Yes</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Owner advised of required actions</span>
-              <select data-save name="ownerAdvisedActions">
-                <option>No</option>
-                <option>Yes</option>
-                <option>N/A</option>
-              </select>
-            </label>
-
-            <label class="field full">
-              <span>Final Notes</span>
-              <textarea data-save name="finalInspectionNotes" placeholder="Final inspection notes, outcome, required actions, reinspection details or certificate/nonconformity information..."></textarea>
-            </label>
-          </div>
-
-          <div class="photo-widget" data-photo-area="inspection-outcome">
-            <button class="camera-btn" type="button">+ Evidence Photo</button>
-            <input type="file" accept="image/*" capture="environment" multiple hidden />
-            <div class="photo-grid"></div>
-          </div>
-        </div>
-      </details>
-
-
-<!-- PHASE 2 FINDINGS / RECOMMENDATIONS -->
-<section class="findings-panel" aria-label="Issues, risks and recommendations">
-  <div class="section-heading small-heading">
-    <img src="./assets/icons/safety.png" alt="" />
-    <div>
-      <h2>Issues, Risks &amp; Recommendations</h2>
-      <p>Generated from failed checks and measurable rule results. Review before issuing the report.</p>
-    </div>
-  </div>
-  <p id="findingsEmpty" class="findings-empty">No issues or non-compliant items have been recorded yet.</p>
-  <div id="findingsList" class="findings-list"></div>
-</section>
-    </div>
-  </div>
-</section>
-
-
-
-
-
-    </main>
-  </div>
-</body>
-</html>
+{
+  "version": "2026-06-15-qld-rules-v2",
+  "jurisdiction": "Queensland",
+  "ruleSetName": "Queensland Pool Safety Rule Bank - Draft v2",
+  "status": "draft_for_testing",
+  "basis": [
+    "Queensland Development Code MP 3.4 - Swimming pool barriers",
+    "AS 1926.1-2007 as called up/modified by QDC MP 3.4",
+    "AS 1926.2-2007 as called up/modified by QDC MP 3.4",
+    "Queensland pool safety inspector guideline effective 10 June 2024"
+  ],
+  "rules": [
+    {
+      "id": "fence-effective-height-1200",
+      "field": "fenceHeight",
+      "type": "number",
+      "operator": ">=",
+      "threshold": 1200,
+      "itemType": "Fence",
+      "requirement": "Effective barrier height should be at least 1200mm unless another specific barrier requirement applies.",
+      "issueTemplate": "The measured effective barrier height for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "A reduced effective barrier height may make it easier for a young child to climb over the barrier and access the pool area.",
+      "recommendationTemplate": "Rectify this fence section so the effective barrier height satisfies the applicable pool safety standard before a pool safety certificate is issued.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "fence-ground-clearance-100",
+      "field": "fenceGroundClearance",
+      "type": "number",
+      "operator": "<=",
+      "threshold": 100,
+      "itemType": "Fence",
+      "requirement": "Ground clearance should not exceed 100mm.",
+      "issueTemplate": "The recorded ground clearance for {item} was {value}mm, which is above the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "Excessive ground clearance may allow a young child to pass under the barrier.",
+      "recommendationTemplate": "Reduce the ground clearance or rectify the fence/ground level so the clearance satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "fence-aperture-max-100",
+      "field": "fenceApertureSize",
+      "type": "number_optional",
+      "operator": "<=",
+      "threshold": 100,
+      "itemType": "Fence",
+      "requirement": "Perforated or mesh barrier aperture sizes should not exceed 100mm.",
+      "issueTemplate": "The recorded mesh/perforated aperture size for {item} was {value}mm, which is above the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "Large apertures may compromise the barrier by allowing climbing, footholds or access through the barrier.",
+      "recommendationTemplate": "Replace, modify or rectify the mesh/perforated barrier section so the aperture size satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "boundary-height-1800",
+      "field": "boundaryFenceHeight",
+      "type": "number_optional",
+      "operator": ">=",
+      "threshold": 1800,
+      "itemType": "Boundary Fence",
+      "requirement": "Boundary fence height should be at least 1800mm where the boundary fence forms part of the pool barrier.",
+      "issueTemplate": "The recorded boundary fence height for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "A reduced boundary barrier height may allow easier climbing or access from outside the pool area.",
+      "recommendationTemplate": "Rectify the boundary fence so its effective height and non-climbable zone satisfy the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-gap-under-100",
+      "field": "gateGapUnder",
+      "type": "number_optional",
+      "operator": "<=",
+      "threshold": 100,
+      "itemType": "Gate",
+      "requirement": "The gap below a gate should not exceed 100mm.",
+      "issueTemplate": "The recorded gap under {item} was {value}mm, which is above the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "Excessive clearance below a gate may allow a young child to pass under the gate into the pool area.",
+      "recommendationTemplate": "Adjust, repair or replace the gate and/or finished ground level so the gap below the gate satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-latch-height-1500",
+      "field": "gateLatchHeight",
+      "type": "number_optional",
+      "operator": ">=",
+      "threshold": 1500,
+      "itemType": "Gate",
+      "requirement": "Latch release height should generally be at least 1500mm unless compliant shielding or another permitted arrangement applies.",
+      "issueTemplate": "The recorded latch height for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "A low latch may be reachable by a young child and may allow unsupervised access to the pool area.",
+      "recommendationTemplate": "Raise, shield or otherwise rectify the latch release arrangement so it satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-object-distance-900",
+      "field": "nczDistance",
+      "type": "number_optional",
+      "operator": ">=",
+      "threshold": 900,
+      "itemType": "NCZ Object",
+      "requirement": "Climbable objects should not be within the 900mm non-climbable zone where they create a foothold/handhold risk.",
+      "issueTemplate": "The recorded distance from the barrier for {item} was {value}mm, which is within the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "A climbable object within the non-climbable zone may assist a young child to climb the barrier and access the pool area.",
+      "recommendationTemplate": "Remove or permanently relocate the object outside the non-climbable zone, or otherwise rectify the barrier arrangement so it satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "water-barrier-depth-300",
+      "field": "waterBarrierDepth",
+      "type": "number_optional",
+      "operator": ">=",
+      "threshold": 300,
+      "itemType": "Permanent Body of Water",
+      "requirement": "A permanent body of water used as a barrier should have sufficient depth at the relevant pool-area edge.",
+      "issueTemplate": "The recorded water depth for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
+      "riskTemplate": "Insufficient water depth may mean the water body does not provide an effective barrier to young children.",
+      "recommendationTemplate": "Review and rectify the barrier arrangement so the permanent body of water and associated barrier layout satisfy the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "barrier-surrounds-pool",
+      "field": "barrierSurroundsPool",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Barrier Layout",
+      "requirement": "The barrier should restrict access to the pool area.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "An incomplete or ineffective barrier layout may allow unsupervised access to the pool area.",
+      "recommendationTemplate": "Rectify the barrier layout so access to the pool area is restricted in accordance with the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "barrier-building-access-controlled",
+      "field": "buildingAccessControlled",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Barrier Layout",
+      "requirement": "Direct building access to the pool area must be controlled where it forms part of the pool barrier arrangement.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Uncontrolled building access may allow a young child to enter the pool area without passing through a compliant barrier or gate.",
+      "recommendationTemplate": "Provide or rectify compliant access control to the pool area before a pool safety certificate is issued.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "barrier-neighbour-access-controlled",
+      "field": "neighbourAccessControlled",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Barrier Layout",
+      "requirement": "Access from neighbouring/adjoining property should be controlled where relevant to the barrier arrangement.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Uncontrolled access from an adjoining property may compromise the intended pool barrier.",
+      "recommendationTemplate": "Rectify the adjoining-property access arrangement so the pool area is appropriately isolated.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "barrier-unrelated-structures",
+      "field": "poolAreaFreeOfUnrelatedStructures",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Barrier Layout",
+      "requirement": "The pool area should not contain unrelated structures or items that compromise the barrier arrangement.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Unrelated structures or items may create climbability, access, or supervision risks within the pool area.",
+      "recommendationTemplate": "Remove, relocate or otherwise rectify unrelated structures/items so the pool barrier arrangement remains compliant.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "fence-gaps",
+      "field": "fenceGaps",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Fence",
+      "requirement": "Openings / gaps compliant should be assessed as compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Openings or excessive gaps may allow access through the barrier or create footholds.",
+      "recommendationTemplate": "Rectify the fence section so openings/gaps satisfy the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "fence-nczclear",
+      "field": "fenceNCZClear",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Fence",
+      "requirement": "NCZ clear should be assessed as compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Climbable items or footholds in the non-climbable zone may assist a young child to climb the barrier.",
+      "recommendationTemplate": "Remove climbable items or rectify the barrier/NCZ arrangement so the required non-climbable zone is maintained.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "fence-projectionscompliant",
+      "field": "fenceProjectionsCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Fence",
+      "requirement": "Projections / indentations compliant should be assessed as compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Projections or indentations may provide handholds or footholds for climbing.",
+      "recommendationTemplate": "Remove, modify or shield projections/indentations so they do not compromise the non-climbable zone.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "fence-strengthrigid",
+      "field": "fenceStrengthRigid",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Fence",
+      "requirement": "Strength / rigidity checked should be assessed as compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Loose or flexible barrier components may allow gaps to deform or the barrier to be pushed aside.",
+      "recommendationTemplate": "Repair, reinforce or replace the fence components/posts/fixings so the barrier is stable, rigid and secure.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "fence-fixingssecure",
+      "field": "fenceFixingsSecure",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Fence",
+      "requirement": "Fixings secure should be assessed as compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Loose or missing fixings may reduce the strength and reliability of the barrier.",
+      "recommendationTemplate": "Repair or replace fixings so all fence components are securely fixed and maintained in good condition.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "fence-materialfinishsafe",
+      "field": "fenceMaterialFinishSafe",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Fence",
+      "requirement": "Material / finish safe should be assessed as compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Sharp edges, projections, deterioration or unsafe finishes may create hazards and indicate poor barrier condition.",
+      "recommendationTemplate": "Repair, replace or make safe the affected components so the barrier is in good condition and free of hazardous features.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "special-pool-wall-used-as-barrier",
+      "field": "poolWallUsedAsBarrier",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Special Pool Feature",
+      "requirement": "Where a pool wall is relied on as a barrier, the arrangement must satisfy the applicable barrier requirements.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A pool wall that does not operate as an effective barrier may allow access into the pool.",
+      "recommendationTemplate": "Provide, modify or supplement the barrier arrangement so the pool wall and associated access points satisfy the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "special-pool-wall-height",
+      "field": "poolWallHeightCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Special Pool Feature",
+      "requirement": "A pool wall relied on as a barrier must have compliant effective height and climbability controls.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Insufficient effective height or climbability control may allow a young child to climb into the pool.",
+      "recommendationTemplate": "Rectify the pool wall/barrier arrangement so effective height and non-climbable-zone requirements are satisfied.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "special-ladder-access",
+      "field": "ladderAccessSecured",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Special Pool Feature",
+      "requirement": "Ladders or access points associated with above-ground/inflatable pools should be secured or controlled.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "An unsecured ladder or access point may allow unsupervised entry into the pool.",
+      "recommendationTemplate": "Remove, lock, isolate or otherwise secure the ladder/access point so it does not provide non-compliant access to the pool.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "special-pump-filter-climbable",
+      "field": "pumpFilterClimbableAccess",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Special Pool Feature",
+      "requirement": "Pump/filter equipment should not create climbable access to the pool or barrier.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Equipment positioned near the pool or barrier may act as a foothold or climbing aid.",
+      "recommendationTemplate": "Relocate, shield or otherwise rectify the equipment so it does not create climbable access or compromise the barrier.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "special-holding-tank-depth",
+      "field": "holdingTank300mmOrDeeper",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Special Pool Feature",
+      "requirement": "Water-holding structures capable of holding 300mm or more may require further assessment as a swimming pool or hazard.",
+      "issueTemplate": "{label} for {item} was recorded as Yes.",
+      "riskTemplate": "A water-holding structure 300mm or deeper may create a drowning hazard or may need to be assessed as a regulated pool depending on its use and context.",
+      "recommendationTemplate": "Further assess and, if required, fence, modify, decommission or otherwise rectify the structure so it satisfies Queensland pool safety requirements.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "balcony-access-controlled",
+      "field": "balconyAccessControlled",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Balcony / Deck",
+      "requirement": "Access from a balcony/deck/raised platform to the pool area should be controlled where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Uncontrolled access from a raised platform may compromise the barrier and allow entry to the pool area.",
+      "recommendationTemplate": "Rectify the balcony/deck access arrangement so it does not provide non-compliant access to the pool area.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "balcony-barrier-compliant",
+      "field": "balconyBarrierCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Balcony / Deck",
+      "requirement": "Balcony/deck barriers forming part of the pool barrier must be compliant.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A non-compliant balcony/deck barrier may allow climbing or access into the pool area.",
+      "recommendationTemplate": "Modify, repair or replace the balcony/deck barrier so it satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "retaining-wall-compliant",
+      "field": "retainingWallCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Retaining Wall / Level Change",
+      "requirement": "Retaining walls or level changes forming part of the barrier must be compliant.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A retaining wall or level change may reduce effective barrier height or create climbable access.",
+      "recommendationTemplate": "Rectify the retaining wall/level-change arrangement so effective barrier height and climbability requirements are satisfied.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "boundary-neighbour-clear",
+      "field": "boundaryNeighbourSideClear",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Boundary Fence",
+      "requirement": "Neighbour-side issues affecting the boundary barrier should be assessed and controlled where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Climbable objects or level changes on the boundary side may compromise the effective barrier height or NCZ.",
+      "recommendationTemplate": "Rectify the boundary-fence arrangement or address neighbouring-side climbability issues so the boundary barrier satisfies the applicable standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "boundary-compliant",
+      "field": "boundaryCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Boundary Fence",
+      "requirement": "Boundary fence sections forming part of the pool barrier must be compliant.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A non-compliant boundary fence may allow access over, under or through the barrier.",
+      "recommendationTemplate": "Repair, raise, modify or replace the boundary fence section so it satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "window-opening-restricted",
+      "field": "barrierWindowOpeningRestricted",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Window Forming Part of Barrier",
+      "requirement": "Openable windows forming part of the barrier should be restricted or protected where required.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "An unrestricted window may provide direct access from a building into the pool area.",
+      "recommendationTemplate": "Restrict, secure or protect the window opening so it satisfies the applicable child-resistant window requirements.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "window-screen-bars-fixed",
+      "field": "barrierWindowScreenBarsMeshFixed",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Window Forming Part of Barrier",
+      "requirement": "Screens, bars or mesh used for a barrier window should be fixed securely.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Loose or removable screens/bars may allow a child to access the pool area through the window opening.",
+      "recommendationTemplate": "Secure, repair or replace the screen/bars/mesh so they are fixed and effective for the barrier arrangement.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "window-fixings-tools",
+      "field": "barrierWindowFixingsRequireTools",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Window Forming Part of Barrier",
+      "requirement": "Barrier window fixings should require tools to remove where required.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Fixings that can be removed without tools may allow the restriction to be bypassed.",
+      "recommendationTemplate": "Replace or modify the fixings so the restriction cannot be removed without tools where required.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "window-compliant",
+      "field": "barrierWindowCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Window Forming Part of Barrier",
+      "requirement": "Windows forming part of the barrier must be compliant.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A non-compliant window may provide direct or climbable access to the pool area.",
+      "recommendationTemplate": "Rectify the window arrangement so it satisfies the applicable pool safety standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "door-self-closing",
+      "field": "barrierDoorSelfClosing",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Door / Building Access",
+      "requirement": "Door/building access forming part of the pool barrier should be self-closing where required.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A door that does not self-close may be left open and allow unsupervised access to the pool area.",
+      "recommendationTemplate": "Adjust, repair, replace or otherwise rectify the door/self-closing device so the access point is compliant.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "door-self-latching",
+      "field": "barrierDoorSelfLatching",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Door / Building Access",
+      "requirement": "Door/building access forming part of the pool barrier should be self-latching where required.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A door that does not self-latch may allow unsupervised access to the pool area.",
+      "recommendationTemplate": "Adjust, repair, replace or otherwise rectify the latching arrangement so the access point is compliant.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "door-compliant",
+      "field": "barrierDoorCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Door / Building Access",
+      "requirement": "Door/building access forming part of the barrier must be compliant.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Non-compliant building access may bypass the pool barrier.",
+      "recommendationTemplate": "Rectify the building access arrangement so it does not provide non-compliant access to the pool area.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "door-fire-exit-safe",
+      "field": "barrierDoorFireExitSafe",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Door / Building Access",
+      "requirement": "Fire exit arrangements should not be compromised by pool barrier rectification.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A rectification that compromises a fire exit may create a separate safety risk.",
+      "recommendationTemplate": "Seek appropriate building/fire safety advice and rectify the access arrangement without compromising required fire egress.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-ncz900provided",
+      "field": "ncz900Provided",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "900mm NCZ provided should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Insufficient NCZ may allow a young child to climb the barrier.",
+      "recommendationTemplate": "Rectify the barrier and surrounding area so the required non-climbable zone is provided.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-nczcorrectside",
+      "field": "nczCorrectSide",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "NCZ on correct side of barrier should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "An NCZ on the wrong side may not prevent child access to the pool area.",
+      "recommendationTemplate": "Rectify the barrier arrangement so the NCZ is located on the appropriate side for the barrier type.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-ncznohandholdsfootholds",
+      "field": "nczNoHandholdsFootholds",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "No handholds or footholds in NCZ should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Handholds or footholds may assist a young child to climb the barrier.",
+      "recommendationTemplate": "Remove, shield or modify handholds/footholds so the NCZ remains clear.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-nczprojectionsindentationscompliant",
+      "field": "nczProjectionsIndentationsCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "Projections / indentations compliant should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Projections or indentations may act as handholds or footholds.",
+      "recommendationTemplate": "Modify, remove or shield non-compliant projections/indentations.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-nczvegetationnonclimbable",
+      "field": "nczVegetationNonClimbable",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "Vegetation non-climbable should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Climbable vegetation may provide access over the barrier.",
+      "recommendationTemplate": "Trim, remove or permanently maintain vegetation so it does not compromise the NCZ.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-nczobjectsremoved",
+      "field": "nczObjectsRemoved",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "Objects removed from NCZ should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Objects within the NCZ may act as climbing aids.",
+      "recommendationTemplate": "Remove or permanently relocate objects outside the NCZ.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-nczcompliant",
+      "field": "nczCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "NCZ compliant should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A non-compliant NCZ object or condition may assist climbing of the barrier.",
+      "recommendationTemplate": "Remove, relocate or rectify the object/condition so the NCZ satisfies the applicable standard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-additionalclearareamaintained",
+      "field": "additionalClearAreaMaintained",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "Clear area maintained should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Items or level changes in the additional clear area may compromise effective barrier height or climbability.",
+      "recommendationTemplate": "Remove or relocate items and maintain the additional clear area where required.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-effectivebarrierheightmaintained",
+      "field": "effectiveBarrierHeightMaintained",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "Effective barrier height maintained should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Changes in ground level or adjacent features may reduce the effective barrier height.",
+      "recommendationTemplate": "Rectify ground levels, adjacent features or barrier height so effective barrier height is maintained.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-stepsledgesraisedareasclear",
+      "field": "stepsLedgesRaisedAreasClear",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "Steps / ledges / raised areas clear should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Steps, ledges or raised areas may reduce effective height or assist climbing.",
+      "recommendationTemplate": "Remove, relocate, shield or otherwise rectify steps/ledges/raised areas that compromise the barrier.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-tapspoweroutletsassessed",
+      "field": "tapsPowerOutletsAssessed",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "Taps / power outlets assessed should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Taps, power outlets or similar fixtures may act as climbable features.",
+      "recommendationTemplate": "Remove, relocate, shield or otherwise rectify fixtures that compromise the NCZ or additional clear area.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-raisedgardenbedsassessed",
+      "field": "raisedGardenBedsAssessed",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Climbability / NCZ",
+      "requirement": "Raised garden beds assessed should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Raised garden beds may reduce effective height or create climbable access.",
+      "recommendationTemplate": "Modify, remove or otherwise rectify raised garden beds that compromise the barrier.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "ncz-horizontal-surface",
+      "field": "nczHorizontalSurface",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "NCZ Object",
+      "requirement": "Substantially horizontal surfaces within the NCZ should not create climbable handholds or footholds.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A horizontal surface within the NCZ may assist climbing over the barrier.",
+      "recommendationTemplate": "Remove, shield or modify the horizontal surface so it does not create a climbable feature within the NCZ.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-swingsaway",
+      "field": "gateSwingsAway",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Gate opens away from pool should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A gate that swings toward the pool may not perform as intended as part of the safety barrier.",
+      "recommendationTemplate": "Rehang, repair or replace the gate so it opens away from the pool area where required.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-selfclosing",
+      "field": "gateSelfClosing",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Gate self-closes should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A gate that does not self-close may remain open and allow unsupervised access to the pool area.",
+      "recommendationTemplate": "Adjust, repair or replace the gate/self-closing device so the gate self-closes from the required open positions.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-selflatching",
+      "field": "gateSelfLatching",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Gate self-latches should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A gate that does not self-latch may allow unsupervised access to the pool area.",
+      "recommendationTemplate": "Adjust, repair or replace the latch so the gate self-latches when it closes.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-closesfromanyposition",
+      "field": "gateClosesFromAnyPosition",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Closes from any open position should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A gate that only closes from some positions may be left partly open.",
+      "recommendationTemplate": "Adjust, repair or replace the gate/self-closing device so it closes from all required open positions.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-latchpreventsreopening",
+      "field": "gateLatchPreventsReopening",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Latch prevents reopening should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A latch that does not hold securely may allow the gate to reopen after closing.",
+      "recommendationTemplate": "Repair, adjust or replace the latch so it securely engages and prevents reopening.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-fullarc",
+      "field": "gateFullArc",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Gate swings freely through full arc should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Obstruction or friction through the gate arc may prevent reliable self-closing/latching.",
+      "recommendationTemplate": "Remove obstructions and adjust/repair the gate so it swings freely through the required arc.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-cannotbeproppedopen",
+      "field": "gateCannotBeProppedOpen",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Gate cannot be propped open should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A gate that can be propped open may leave the pool area unprotected.",
+      "recommendationTemplate": "Remove propping devices/conditions and rectify the gate so it cannot be secured open in a non-compliant manner.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-gapundercompliant",
+      "field": "gateGapUnderCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Gap under gate compliant should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Excessive clearance below a gate may allow a child to pass underneath.",
+      "recommendationTemplate": "Adjust the gate or ground level so the gap below the gate is compliant.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-latchheightcompliant",
+      "field": "gateLatchHeightCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Latch height compliant should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A low or accessible latch may be operated by a young child.",
+      "recommendationTemplate": "Raise, shield or otherwise modify the latch release arrangement so it is compliant.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-latchshielded",
+      "field": "gateLatchShielded",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Latch shielded if required should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "An unshielded latch may be reachable by a young child through or over the gate/barrier.",
+      "recommendationTemplate": "Install or rectify latch shielding where required so the latch release cannot be accessed by a young child.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-latchreachthroughgaps",
+      "field": "gateLatchReachThroughGaps",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Latch cannot be reached through gaps should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Reach-through gaps may allow a child to operate the latch.",
+      "recommendationTemplate": "Reduce, shield or otherwise rectify reach-through gaps near the latch.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-hingessafe",
+      "field": "gateHingesSafe",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Hinges safe / not climbable should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Climbable hinges or hardware may assist climbing of the gate/barrier.",
+      "recommendationTemplate": "Replace, shield or modify hinges/hardware so they do not create climbable features.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "gate-hardwaresecure",
+      "field": "gateHardwareSecure",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Gate",
+      "requirement": "Gate hardware secure and functional should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Loose or defective gate hardware may prevent reliable closing, latching or barrier performance.",
+      "recommendationTemplate": "Repair, adjust or replace gate hardware so it is secure and functions correctly.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-cprsignpresentsafety",
+      "field": "cprSignPresentSafety",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "CPR sign present should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Without a CPR sign, required emergency information may not be readily available at the pool.",
+      "recommendationTemplate": "Install a compliant CPR sign in an appropriate visible location.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-cprsignvisible",
+      "field": "cprSignVisible",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "CPR sign visible should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A CPR sign that is not visible from the pool area may not be usable in an emergency.",
+      "recommendationTemplate": "Relocate or install the CPR sign so it is clearly visible from the pool area.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-cprsignweatherproof",
+      "field": "cprSignWeatherproof",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "CPR sign weatherproof should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A damaged or non-weatherproof sign may deteriorate and become unreadable.",
+      "recommendationTemplate": "Replace the CPR sign with a durable/weatherproof compliant sign.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-cprsignminimumsize",
+      "field": "cprSignMinimumSize",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "CPR sign minimum size should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "An undersized sign may not meet the required display standard.",
+      "recommendationTemplate": "Replace the sign with a CPR sign of compliant size and format.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-cprsigncontentcompliant",
+      "field": "cprSignContentCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "CPR sign content compliant should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Incomplete or incorrect CPR information may reduce emergency response effectiveness.",
+      "recommendationTemplate": "Replace the sign with a current compliant CPR sign containing the required information.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-directbuildingaccesscontrolled",
+      "field": "directBuildingAccessControlled",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Direct building access controlled should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Uncontrolled building access may bypass the pool barrier.",
+      "recommendationTemplate": "Rectify building access so it does not provide non-compliant direct access to the pool area.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-windowopeningrestricted",
+      "field": "windowOpeningRestricted",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Window opening restricted where required should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "An unrestricted opening may allow direct access from the building to the pool area.",
+      "recommendationTemplate": "Restrict, secure or otherwise rectify the window opening as required.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-screenbarsmeshfixed",
+      "field": "screenBarsMeshFixed",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Screen / bars / mesh fixed correctly should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Loose or removable screens/bars/mesh may be bypassed.",
+      "recommendationTemplate": "Secure, repair or replace screens/bars/mesh so they are fixed correctly.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-fixingsrequiretools",
+      "field": "fixingsRequireTools",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Fixings require tools to remove should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Fixings removable without tools may allow restrictions to be bypassed.",
+      "recommendationTemplate": "Replace or modify fixings so restrictions cannot be removed without tools where required.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-dooraccesscompliant",
+      "field": "doorAccessCompliant",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Door does not provide non-compliant access should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A non-compliant door may provide uncontrolled access to the pool area.",
+      "recommendationTemplate": "Rectify, restrict or remove the non-compliant door access arrangement.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-fireexitnotcompromised",
+      "field": "fireExitNotCompromised",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Fire exit not compromised should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Barrier works that compromise fire egress may create a separate safety risk.",
+      "recommendationTemplate": "Seek appropriate building/fire safety advice and rectify the access arrangement without compromising required egress.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-sharpedgesabsent",
+      "field": "sharpEdgesAbsent",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Sharp edges absent should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Sharp edges may injure pool users and can indicate barrier deterioration.",
+      "recommendationTemplate": "Repair, remove or make safe sharp edges and restore the barrier to good condition.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-sharpprojectionsabsent",
+      "field": "sharpProjectionsAbsent",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Sharp projections absent should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Sharp projections may injure users and may act as climbable features.",
+      "recommendationTemplate": "Remove, shield or make safe sharp projections.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-entrapmentspacesabsent",
+      "field": "entrapmentSpacesAbsent",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Entrapment spaces absent should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Entrapment spaces may create a safety hazard.",
+      "recommendationTemplate": "Rectify the affected component or opening so entrapment hazards are removed.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-loosebrokencomponentsabsent",
+      "field": "looseBrokenComponentsAbsent",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Loose / broken components absent should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Loose or broken components may reduce the effectiveness of the pool barrier.",
+      "recommendationTemplate": "Repair or replace loose/broken components so the barrier is maintained in good condition.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-rustedweakenedcomponentsabsent",
+      "field": "rustedWeakenedComponentsAbsent",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Rusted or weakened components absent should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Corrosion or weakening may reduce barrier strength and reliability.",
+      "recommendationTemplate": "Repair, reinforce or replace rusted/weakened components.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-temporaryfencesecure",
+      "field": "temporaryFenceSecure",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Temporary fence appears secure should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "An insecure temporary fence may fail to restrict access to the pool area.",
+      "recommendationTemplate": "Repair, brace, secure or replace the temporary fencing so it provides an effective barrier.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-barriernotalteredunsafely",
+      "field": "barrierNotAlteredUnsafely",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Barrier not removed or altered unsafely should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Unsafe alteration/removal may compromise the pool barrier.",
+      "recommendationTemplate": "Reinstate or rectify the barrier so it remains compliant during and after works.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-cannothold300mmwater",
+      "field": "cannotHold300mmWater",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Cannot hold 300mm or more of water should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A pool claimed to be decommissioned may still be a swimming pool if it can hold 300mm or more water.",
+      "recommendationTemplate": "Modify, demolish, drain or otherwise decommission the pool so it cannot hold 300mm or more water, or provide compliant pool barriers.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-certificatereadytoissue",
+      "field": "certificateReadyToIssue",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Pool safety certificate ready to issue should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "A certificate should not be issued if unresolved compliance items remain.",
+      "recommendationTemplate": "Resolve all outstanding compliance items before issuing a pool safety certificate.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "safety-owneradvisedactions",
+      "field": "ownerAdvisedActions",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Safety / Outcome",
+      "requirement": "Owner advised of required actions should be compliant or not applicable.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "The owner/occupier should be advised of required rectification actions.",
+      "recommendationTemplate": "Provide clear written advice to the owner/occupier about the required actions and reinspection pathway.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "site-hazards-observed",
+      "field": "siteHazardsNoted",
+      "type": "select_values",
+      "triggerValues": [
+        "Hazards observed"
+      ],
+      "passValues": [
+        "No hazards observed"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "General Safety",
+      "requirement": "Site hazards should be noted and addressed where observed.",
+      "issueTemplate": "Site hazards were recorded for {item}.",
+      "riskTemplate": "Site hazards may affect safe inspection, access or use of the pool area.",
+      "recommendationTemplate": "Record the hazard details and recommend that the owner/occupier remove, repair or otherwise manage the hazard.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "temporary-fencing-present-required",
+      "field": "temporaryFencingPresent",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Temporary Fencing",
+      "requirement": "Temporary fencing should be present and compliant where required.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "Missing or ineffective temporary fencing may allow access to a pool during construction or barrier works.",
+      "recommendationTemplate": "Install or rectify temporary fencing so the pool area is restricted until the permanent barrier is compliant.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "building-work-affecting-barrier",
+      "field": "buildingWorkAffectingBarrier",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Temporary Fencing / Building Work",
+      "requirement": "Building work should not compromise the pool barrier.",
+      "issueTemplate": "Building work affecting the barrier was recorded for {item}.",
+      "riskTemplate": "Building work may create gaps, access points or removed sections that compromise the pool barrier.",
+      "recommendationTemplate": "Install temporary controls and rectify/reinstate the barrier so access to the pool area remains restricted.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "minor-repairs-maintenance-noted",
+      "field": "minorRepairsMaintenanceNoted",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Minor Repairs / Maintenance",
+      "requirement": "Minor repairs or maintenance items should be recorded and actioned where relevant.",
+      "issueTemplate": "Minor repairs or maintenance were noted for {item}.",
+      "riskTemplate": "Minor defects can deteriorate and may compromise barrier performance if not addressed.",
+      "recommendationTemplate": "Record the item and arrange repair/maintenance to keep the barrier in good condition.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "register-update-required",
+      "field": "registerUpdateRequired",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Decommissioned / Converted Pool",
+      "requirement": "Pool register updates should be completed where required.",
+      "issueTemplate": "A pool register update was recorded as required for {item}.",
+      "riskTemplate": "Incorrect register information may cause administrative non-compliance or confusion about pool status.",
+      "recommendationTemplate": "Complete any required pool register update or administrative notification after confirming the pool status.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "observed-electricalissueobserved",
+      "field": "electricalIssueObserved",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Referral / Outcome",
+      "requirement": "Electrical safety issue observed should be recorded and actioned where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Yes.",
+      "riskTemplate": "Electrical hazards may create serious safety risks beyond the pool barrier assessment.",
+      "recommendationTemplate": "Advise the owner/occupier to obtain assessment and rectification by a suitably qualified electrical practitioner.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "observed-bondingconcernnoted",
+      "field": "bondingConcernNoted",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Referral / Outcome",
+      "requirement": "Bonding / conductive fencing concern noted should be recorded and actioned where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Yes.",
+      "riskTemplate": "Conductive components or bonding concerns may create an electrical safety risk.",
+      "recommendationTemplate": "Advise the owner/occupier to obtain specialist electrical advice about bonding/conductive components.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "observed-possibleasbestosobserved",
+      "field": "possibleAsbestosObserved",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Referral / Outcome",
+      "requirement": "Possible asbestos material observed should be recorded and actioned where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Yes.",
+      "riskTemplate": "Possible asbestos-containing material may create a health risk if disturbed.",
+      "recommendationTemplate": "Advise the owner/occupier to obtain asbestos assessment and management advice from a suitably qualified person.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "observed-firesafetyissueobserved",
+      "field": "fireSafetyIssueObserved",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Referral / Outcome",
+      "requirement": "Fire safety issue observed should be recorded and actioned where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Yes.",
+      "riskTemplate": "Fire safety issues may create risks beyond the pool barrier assessment.",
+      "recommendationTemplate": "Advise the owner/occupier to obtain appropriate building/fire safety advice.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "observed-referralrecommended",
+      "field": "referralRecommended",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Referral / Outcome",
+      "requirement": "Referral recommended should be recorded and actioned where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Yes.",
+      "riskTemplate": "A specialist referral indicates the issue may be outside the pool safety inspection scope or requires expert assessment.",
+      "recommendationTemplate": "Refer the owner/occupier to an appropriately qualified person or authority and record the referral in the inspection notes.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "observed-nonconformitynoticerequired",
+      "field": "nonconformityNoticeRequired",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Referral / Outcome",
+      "requirement": "Nonconformity notice required should be recorded and actioned where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Yes.",
+      "riskTemplate": "A nonconformity notice indicates unresolved items require rectification before certification.",
+      "recommendationTemplate": "Issue the required notice and clearly identify the rectification actions and reinspection requirements.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "observed-reinspectionrequired",
+      "field": "reinspectionRequired",
+      "type": "select_values",
+      "triggerValues": [
+        "Yes"
+      ],
+      "passValues": [
+        "No"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Referral / Outcome",
+      "requirement": "Reinspection required should be recorded and actioned where relevant.",
+      "issueTemplate": "{label} for {item} was recorded as Yes.",
+      "riskTemplate": "A reinspection is needed to verify rectification before certification.",
+      "recommendationTemplate": "Arrange reinspection after the identified items have been rectified.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "certificate-ready-no",
+      "field": "certificateReadyToIssue",
+      "type": "select_values",
+      "triggerValues": [
+        "No"
+      ],
+      "passValues": [
+        "Yes"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Inspection Outcome",
+      "requirement": "A pool safety certificate should only be issued when the pool barrier is compliant and ready for certification.",
+      "issueTemplate": "Pool safety certificate ready to issue was recorded as No.",
+      "riskTemplate": "This indicates the inspection has unresolved compliance or administrative items before certification.",
+      "recommendationTemplate": "Complete the required rectification, notices and/or reinspection steps before issuing a pool safety certificate.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "owner-advised-actions-no",
+      "field": "ownerAdvisedActions",
+      "type": "select_values",
+      "triggerValues": [
+        "No"
+      ],
+      "passValues": [
+        "Yes"
+      ],
+      "naValues": [
+        "N/A"
+      ],
+      "itemType": "Inspection Outcome",
+      "requirement": "The owner/occupier should be advised of required actions where rectification is needed.",
+      "issueTemplate": "Owner advised of required actions was recorded as No.",
+      "riskTemplate": "The owner/occupier may not understand the required rectification actions or reinspection pathway.",
+      "recommendationTemplate": "Provide clear written advice to the owner/occupier about the required actions and record that advice in the inspection notes.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "overall-result-fail",
+      "field": "overallInspectionResult",
+      "type": "select_values",
+      "triggerValues": [
+        "Fail"
+      ],
+      "passValues": [
+        "Pass"
+      ],
+      "naValues": [
+        "Pending"
+      ],
+      "itemType": "Inspection Outcome",
+      "requirement": "The final inspection result should reflect whether the pool barrier is ready for certification.",
+      "issueTemplate": "The overall inspection result was recorded as Fail.",
+      "riskTemplate": "A failed overall result indicates unresolved items remain before a pool safety certificate can be issued.",
+      "recommendationTemplate": "Address all listed issues and complete any required reinspection before issuing a pool safety certificate.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    },
+    {
+      "id": "select-fail-template",
+      "field": "*",
+      "type": "select_fail",
+      "itemType": "Checklist Item",
+      "requirement": "The item should be assessed as compliant or not applicable before a pool safety certificate is issued.",
+      "issueTemplate": "{label} for {item} was recorded as Fail.",
+      "riskTemplate": "This condition may reduce the effectiveness of the pool barrier or indicate an item requiring rectification.",
+      "recommendationTemplate": "Rectify this item so it satisfies the applicable pool safety standard before a pool safety certificate is issued.",
+      "source": "QDC MP 3.4 / AS 1926.1-2007 / AS 1926.2-2007 / Queensland pool safety inspector guideline 2024"
+    }
+  ]
+}
