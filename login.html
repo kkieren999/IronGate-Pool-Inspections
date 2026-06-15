@@ -1,56 +1,64 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Sign in | IronGate Pool Safety Inspections</title>
-<link href="./styles.css?v=20260615phase1" rel="stylesheet"/>
-<script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-<script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-<script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
-<script defer="" src="./login.js?v=20260615phase1"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign in | IronGate Pool Safety Inspections</title>
+  <link rel="stylesheet" href="./styles.css?v=20260615phase2" />
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
+  <script src="./login.js?v=20260615phase2" defer></script>
 </head>
 <body class="login-page-body">
-<main aria-label="IronGate sign in" class="login-shell">
-<section class="login-card">
-<div class="login-brand">
-<img alt="IronGate logo" class="login-logo" src="./assets/logo/logo-no-text.png"/>
-<div>
-<h1><span class="iron">Iron</span><span class="gate">Gate</span></h1>
-<p>Pool Safety Inspections</p>
-</div>
-</div>
-<div class="login-intro">
-<h2>Sign in</h2>
-<p>Use your approved IronGate account to access cloud-saved inspections.</p>
-</div>
-<form class="login-form" id="emailLoginForm">
-<label class="login-field">
-<span>Email</span>
-<input autocomplete="email" id="loginEmail" required="" type="email"/>
-</label>
-<label class="login-field">
-<span>Password</span>
-<input autocomplete="current-password" id="loginPassword" required="" type="password"/>
-</label>
-<button class="login-primary-btn" type="submit">Sign in</button>
-<button class="login-secondary-btn" id="createAccountBtn" type="button">Create account</button>
-</form>
-<div class="login-divider"><span>or</span></div>
-<button class="login-google-btn" id="googleSignInBtn" type="button">
+  <main class="login-shell" aria-label="IronGate sign in">
+    <section class="login-card">
+      <div class="login-brand">
+        <img class="login-logo" src="./assets/logo/logo-no-text.png" alt="IronGate logo" />
+        <div>
+          <h1><span class="iron">Iron</span><span class="gate">Gate</span></h1>
+          <p>Pool Safety Inspections</p>
+        </div>
+      </div>
+
+      <div class="login-intro">
+        <h2>Sign in</h2>
+        <p>Use your approved IronGate account to access cloud-saved inspections.</p>
+      </div>
+
+      <form id="emailLoginForm" class="login-form">
+        <label class="login-field">
+          <span>Email</span>
+          <input id="loginEmail" type="email" autocomplete="email" required />
+        </label>
+
+        <label class="login-field">
+          <span>Password</span>
+          <input id="loginPassword" type="password" autocomplete="current-password" required />
+        </label>
+
+        <button class="login-primary-btn" type="submit">Sign in</button>
+        <button id="createAccountBtn" class="login-secondary-btn" type="button">Create account</button>
+      </form>
+
+      <div class="login-divider"><span>or</span></div>
+
+      <button id="googleSignInBtn" class="login-google-btn" type="button">
         Sign in with Google
       </button>
-<div class="login-pending-box" hidden="" id="pendingBox">
-<strong>Account pending approval</strong>
-<p>Your account has been created, but it needs to be approved in Firebase before you can use the inspection app.</p>
-<button class="login-google-btn" id="pendingSignOutBtn" type="button">Sign out</button>
-</div>
-<p class="login-status" id="loginStatus">Checking Firebase...</p>
-<p class="login-note">
+
+      <div id="pendingBox" class="login-pending-box" hidden>
+        <strong>Account pending approval</strong>
+        <p>Your account has been created, but it needs to be approved in Firebase before you can use the inspection app.</p>
+        <button id="pendingSignOutBtn" class="login-google-btn" type="button">Sign out</button>
+      </div>
+
+      <p id="loginStatus" class="login-status">Checking Firebase...</p>
+
+      <p class="login-note">
         New accounts can be created, but they stay pending until you approve them in Firebase.
       </p>
-</section>
-</main>
+    </section>
+  </main>
 </body>
 </html>

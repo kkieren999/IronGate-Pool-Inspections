@@ -389,6 +389,7 @@ function gatherInspectionData() {
     temporaryFenceSections: gatherDynamicSections('.temporary-fence-card'),
     decommissionedPoolSections: gatherDynamicSections('.decommissioned-pool-card'),
     referralSections: gatherDynamicSections('.referral-card'),
+    findings: collectFindings(),
     inspectionStarted: inspectionStarted,
     updatedAt: new Date().toISOString()
   };
@@ -1082,6 +1083,124 @@ REQUIRED_STATIC_FIELDS = REQUIRED_STATIC_FIELDS.filter(function (name) {
   ].indexOf(name) === -1;
 });
 
+var COMPLIANCE_RULE_BANK = [
+  {
+    "id": "fence-effective-height-1200",
+    "field": "fenceHeight",
+    "type": "number",
+    "operator": ">=",
+    "threshold": 1200,
+    "itemType": "Fence",
+    "requirement": "Effective barrier height should be at least 1200mm unless another specific barrier requirement applies.",
+    "issueTemplate": "The measured effective barrier height for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
+    "riskTemplate": "A reduced effective barrier height may make it easier for a young child to climb over the barrier and access the pool area.",
+    "recommendationTemplate": "Rectify this fence section so the effective barrier height satisfies the applicable pool safety standard before a pool safety certificate is issued.",
+    "source": "QDC MP 3.4 / AS 1926.1-2007"
+  },
+  {
+    "id": "fence-ground-clearance-100",
+    "field": "fenceGroundClearance",
+    "type": "number",
+    "operator": "<=",
+    "threshold": 100,
+    "itemType": "Fence",
+    "requirement": "Ground clearance should not exceed 100mm.",
+    "issueTemplate": "The recorded ground clearance for {item} was {value}mm, which is above the rule-bank threshold of {threshold}mm.",
+    "riskTemplate": "Excessive ground clearance may allow a young child to pass under the barrier.",
+    "recommendationTemplate": "Reduce the ground clearance or rectify the fence/ground level so the clearance satisfies the applicable pool safety standard.",
+    "source": "QDC MP 3.4 / AS 1926.1-2007"
+  },
+  {
+    "id": "fence-aperture-max-100",
+    "field": "fenceApertureSize",
+    "type": "number_optional",
+    "operator": "<=",
+    "threshold": 100,
+    "itemType": "Fence",
+    "requirement": "Perforated or mesh barrier aperture sizes should not exceed 100mm.",
+    "issueTemplate": "The recorded mesh/perforated aperture size for {item} was {value}mm, which is above the rule-bank threshold of {threshold}mm.",
+    "riskTemplate": "Large apertures may compromise the barrier by allowing climbing, footholds or access through the barrier.",
+    "recommendationTemplate": "Replace, modify or rectify the mesh/perforated barrier section so the aperture size satisfies the applicable pool safety standard.",
+    "source": "QDC MP 3.4 / AS 1926.1-2007"
+  },
+  {
+    "id": "boundary-height-1800",
+    "field": "boundaryFenceHeight",
+    "type": "number_optional",
+    "operator": ">=",
+    "threshold": 1800,
+    "itemType": "Boundary Fence",
+    "requirement": "Boundary fence height should be at least 1800mm where the boundary fence forms part of the pool barrier.",
+    "issueTemplate": "The recorded boundary fence height for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
+    "riskTemplate": "A reduced boundary barrier height may allow easier climbing or access from outside the pool area.",
+    "recommendationTemplate": "Rectify the boundary fence so its effective height and non-climbable zone satisfy the applicable pool safety standard.",
+    "source": "QDC MP 3.4 / AS 1926.1-2007"
+  },
+  {
+    "id": "gate-gap-under-100",
+    "field": "gateGapUnder",
+    "type": "number_optional",
+    "operator": "<=",
+    "threshold": 100,
+    "itemType": "Gate",
+    "requirement": "The gap below a gate should not exceed 100mm.",
+    "issueTemplate": "The recorded gap under {item} was {value}mm, which is above the rule-bank threshold of {threshold}mm.",
+    "riskTemplate": "Excessive clearance below a gate may allow a young child to pass under the gate into the pool area.",
+    "recommendationTemplate": "Adjust, repair or replace the gate and/or finished ground level so the gap below the gate satisfies the applicable pool safety standard.",
+    "source": "QDC MP 3.4 / AS 1926.1-2007"
+  },
+  {
+    "id": "gate-latch-height-1500",
+    "field": "gateLatchHeight",
+    "type": "number_optional",
+    "operator": ">=",
+    "threshold": 1500,
+    "itemType": "Gate",
+    "requirement": "Latch release height should generally be at least 1500mm unless compliant shielding or another permitted arrangement applies.",
+    "issueTemplate": "The recorded latch height for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
+    "riskTemplate": "A low latch may be reachable by a young child and may allow unsupervised access to the pool area.",
+    "recommendationTemplate": "Raise, shield or otherwise rectify the latch release arrangement so it satisfies the applicable pool safety standard.",
+    "source": "QDC MP 3.4 / AS 1926.1-2007"
+  },
+  {
+    "id": "ncz-object-distance-900",
+    "field": "nczDistance",
+    "type": "number_optional",
+    "operator": ">=",
+    "threshold": 900,
+    "itemType": "NCZ Object",
+    "requirement": "Climbable objects should not be within the 900mm non-climbable zone where they create a foothold/handhold risk.",
+    "issueTemplate": "The recorded distance from the barrier for {item} was {value}mm, which is within the rule-bank threshold of {threshold}mm.",
+    "riskTemplate": "A climbable object within the non-climbable zone may assist a young child to climb the barrier and access the pool area.",
+    "recommendationTemplate": "Remove or permanently relocate the object outside the non-climbable zone, or otherwise rectify the barrier arrangement so it satisfies the applicable pool safety standard.",
+    "source": "QDC MP 3.4 / AS 1926.1-2007"
+  },
+  {
+    "id": "water-barrier-depth-300",
+    "field": "waterBarrierDepth",
+    "type": "number_optional",
+    "operator": ">=",
+    "threshold": 300,
+    "itemType": "Permanent Body of Water",
+    "requirement": "A permanent body of water used as a barrier should have sufficient depth at the relevant pool-area edge.",
+    "issueTemplate": "The recorded water depth for {item} was {value}mm, which is below the rule-bank threshold of {threshold}mm.",
+    "riskTemplate": "Insufficient water depth may mean the water body does not provide an effective barrier to young children.",
+    "recommendationTemplate": "Review and rectify the barrier arrangement so the permanent body of water and associated barrier layout satisfy the applicable pool safety standard.",
+    "source": "QDC MP 3.4 / AS 1926.1-2007"
+  },
+  {
+    "id": "select-fail-template",
+    "field": "*",
+    "type": "select_fail",
+    "itemType": "Checklist Item",
+    "requirement": "The item should be assessed as compliant or not applicable before a pool safety certificate is issued.",
+    "issueTemplate": "{label} for {item} was recorded as Fail.",
+    "riskTemplate": "This condition may reduce the effectiveness of the pool barrier or indicate an item requiring rectification.",
+    "recommendationTemplate": "Rectify this item so it satisfies the applicable pool safety standard before a pool safety certificate is issued.",
+    "source": "QDC MP 3.4 / AS 1926.1-2007"
+  }
+];
+
 var REQUIRED_DYNAMIC_GROUPS = [
   { selector: '.fence-card[data-section="fence"]', fields: ["fenceLocation", "fenceType", "fenceHeight", "fenceGroundClearance", "fenceGaps", "fenceStrengthRigid"] },
   { selector: '.climbability-card[data-section="climbabilityItem"]', fields: ["nczLocation", "nczObjectType", "nczCompliant"] },
@@ -1145,6 +1264,184 @@ function updateRequiredFieldMarkers() {
   });
 }
 
+
+
+function getComplianceRuleForField(name) {
+  var exact = COMPLIANCE_RULE_BANK.filter(function (rule) { return rule.field === name; })[0];
+  if (exact) return exact;
+  return COMPLIANCE_RULE_BANK.filter(function (rule) { return rule.field === "*"; })[0] || null;
+}
+
+function numberFromValue(value) {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  var n = Number(String(value).replace(/[^0-9.\-]/g, ""));
+  return isNaN(n) ? null : n;
+}
+
+function compareRuleValue(value, rule) {
+  if (rule.operator === ">=") return value >= rule.threshold;
+  if (rule.operator === "<=") return value <= rule.threshold;
+  if (rule.operator === ">") return value > rule.threshold;
+  if (rule.operator === "<") return value < rule.threshold;
+  if (rule.operator === "===") return value === rule.threshold;
+  return true;
+}
+
+function getFieldItemTitle(el) {
+  var card = el.closest(".fence-card");
+  if (card) {
+    var h3 = card.querySelector(".fence-card-head h3") || card.querySelector("h3");
+    if (h3) return h3.textContent.trim();
+  }
+  var details = el.closest("details");
+  if (details) {
+    var dh = details.querySelector("summary h3");
+    if (dh) return dh.textContent.trim();
+  }
+  var section = el.closest(".section-card");
+  if (section) {
+    var sh = section.querySelector(".section-heading h2");
+    if (sh) return sh.textContent.trim();
+  }
+  return "Inspection item";
+}
+
+function fillRuleTemplate(template, data) {
+  return String(template || "")
+    .replace(/\{item\}/g, data.item || "this item")
+    .replace(/\{label\}/g, data.label || "This field")
+    .replace(/\{value\}/g, data.value === undefined ? "" : data.value)
+    .replace(/\{threshold\}/g, data.threshold === undefined ? "" : data.threshold)
+    .replace(/\{requirement\}/g, data.requirement || "");
+}
+
+function evaluateComplianceForElement(el) {
+  if (!el || !el.name || !el.hasAttribute("data-save")) return null;
+  var value = getFieldElementValue(el);
+  var rule = getComplianceRuleForField(el.name);
+  if (!rule) return null;
+  var label = getFieldLabel(el);
+  var item = getFieldItemTitle(el);
+  if (rule.type === "number" || rule.type === "number_optional") {
+    var numberValue = numberFromValue(value);
+    if (numberValue === null) return null;
+    var pass = compareRuleValue(numberValue, rule);
+    return {
+      status: pass ? "pass" : "fail",
+      rule: rule,
+      item: item,
+      label: label,
+      value: numberValue,
+      threshold: rule.threshold,
+      requirement: rule.requirement,
+      issue: pass ? "" : fillRuleTemplate(rule.issueTemplate, { item: item, label: label, value: numberValue, threshold: rule.threshold, requirement: rule.requirement }),
+      risk: pass ? "" : fillRuleTemplate(rule.riskTemplate, { item: item, label: label, value: numberValue, threshold: rule.threshold, requirement: rule.requirement }),
+      recommendation: pass ? "" : fillRuleTemplate(rule.recommendationTemplate, { item: item, label: label, value: numberValue, threshold: rule.threshold, requirement: rule.requirement })
+    };
+  }
+  if (rule.type === "select_fail" && el.tagName === "SELECT") {
+    if (value === "Fail") {
+      return {
+        status: "fail",
+        rule: rule,
+        item: item,
+        label: label,
+        value: value,
+        threshold: "",
+        requirement: rule.requirement,
+        issue: fillRuleTemplate(rule.issueTemplate, { item: item, label: label, value: value, requirement: rule.requirement }),
+        risk: fillRuleTemplate(rule.riskTemplate, { item: item, label: label, value: value, requirement: rule.requirement }),
+        recommendation: fillRuleTemplate(rule.recommendationTemplate, { item: item, label: label, value: value, requirement: rule.requirement })
+      };
+    }
+    if (value === "Pass") return { status: "pass", rule: rule, item: item, label: label, value: value };
+    if (value === "N/A") return { status: "na", rule: rule, item: item, label: label, value: value };
+  }
+  return null;
+}
+
+function getComplianceContainer(el) {
+  return el ? el.closest(".field, .check-field, .toggle-field") : null;
+}
+
+function clearComplianceMarkers(root) {
+  var scope = root || document;
+  scope.querySelectorAll(".compliance-pass, .compliance-fail, .compliance-na").forEach(function (el) {
+    el.classList.remove("compliance-pass", "compliance-fail", "compliance-na");
+  });
+}
+
+function updateComplianceUI(root) {
+  var scope = root || document;
+  clearComplianceMarkers(scope);
+  scope.querySelectorAll("[data-save]").forEach(function (el) {
+    var result = evaluateComplianceForElement(el);
+    var container = getComplianceContainer(el);
+    if (!result || !container) return;
+    container.classList.toggle("compliance-pass", result.status === "pass");
+    container.classList.toggle("compliance-fail", result.status === "fail");
+    container.classList.toggle("compliance-na", result.status === "na");
+  });
+}
+
+function collectFindings() {
+  var findings = [];
+  var seen = {};
+  qsa("[data-save]").forEach(function (el) {
+    var result = evaluateComplianceForElement(el);
+    if (!result || result.status !== "fail") return;
+    var key = [result.rule.id, result.item, result.label, result.value].join("|");
+    if (seen[key]) return;
+    seen[key] = true;
+    var nearestCard = el.closest(".fence-card") || el.closest(".section-card");
+    var comments = [];
+    if (nearestCard) {
+      nearestCard.querySelectorAll("textarea").forEach(function (textarea) {
+        var text = textarea.value.trim();
+        if (text) comments.push(text);
+      });
+    }
+    findings.push({
+      id: result.rule.id,
+      item: result.item,
+      field: result.label,
+      value: result.value,
+      requirement: result.requirement || "",
+      issue: result.issue,
+      risk: result.risk,
+      recommendation: result.recommendation,
+      source: result.rule.source || "Rule bank",
+      inspectorNotes: comments.join(" ")
+    });
+  });
+  return findings;
+}
+
+function renderFindingsSummary() {
+  var list = qs("#findingsList");
+  var empty = qs("#findingsEmpty");
+  if (!list) return;
+  var findings = collectFindings();
+  list.innerHTML = "";
+  if (empty) empty.style.display = findings.length ? "none" : "block";
+  if (!findings.length) return;
+  findings.forEach(function (finding, index) {
+    var article = document.createElement("article");
+    article.className = "finding-card";
+    article.innerHTML =
+      '<div class="finding-number">' + (index + 1) + '</div>' +
+      '<div class="finding-content">' +
+        '<h3>' + escapeHtml(finding.item) + '</h3>' +
+        '<p class="finding-field"><strong>Item:</strong> ' + escapeHtml(finding.field) + '</p>' +
+        '<p><strong>Issue:</strong> ' + escapeHtml(finding.issue) + '</p>' +
+        '<p><strong>Risk:</strong> ' + escapeHtml(finding.risk) + '</p>' +
+        '<p><strong>Recommendation:</strong> ' + escapeHtml(finding.recommendation) + '</p>' +
+        (finding.inspectorNotes ? '<p><strong>Inspector notes:</strong> ' + escapeHtml(finding.inspectorNotes) + '</p>' : '') +
+        '<p class="finding-source"><strong>Source:</strong> ' + escapeHtml(finding.source) + '</p>' +
+      '</div>';
+    list.appendChild(article);
+  });
+}
 
 function startDownloadInspection(id) {
   if (inspectionStarted) {
@@ -2185,6 +2482,8 @@ function markFailures() {
 function refreshSummary() {
   markFailures();
   updateRequiredFieldMarkers();
+  updateComplianceUI();
+  renderFindingsSummary();
 
   var summary = qs("#failureSummary");
   if (!summary) return;
@@ -2264,13 +2563,13 @@ function bindSaveEvents(root) {
   scope.querySelectorAll("[data-save]").forEach(function (el) {
     el.addEventListener("input", function () {
       if (currentTab !== "home") inspectionStarted = true;
-      updateRequiredFieldMarkers();
+      refreshSummary();
       saveCurrentInspection(false);
     });
 
     el.addEventListener("change", function () {
       if (currentTab !== "home") inspectionStarted = true;
-      updateRequiredFieldMarkers();
+      refreshSummary();
       saveCurrentInspection(false);
     });
   });
