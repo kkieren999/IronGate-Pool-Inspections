@@ -4787,6 +4787,16 @@ function init() {
   var summaryHomeBtn = qs("#summaryHomeBtn");
   if (summaryHomeBtn) summaryHomeBtn.onclick = function () { showTab("home"); };
 
+  var summaryDownloadBtn = qs("#summaryDownloadBtn");
+  if (summaryDownloadBtn) summaryDownloadBtn.onclick = function () {
+    if (!currentInspectionId) return;
+    saveCurrentInspection(false);
+    startDownloadInspection(currentInspectionId);
+  };
+
+  var summaryHomeBtn = qs("#summaryHomeBtn");
+  if (summaryHomeBtn) summaryHomeBtn.onclick = function () { showTab("home"); };
+
   // These buttons used to exist at the bottom of the Details tab.
   // They are now optional because the app autosaves and uses the top Home tab.
   var saveBtn = qs("#saveBtn");
