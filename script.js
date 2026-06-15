@@ -208,6 +208,10 @@ function showTab(tabName) {
     tab.classList.toggle("active", getTabName(tab) === tabName);
   });
 
+  if (tabName === "summary") {
+    refreshSummary();
+  }
+
   updateNavLock();
   window.scrollTo(0, 0);
 }
@@ -3008,7 +3012,7 @@ var COMPLIANCE_RULE_BANK = [
 
 function loadComplianceRuleBankFromFile() {
   if (!window.fetch) return;
-  fetch("./rules/qld-pool-safety-2024.json?v=20260615gate1", { cache: "no-store" })
+  fetch("./rules/qld-pool-safety-2024.json?v=20260615summary1", { cache: "no-store" })
     .then(function (response) {
       if (!response.ok) throw new Error("Rules file could not be loaded");
       return response.json();
@@ -4336,11 +4340,123 @@ function markFailures() {
   });
 }
 
+
+function setSummaryText(id, value) {
+  var el = qs("#" + id);
+  if (!el) return;
+  el.textContent = value === undefined || value === null || String(value).trim() === "" ? "—" : String(value);
+}
+
+function countInspectionPhotos(data) {
+  var count = 0;
+  function countArray(arr) {
+    if (Array.isArray(arr)) count += arr.length;
+  }
+  function countPhotoObject(obj) {
+    Object.keys(obj || {}).forEach(function (key) {
+      countArray(obj[key]);
+    });
+  }
+
+  countPhotoObject((data && data.photos) || {});
+  [
+    "fenceSections",
+    "climbabilitySections",
+    "balconySections",
+    "retainingWallSections",
+    "boundarySections",
+    "specialPoolFeatureSections",
+    "waterBarrierSections",
+    "barrierWindowSections",
+    "barrierDoorSections",
+    "gateSections",
+    "temporaryFenceSections",
+    "decommissionedPoolSections",
+    "referralSections"
+  ].forEach(function (sectionKey) {
+    ((data && data[sectionKey]) || []).forEach(function (section) {
+      countArray(section.photos || []);
+    });
+  });
+
+  return count;
+}
+
+function renderSummaryPage() {
+  var statusBadge = qs("#summaryStatusBadge");
+  if (!statusBadge) return;
+
+  if (!inspectionStarted) {
+    statusBadge.textContent = "No inspection open";
+    statusBadge.className = "summary-status-pill not-started";
+    [
+      "summaryInspectionNumber",
+      "summaryInspectionDate",
+      "summaryOwnerName",
+      "summaryPropertyAddress",
+      "summaryOverallResult",
+      "summaryCertificateReady",
+      "summaryNonconformityNotice",
+      "summaryReinspectionRequired"
+    ].forEach(function (id) { setSummaryText(id, "—"); });
+    var emptyCompletion = qs("#summaryCompletionList");
+    if (emptyCompletion) emptyCompletion.innerHTML = '<p class="summary-note">Start or open an inspection to view the summary.</p>';
+    setSummaryText("summaryPhotoCount", "0");
+    setSummaryText("summaryFindingsCount", "0");
+    return;
+  }
+
+  var data = gatherInspectionData();
+  var f = data.fields || {};
+  var status = getInspectionStatus(data);
+  var findings = collectFindings();
+
+  statusBadge.textContent = status.status;
+  statusBadge.className = "summary-status-pill " + status.statusClass;
+
+  setSummaryText("summaryInspectionNumber", f.inspectionNumber || data.inspectionNumber);
+  setSummaryText("summaryInspectionDate", f.inspectionDate);
+  setSummaryText("summaryOwnerName", f.ownerName);
+  setSummaryText("summaryPropertyAddress", f.propertyAddress);
+  setSummaryText("summaryOverallResult", f.overallInspectionResult);
+  setSummaryText("summaryCertificateReady", f.certificateReadyToIssue);
+  setSummaryText("summaryNonconformityNotice", f.nonconformityNoticeRequired);
+  setSummaryText("summaryReinspectionRequired", f.reinspectionRequired);
+  setSummaryText("summaryPhotoCount", String(countInspectionPhotos(data)));
+  setSummaryText("summaryFindingsCount", String(findings.length));
+
+  var completion = qs("#summaryCompletionList");
+  if (completion) {
+    completion.innerHTML = "";
+    var labels = {
+      details: "Details",
+      barrier: "Barrier",
+      climbability: "Climbability",
+      gate: "Gate",
+      safety: "Safety"
+    };
+    Object.keys(status.sections || {}).forEach(function (key) {
+      var row = document.createElement("div");
+      row.className = "summary-completion-row " + (status.sections[key].complete ? "complete" : "incomplete");
+      row.innerHTML = '<span>' + escapeHtml(labels[key] || key) + '</span><strong>' + (status.sections[key].complete ? "Complete" : "Incomplete") + '</strong>';
+      completion.appendChild(row);
+    });
+  }
+
+  var note = qs("#summaryEvidenceNote");
+  if (note) {
+    note.textContent = findings.length
+      ? "Review the generated findings before downloading the report."
+      : "No generated issues are currently recorded for this inspection.";
+  }
+}
+
 function refreshSummary() {
   markFailures();
   updateRequiredFieldMarkers();
   updateComplianceUI();
   renderFindingsSummary();
+  renderSummaryPage();
 
   var summary = qs("#failureSummary");
   if (!summary) return;
@@ -4660,6 +4776,16 @@ function init() {
 
   var refreshListBtn = qs("#refreshListBtn");
   if (refreshListBtn) refreshListBtn.onclick = renderInspectionList;
+
+  var summaryDownloadBtn = qs("#summaryDownloadBtn");
+  if (summaryDownloadBtn) summaryDownloadBtn.onclick = function () {
+    if (!currentInspectionId) return;
+    saveCurrentInspection(false);
+    startDownloadInspection(currentInspectionId);
+  };
+
+  var summaryHomeBtn = qs("#summaryHomeBtn");
+  if (summaryHomeBtn) summaryHomeBtn.onclick = function () { showTab("home"); };
 
   // These buttons used to exist at the bottom of the Details tab.
   // They are now optional because the app autosaves and uses the top Home tab.
