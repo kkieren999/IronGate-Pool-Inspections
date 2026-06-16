@@ -53,6 +53,14 @@ function buildInitialInspectorProfile(user) {
     inspectorEmail: user && user.email ? user.email : "",
     inspectorPhone: "",
     businessName: "",
+    businessAddress: "",
+    businessAbn: "",
+    businessWebsite: "",
+    reportEmail: user && user.email ? user.email : "",
+    reportPhone: "",
+    reportLogoUrl: "",
+    reportFooterText: "",
+    inspectionNumberPrefix: "BC",
     profileIcon: googleUrl
       ? { type: "google", photoURL: googleUrl, avatarId: "" }
       : { type: "default", photoURL: "", avatarId: "default" }

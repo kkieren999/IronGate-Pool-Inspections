@@ -4,13 +4,13 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>IronGate Pool Safety Inspections</title>
-<link href="./styles.css?v=20260616profilesettings1" rel="stylesheet"/>
+<title>BarrierCheck Pool Safety</title>
+<link href="./styles.css?v=20260616barriercheck1" rel="stylesheet"/>
 <script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js"></script>
-<script defer="" src="./script.js?v=20260616profilesettings1"></script>
+<script defer="" src="./script.js?v=20260616barriercheck1"></script>
 </head>
 <body class="auth-checking">
 <div class="app-shell">
@@ -20,9 +20,9 @@
 <span>Home</span>
 </button>
 <div class="brand">
-<img alt="IronGate logo" class="main-logo" src="./assets/logo/logo-no-text.png"/>
+<div class="brand-mark main-logo" aria-hidden="true">BC</div>
 <div class="brand-text">
-<h1><span class="iron">Iron</span><span class="gate">Gate</span></h1>
+<h1><span class="iron">Barrier</span><span class="gate">Check</span></h1>
 <p>Pool Safety Inspections</p>
 </div>
 </div>
@@ -30,6 +30,19 @@
 <span aria-hidden="true">⚙</span>
 </button>
 </header>
+<section id="reportBrandHeader" class="report-brand-header" aria-label="Client report branding">
+  <div class="report-brand-topline"></div>
+  <div class="report-brand-inner">
+    <div id="reportLogoBox" class="report-logo-box" aria-hidden="true">BC</div>
+    <div class="report-brand-copy">
+      <p class="report-kicker">Pool Safety Inspection Report</p>
+      <h1 id="reportCompanyName">Company Name</h1>
+      <p id="reportBusinessMeta" class="report-business-meta">Inspector details</p>
+    </div>
+  </div>
+  <div id="reportInspectionMeta" class="report-inspection-meta"></div>
+  <p id="reportFooterText" class="report-footer-text"></p>
+</section>
 <main class="content">
 <!-- HOME -->
 <section class="page home-page active-page" id="home">
@@ -1281,7 +1294,7 @@
 
     <div id="settingsMainPanel" class="settings-main-panel">
       <div class="settings-header">
-        <div id="settingsAvatar" class="settings-avatar" aria-hidden="true">IG</div>
+        <div id="settingsAvatar" class="settings-avatar" aria-hidden="true">BC</div>
         <div>
           <h2 id="settingsTitle">Settings</h2>
           <p id="settingsSignedIn">Signed in as —</p>
@@ -1291,14 +1304,14 @@
       <button id="profileSettingsBtn" class="settings-option" type="button">
         <span class="settings-option-icon" aria-hidden="true">👤</span>
         <span>
-          <strong>Profile</strong>
-          <small>Inspector details, licence and profile icon</small>
+          <strong>Company Profile</strong>
+          <small>Inspector details, licence, report branding and prefix</small>
         </span>
         <b aria-hidden="true">›</b>
       </button>
 
       <div class="settings-cloud-card">
-        <strong>IronGate Cloud Account</strong>
+        <strong>BarrierCheck Cloud Account</strong>
         <p id="settingsCloudEmail">—</p>
         <span id="firebaseStatus">Checking access...</span>
       </div>
@@ -1310,13 +1323,13 @@
       <div class="profile-form-head">
         <button id="profileBackBtn" class="profile-back-btn" type="button">‹ Settings</button>
         <div>
-          <h2 id="profileTitle">Inspector Profile</h2>
-          <p id="profileSetupNote">Complete these details once. They will prefill future inspections.</p>
+          <h2 id="profileTitle">Company Profile</h2>
+          <p id="profileSetupNote">Complete these details once. They will prefill future inspections and brand completed reports.</p>
         </div>
       </div>
 
       <div class="profile-avatar-preview-row">
-        <div id="profileAvatarPreview" class="settings-avatar large" aria-hidden="true">IG</div>
+        <div id="profileAvatarPreview" class="settings-avatar large" aria-hidden="true">BC</div>
         <div>
           <strong>Profile icon</strong>
           <small>Choose a default icon for your inspector account.</small>
@@ -1326,8 +1339,8 @@
       <div class="avatar-choice-grid" role="radiogroup" aria-label="Profile icon options">
         <label class="avatar-choice" data-avatar-choice="default">
           <input type="radio" name="profileIconChoice" value="default"/>
-          <span class="avatar-placeholder default-avatar">IG</span>
-          <small>IronGate</small>
+          <span class="avatar-placeholder default-avatar">BC</span>
+          <small>BarrierCheck</small>
         </label>
         <label class="avatar-choice" data-avatar-choice="google" id="googleAvatarChoice">
           <input type="radio" name="profileIconChoice" value="google"/>
@@ -1376,6 +1389,38 @@
         <label class="login-field full">
           <span>Business / Company Name</span>
           <input id="profileBusinessName" type="text" required/>
+        </label>
+        <label class="login-field">
+          <span>Inspection Number Prefix</span>
+          <input id="profileInspectionPrefix" type="text" maxlength="8" placeholder="BC"/>
+        </label>
+        <label class="login-field">
+          <span>ABN / ACN</span>
+          <input id="profileBusinessAbn" type="text" placeholder="Optional"/>
+        </label>
+        <label class="login-field full">
+          <span>Business Address</span>
+          <input id="profileBusinessAddress" type="text" placeholder="Optional report address"/>
+        </label>
+        <label class="login-field">
+          <span>Report Email</span>
+          <input id="profileReportEmail" type="email" placeholder="Defaults to inspector email"/>
+        </label>
+        <label class="login-field">
+          <span>Report Phone</span>
+          <input id="profileReportPhone" type="tel" placeholder="Defaults to inspector phone"/>
+        </label>
+        <label class="login-field full">
+          <span>Website</span>
+          <input id="profileBusinessWebsite" type="url" placeholder="https://example.com"/>
+        </label>
+        <label class="login-field full">
+          <span>Company Logo URL</span>
+          <input id="profileReportLogoUrl" type="url" placeholder="Optional image URL for completed reports"/>
+        </label>
+        <label class="login-field full">
+          <span>Report Footer / Disclaimer</span>
+          <textarea id="profileReportFooterText" rows="3" placeholder="Optional footer text for completed reports"></textarea>
         </label>
       </div>
 

@@ -1,4 +1,4 @@
-// IronGate Firebase cloud rebuild
+// BarrierCheck Firebase cloud rebuild
 // Simple browser-safe JavaScript. No modules. No crypto. No :has() dependency.
 // Firestore stores inspection data. Firebase Storage stores evidence photos.
 var currentInspectionId = null;
@@ -180,9 +180,22 @@ function generateId() {
   return "inspection-" + Date.now() + "-" + Math.floor(Math.random() * 100000);
 }
 
+function sanitizeInspectionPrefix(value) {
+  var clean = String(value || "BC")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "")
+    .slice(0, 8);
+  return clean || "BC";
+}
+
+function getCurrentInspectionPrefix() {
+  var profile = getEffectiveInspectorProfile ? getEffectiveInspectorProfile() : {};
+  return sanitizeInspectionPrefix(profile.inspectionNumberPrefix || "BC");
+}
+
 function generateInspectionNumber() {
   var year = new Date().getFullYear();
-  var prefix = "IG-" + year + "-";
+  var prefix = getCurrentInspectionPrefix() + "-" + year + "-";
   var inspections = getInspections();
   var highest = 0;
 
@@ -274,12 +287,22 @@ function valueOrDefault(source, key, fallback) {
 
 function normalizeInspectorProfile(profile) {
   var p = profile || {};
+  var inspectorEmail = valueOrDefault(p, "inspectorEmail", getAuthEmail());
+  var inspectorPhone = valueOrDefault(p, "inspectorPhone", "");
   return {
     inspectorName: valueOrDefault(p, "inspectorName", getAuthDisplayName()),
     licenceNumber: valueOrDefault(p, "licenceNumber", ""),
-    inspectorEmail: valueOrDefault(p, "inspectorEmail", getAuthEmail()),
-    inspectorPhone: valueOrDefault(p, "inspectorPhone", ""),
+    inspectorEmail: inspectorEmail,
+    inspectorPhone: inspectorPhone,
     businessName: valueOrDefault(p, "businessName", ""),
+    businessAddress: valueOrDefault(p, "businessAddress", ""),
+    businessAbn: valueOrDefault(p, "businessAbn", ""),
+    businessWebsite: valueOrDefault(p, "businessWebsite", ""),
+    reportEmail: valueOrDefault(p, "reportEmail", inspectorEmail),
+    reportPhone: valueOrDefault(p, "reportPhone", inspectorPhone),
+    reportLogoUrl: valueOrDefault(p, "reportLogoUrl", ""),
+    reportFooterText: valueOrDefault(p, "reportFooterText", ""),
+    inspectionNumberPrefix: sanitizeInspectionPrefix(valueOrDefault(p, "inspectionNumberPrefix", "BC")),
     profileIcon: normalizeProfileIcon(p.profileIcon)
   };
 }
@@ -324,7 +347,7 @@ function avatarLabelForIcon(icon) {
   if (normalized.type === "app" && normalized.avatarId) {
     return normalized.avatarId.replace("avatar-", "A").toUpperCase();
   }
-  return "IG";
+  return "BC";
 }
 
 function renderAvatarElement(el, icon) {
@@ -380,7 +403,15 @@ function fillProfileForm() {
     profileLicenceNumber: p.licenceNumber,
     profileEmail: p.inspectorEmail,
     profilePhone: p.inspectorPhone,
-    profileBusinessName: p.businessName
+    profileBusinessName: p.businessName,
+    profileBusinessAddress: p.businessAddress,
+    profileBusinessAbn: p.businessAbn,
+    profileBusinessWebsite: p.businessWebsite,
+    profileReportEmail: p.reportEmail || p.inspectorEmail,
+    profileReportPhone: p.reportPhone || p.inspectorPhone,
+    profileReportLogoUrl: p.reportLogoUrl,
+    profileReportFooterText: p.reportFooterText,
+    profileInspectionPrefix: p.inspectionNumberPrefix || "BC"
   };
 
   Object.keys(fields).forEach(function (id) {
@@ -401,6 +432,14 @@ function readProfileForm() {
     inspectorEmail: qs("#profileEmail") ? qs("#profileEmail").value : "",
     inspectorPhone: qs("#profilePhone") ? qs("#profilePhone").value : "",
     businessName: qs("#profileBusinessName") ? qs("#profileBusinessName").value : "",
+    businessAddress: qs("#profileBusinessAddress") ? qs("#profileBusinessAddress").value : "",
+    businessAbn: qs("#profileBusinessAbn") ? qs("#profileBusinessAbn").value : "",
+    businessWebsite: qs("#profileBusinessWebsite") ? qs("#profileBusinessWebsite").value : "",
+    reportEmail: qs("#profileReportEmail") ? qs("#profileReportEmail").value : "",
+    reportPhone: qs("#profileReportPhone") ? qs("#profileReportPhone").value : "",
+    reportLogoUrl: qs("#profileReportLogoUrl") ? qs("#profileReportLogoUrl").value : "",
+    reportFooterText: qs("#profileReportFooterText") ? qs("#profileReportFooterText").value : "",
+    inspectionNumberPrefix: qs("#profileInspectionPrefix") ? qs("#profileInspectionPrefix").value : "BC",
     profileIcon: buildProfileIconFromChoice(choice)
   });
 }
@@ -439,8 +478,8 @@ function showProfilePanel(mandatory) {
   if (title) title.textContent = mandatory ? "Complete Inspector Profile" : "Inspector Profile";
   if (note) {
     note.textContent = mandatory
-      ? "Your approved account needs these details before inspections can be started. They will prefill future inspections."
-      : "Update your inspector details. Changes apply to future inspections.";
+      ? "Your approved account needs these details before inspections can be started. They will prefill inspections and brand completed reports."
+      : "Update your company and inspector details. Changes apply to future inspections and reports.";
   }
 
   fillProfileForm();
@@ -483,7 +522,7 @@ function saveInspectorProfile(event) {
 
   var clean = readProfileForm();
   if (!isInspectorProfileComplete(clean)) {
-    setProfileStatus("Fill in every profile field and choose a profile icon.", true);
+    setProfileStatus("Fill in the required inspector/company fields and choose a profile icon.", true);
     return;
   }
 
@@ -582,6 +621,14 @@ function createInspectorSnapshotFromProfile() {
     inspectorEmail: p.inspectorEmail,
     inspectorPhone: p.inspectorPhone,
     businessName: p.businessName,
+    businessAddress: p.businessAddress,
+    businessAbn: p.businessAbn,
+    businessWebsite: p.businessWebsite,
+    reportEmail: p.reportEmail,
+    reportPhone: p.reportPhone,
+    reportLogoUrl: p.reportLogoUrl,
+    reportFooterText: p.reportFooterText,
+    inspectionNumberPrefix: p.inspectionNumberPrefix,
     profileIcon: normalizeProfileIcon(p.profileIcon)
   };
 }
@@ -597,6 +644,14 @@ function normalizeInspectorSnapshot(snapshot, fields) {
     inspectorEmail: cleanText(source.inspectorEmail || f.inspectorEmail || base.inspectorEmail),
     inspectorPhone: cleanText(source.inspectorPhone || f.inspectorPhone || base.inspectorPhone),
     businessName: cleanText(source.businessName || f.businessName || base.businessName),
+    businessAddress: cleanText(source.businessAddress || base.businessAddress),
+    businessAbn: cleanText(source.businessAbn || base.businessAbn),
+    businessWebsite: cleanText(source.businessWebsite || base.businessWebsite),
+    reportEmail: cleanText(source.reportEmail || base.reportEmail || source.inspectorEmail || f.inspectorEmail || base.inspectorEmail),
+    reportPhone: cleanText(source.reportPhone || base.reportPhone || source.inspectorPhone || f.inspectorPhone || base.inspectorPhone),
+    reportLogoUrl: cleanText(source.reportLogoUrl || base.reportLogoUrl),
+    reportFooterText: cleanText(source.reportFooterText || base.reportFooterText),
+    inspectionNumberPrefix: sanitizeInspectionPrefix(source.inspectionNumberPrefix || base.inspectionNumberPrefix || "BC"),
     profileIcon: normalizeProfileIcon(source.profileIcon || base.profileIcon)
   };
 }
@@ -3772,6 +3827,7 @@ function startDownloadInspection(id) {
 
   if (!loadInspectionIntoForm(data)) return;
 
+  refreshSummary();
   showTab("home");
   enterDownloadMode();
 }
@@ -4505,12 +4561,18 @@ function getCurrentInspectionNumberForStamp() {
   return el && el.value ? el.value : (currentInspectionId || "Inspection");
 }
 
+function getReportCompanyNameForStamp() {
+  var profile = getEffectiveInspectorProfile ? getEffectiveInspectorProfile() : {};
+  var fieldBusiness = getFieldValue ? getFieldValue("businessName") : "";
+  return cleanText(fieldBusiness || profile.businessName || "Pool Safety Inspection");
+}
+
 function buildPhotoStampLines(area, uploadedAt) {
   return [
     formatDateTime(uploadedAt),
     getCurrentInspectionNumberForStamp(),
     getPhotoAreaLabel(area),
-    "IronGate Pool Inspections"
+    getReportCompanyNameForStamp()
   ];
 }
 
@@ -4844,6 +4906,60 @@ function countInspectionPhotos(data) {
   return count;
 }
 
+function companyInitials(name) {
+  var words = String(name || "BarrierCheck").trim().split(/\s+/).filter(function (word) { return !!word; });
+  if (!words.length) return "BC";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+}
+
+function setReportText(id, value) {
+  var el = qs("#" + id);
+  if (el) el.textContent = value || "";
+}
+
+function updateReportBranding(data, inspectorSnapshot) {
+  var f = data && data.fields ? data.fields : {};
+  var inspector = normalizeInspectorSnapshot(inspectorSnapshot || (data && data.inspectorSnapshot), f);
+  var companyName = cleanText(inspector.businessName || f.businessName || "Pool Safety Inspection");
+  var contact = [
+    inspector.businessAbn ? "ABN/ACN " + inspector.businessAbn : "",
+    inspector.businessAddress,
+    inspector.businessWebsite,
+    inspector.reportEmail || inspector.inspectorEmail,
+    inspector.reportPhone || inspector.inspectorPhone
+  ].filter(function (item) { return !!cleanText(item); }).join(" · ");
+
+  var inspectionMeta = [
+    (f.inspectionNumber || (data && data.inspectionNumber)) ? "Inspection " + (f.inspectionNumber || data.inspectionNumber) : "",
+    f.inspectionDate ? "Date " + f.inspectionDate : "",
+    inspector.inspectorName ? "Inspector " + inspector.inspectorName : "",
+    inspector.licenceNumber ? "Licence " + inspector.licenceNumber : "",
+    f.propertyAddress ? "Property " + f.propertyAddress : ""
+  ].filter(function (item) { return !!cleanText(item); }).join(" · ");
+
+  setReportText("reportCompanyName", companyName);
+  setReportText("reportBusinessMeta", contact || [inspector.reportEmail || inspector.inspectorEmail, inspector.reportPhone || inspector.inspectorPhone].filter(function (item) { return !!item; }).join(" · "));
+  setReportText("reportInspectionMeta", inspectionMeta);
+  setReportText("reportFooterText", inspector.reportFooterText || "");
+
+  var logoBox = qs("#reportLogoBox");
+  if (logoBox) {
+    logoBox.innerHTML = "";
+    var logoUrl = cleanText(inspector.reportLogoUrl);
+    if (logoUrl) {
+      var img = document.createElement("img");
+      img.src = logoUrl;
+      img.alt = companyName + " logo";
+      logoBox.appendChild(img);
+      logoBox.classList.add("has-logo");
+    } else {
+      logoBox.textContent = companyInitials(companyName);
+      logoBox.classList.remove("has-logo");
+    }
+  }
+}
+
 function renderSummaryPage() {
   var statusBadge = qs("#summaryStatusBadge");
   if (!statusBadge) return;
@@ -4869,6 +4985,7 @@ function renderSummaryPage() {
     if (emptyCompletion) emptyCompletion.innerHTML = '<p class="summary-note">Start or open an inspection to view the summary.</p>';
     setSummaryText("summaryPhotoCount", "0");
     setSummaryText("summaryFindingsCount", "0");
+    updateReportBranding(null, null);
     return;
   }
 
@@ -4896,6 +5013,7 @@ function renderSummaryPage() {
   setSummaryText("summaryReinspectionRequired", f.reinspectionRequired);
   setSummaryText("summaryPhotoCount", String(countInspectionPhotos(data)));
   setSummaryText("summaryFindingsCount", String(findings.length));
+  updateReportBranding(data, inspector);
 
   var completion = qs("#summaryCompletionList");
   if (completion) {

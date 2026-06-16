@@ -98,6 +98,19 @@ body {
 .iron { color: var(--iron); }
 .gate { color: var(--gate); }
 
+.brand-mark {
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 70% 20%, rgba(29, 184, 245, 0.36), transparent 42%),
+    linear-gradient(135deg, var(--iron) 0%, var(--gate) 100%);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-weight: 950;
+  letter-spacing: -0.06em;
+  box-shadow: 0 14px 34px rgba(3, 40, 106, 0.2);
+}
+
 .brand-text p {
   margin: 8px 0 0;
   color: var(--muted);
@@ -1433,6 +1446,102 @@ button:disabled {
   }
 }
 
+/* Client-branded report masthead */
+.report-brand-header {
+  display: none;
+  margin: 0 auto;
+  padding: 0 20px 18px;
+  max-width: 720px;
+  background: #ffffff;
+}
+
+.report-brand-topline {
+  height: 8px;
+  border-radius: 0 0 999px 999px;
+  background: linear-gradient(90deg, var(--iron), var(--gate), var(--wave));
+}
+
+.report-brand-inner {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 18px;
+  padding: 22px 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.report-logo-box {
+  width: 86px;
+  height: 86px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 70% 18%, rgba(29, 184, 245, 0.34), transparent 42%),
+    linear-gradient(135deg, var(--iron), var(--gate));
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 1.65rem;
+  font-weight: 950;
+  letter-spacing: -0.06em;
+  overflow: hidden;
+}
+
+.report-logo-box.has-logo {
+  background: #ffffff;
+  border: 1px solid var(--line);
+}
+
+.report-logo-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 8px;
+}
+
+.report-kicker {
+  margin: 0 0 6px;
+  color: var(--gate);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.report-brand-copy h1 {
+  margin: 0;
+  color: var(--iron);
+  font-size: clamp(1.8rem, 6vw, 2.8rem);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.report-business-meta,
+.report-inspection-meta,
+.report-footer-text {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.45;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.report-inspection-meta {
+  padding-top: 10px;
+  color: var(--text);
+}
+
+.report-footer-text:empty {
+  display: none;
+}
+
+body.download-mode .report-brand-header {
+  display: block;
+}
+
+body.download-mode .hero {
+  display: none;
+}
+
 /* Download / print-to-PDF mode */
 .download-close-btn {
   position: fixed;
@@ -1470,7 +1579,7 @@ body.download-mode .page:not(#home) {
 }
 
 body.download-mode .content::before {
-  content: "Printable inspection view — choose Save as PDF in the print dialog.";
+  content: "Client-branded printable inspection view — choose Save as PDF in the print dialog.";
   display: block;
   margin: 0 0 18px;
   padding: 14px 16px;
@@ -1510,6 +1619,8 @@ body.download-mode .camera-btn {
   }
 
   body.download-mode .download-close-btn,
+  body.download-mode .settings-overlay,
+  body.download-mode .bottom-sheet-overlay,
   body.download-mode .auth-panel,
   body.download-mode .tab-bar,
   body.download-mode #home,
@@ -1519,6 +1630,18 @@ body.download-mode .camera-btn {
   body.download-mode .remove-photo,
   body.download-mode .camera-btn,
   body.download-mode .content::before {
+    display: none !important;
+  }
+
+  body.download-mode .report-brand-header {
+    display: block !important;
+    max-width: none;
+    padding: 0 0 8mm;
+    margin: 0;
+    break-after: avoid;
+  }
+
+  body.download-mode .hero {
     display: none !important;
   }
 
@@ -2776,4 +2899,36 @@ body.profile-required .settings-card {
   .avatar-choice-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+}
+
+
+.login-field textarea {
+  width: 100%;
+  border: 1px solid rgba(13, 130, 216, 0.18);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: #f8fcff;
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+
+.login-field textarea:focus {
+  outline: 2px solid rgba(13, 130, 216, 0.22);
+  border-color: var(--gate);
+}
+
+.brand-mark.main-logo,
+.brand-mark.login-logo {
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+}
+
+.brand-mark.main-logo {
+  font-size: clamp(2rem, 8vw, 3rem);
+}
+
+.brand-mark.login-logo {
+  font-size: 2rem;
 }
