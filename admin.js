@@ -233,7 +233,10 @@ function initAdmin() {
     adminDb.collection("users").doc(adminUser.uid).get().then(function (doc) {
       adminProfile = doc.exists ? (doc.data() || {}) : {};
       if (!isAdminProfile(adminProfile)) {
-        setAdminStatus("This account is not marked as an admin. Set role: 'admin' or admin: true on your user document.", true);
+        setAdminStatus("Admin access required. Redirecting...", true);
+        setTimeout(function () {
+          window.location.replace("index.html");
+        }, 900);
         return;
       }
       setAdminStatus("Admin access confirmed.", false);

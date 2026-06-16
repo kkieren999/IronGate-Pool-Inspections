@@ -5,13 +5,12 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>BarrierCheck Pool Safety</title>
-<link href="./styles.css?v=20260616phase3" rel="stylesheet"/>
+<link href="./styles.css?v=20260616barriercheck1" rel="stylesheet"/>
 <script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
 <script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
 <script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
 <script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js"></script>
-<script defer="" src="https://www.gstatic.com/firebasejs/10.13.2/firebase-functions-compat.js"></script>
-<script defer="" src="./script.js?v=20260616phase3"></script>
+<script defer="" src="./script.js?v=20260616barriercheck1"></script>
 </head>
 <body class="auth-checking">
 <div class="app-shell">
@@ -55,11 +54,6 @@
 </div>
 <div class="inspection-arrow">→</div>
 </button>
-<div id="billingGateCard" class="billing-gate-card" hidden>
-  <strong>Trial or subscription required</strong>
-  <p id="billingGateText">Your account is approved, but your trial or subscription is not active.</p>
-  <a href="./contact.html" target="_blank" rel="noopener">Contact support</a>
-</div>
 <div class="home-list-header">
 <div>
 <h2>Inspections</h2>
@@ -1323,20 +1317,11 @@
       </div>
 
       <div class="settings-cloud-card subscription-card">
-        <strong>Trial & Subscription</strong>
-        <p id="subscriptionStatusText">Checking trial and subscription access...</p>
+        <strong>Subscription</strong>
+        <p id="subscriptionStatusText">Free trial and Stripe billing will be connected in a later build.</p>
         <button id="cancelSubscriptionBtn" class="settings-secondary-btn" type="button" disabled>Cancel Subscription</button>
-        <span>Cancellation will stop future charges and keep access until the end of the paid period once Stripe is connected.</span>
+        <span>When billing is connected, cancellation will stop future charges and keep access until the end of the paid period.</span>
       </div>
-
-      <a id="adminConsoleLink" class="settings-option admin-console-link" href="./admin.html" hidden>
-        <span class="settings-option-icon" aria-hidden="true">🛡️</span>
-        <span>
-          <strong>Admin Console</strong>
-          <small>Review pending inspectors, approve access and start trials</small>
-        </span>
-        <b aria-hidden="true">›</b>
-      </a>
 
       <div class="settings-cloud-card legal-card">
         <strong>Legal & Support</strong>
@@ -1345,6 +1330,7 @@
           <a href="./terms.html" target="_blank" rel="noopener">Terms of Service</a>
           <a href="./refunds.html" target="_blank" rel="noopener">Refund Policy</a>
           <a href="./contact.html" target="_blank" rel="noopener">Contact Support</a>
+          <a id="adminConsoleLink" class="admin-console-link" href="./admin.html" hidden>Admin Console</a>
         </nav>
       </div>
 
@@ -1488,7 +1474,7 @@
     <div class="sheet-handle" aria-hidden="true"></div>
     <h2 id="accountDeleteTitle">Delete account?</h2>
     <p>This will permanently delete your BarrierCheck account, company profile, inspections, evidence photos and stored app data.</p>
-    <p>If you have an active subscription, future billing will be cancelled when Stripe billing is connected. Account deletion ends app access immediately.</p>
+    <p>If you have an active subscription, future billing cancellation will be connected when Stripe billing is implemented.</p>
     <p><strong>This action cannot be undone.</strong></p>
     <label class="delete-confirm-field">
       <span>Type DELETE to confirm</span>
