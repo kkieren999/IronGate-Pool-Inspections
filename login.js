@@ -11,6 +11,10 @@ var FIREBASE_CONFIG = {
 var loginAuth = null;
 var loginDb = null;
 var authStateBusy = false;
+var LEGAL_TERMS_VERSION = "2026-06-16-v1";
+var LEGAL_PRIVACY_VERSION = "2026-06-16-v1";
+var LEGAL_REFUND_VERSION = "2026-06-16-v1";
+
 
 function qs(selector) {
   return document.querySelector(selector);
@@ -26,6 +30,33 @@ function setLoginStatus(message, isError) {
 function setPendingVisible(visible) {
   var box = qs("#pendingBox");
   if (box) box.hidden = !visible;
+}
+
+function hasAcceptedLegalTerms() {
+  var checkbox = qs("#legalAcceptCheck");
+  return !!(checkbox && checkbox.checked);
+}
+
+function wantsMarketingEmails() {
+  var checkbox = qs("#marketingOptInCheck");
+  return !!(checkbox && checkbox.checked);
+}
+
+function buildLegalAcceptanceData() {
+  return {
+    termsAcceptedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    termsVersion: LEGAL_TERMS_VERSION,
+    privacyVersion: LEGAL_PRIVACY_VERSION,
+    refundPolicyVersion: LEGAL_REFUND_VERSION,
+    marketingOptIn: wantsMarketingEmails(),
+    marketingOptInUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+}
+
+function requireLegalTermsForNewAccount() {
+  if (hasAcceptedLegalTerms()) return true;
+  setLoginStatus("Tick the Privacy, Terms and Refund Policy agreement before creating an account.", true);
+  return false;
 }
 
 function goToApp() {
@@ -72,24 +103,44 @@ function createPendingProfile(user) {
     return provider.providerId;
   });
 
-  return getUserProfileRef(user).set({
+  var profileData = {
     email: user.email || "",
     displayName: user.displayName || "",
     approved: false,
     role: "pending",
+    verificationStatus: "pending",
+    verificationMethod: "pool_safety_inspector_register",
+    trialStatus: "not_started",
     providerIds: providerIds,
     inspectorProfile: buildInitialInspectorProfile(user),
     profileCompleted: false,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  }, { merge: true });
+  };
+
+  if (hasAcceptedLegalTerms()) {
+    Object.assign(profileData, buildLegalAcceptanceData());
+  }
+
+  return getUserProfileRef(user).set(profileData, { merge: true });
 }
 
 function ensureUserProfile(user) {
   var ref = getUserProfileRef(user);
   return ref.get().then(function (doc) {
     if (doc.exists) {
-      return doc.data() || {};
+      var data = doc.data() || {};
+      if (!data.termsAcceptedAt && hasAcceptedLegalTerms()) {
+        return ref.set(buildLegalAcceptanceData(), { merge: true }).then(function () {
+          data.termsAcceptedAt = true;
+          data.termsVersion = LEGAL_TERMS_VERSION;
+          data.privacyVersion = LEGAL_PRIVACY_VERSION;
+          data.refundPolicyVersion = LEGAL_REFUND_VERSION;
+          data.marketingOptIn = wantsMarketingEmails();
+          return data;
+        });
+      }
+      return data;
     }
 
     return createPendingProfile(user).then(function () {
@@ -122,7 +173,7 @@ function checkApprovalAndContinue(user) {
       }
 
       setPendingVisible(true);
-      setLoginStatus("Your account is pending approval.", true);
+      setLoginStatus("Your account is pending inspector verification. We aim to review new accounts within 24 hours.", true);
     })
     .catch(function (error) {
       authStateBusy = false;
@@ -156,6 +207,7 @@ function signInWithEmail(event) {
 
 function createAccountWithEmail() {
   if (!loginAuth) return;
+  if (!requireLegalTermsForNewAccount()) return;
 
   var email = qs("#loginEmail").value.trim();
   var password = qs("#loginPassword").value;
@@ -187,6 +239,7 @@ function createAccountWithEmail() {
 
 function signInWithGoogle() {
   if (!loginAuth || !window.firebase) return;
+  if (!requireLegalTermsForNewAccount()) return;
 
   var provider = new firebase.auth.GoogleAuthProvider();
   setPendingVisible(false);
@@ -208,6 +261,14 @@ function signOutPendingUser() {
   });
 }
 
+function getLoginQueryFlag(name) {
+  try {
+    return new URLSearchParams(window.location.search || "").has(name);
+  } catch (error) {
+    return false;
+  }
+}
+
 function initLogin() {
   if (!window.firebase || !window.firebase.initializeApp) {
     setLoginStatus("Firebase scripts could not load. Try opening the app from a hosted site or local server.", true);
@@ -224,7 +285,11 @@ function initLogin() {
         checkApprovalAndContinue(user);
       } else if (!authStateBusy) {
         setPendingVisible(false);
-        setLoginStatus("Sign in or create an account to continue.", false);
+        if (getLoginQueryFlag("accountDeleted")) {
+          setLoginStatus("Your BarrierCheck account has been deleted.", false);
+        } else {
+          setLoginStatus("Sign in or create an account to continue.", false);
+        }
       }
     });
 
@@ -232,7 +297,7 @@ function initLogin() {
     qs("#createAccountBtn").addEventListener("click", createAccountWithEmail);
     qs("#googleSignInBtn").addEventListener("click", signInWithGoogle);
     qs("#pendingSignOutBtn").addEventListener("click", signOutPendingUser);
-    setLoginStatus("Sign in or create an account to continue.", false);
+    setLoginStatus(getLoginQueryFlag("accountDeleted") ? "Your BarrierCheck account has been deleted." : "Sign in or create an account to continue.", false);
   } catch (error) {
     console.error(error);
     setLoginStatus("Firebase setup failed: " + error.message, true);

@@ -20,10 +20,10 @@
 <span>Home</span>
 </button>
 <div class="brand">
-<img class="main-logo" src="./assets/logo/BarrierCheck_logo_no text.png" alt="BarrierCheck logo">
+<div class="brand-mark main-logo" aria-hidden="true">BC</div>
 <div class="brand-text">
 <h1><span class="iron">Barrier</span><span class="gate">Check</span></h1>
-<p>Pool Inspection Software</p>
+<p>Pool Safety Inspections</p>
 </div>
 </div>
 <button id="settingsBtn" class="settings-pill" type="button" aria-label="Open settings">
@@ -1316,6 +1316,29 @@
         <span id="firebaseStatus">Checking access...</span>
       </div>
 
+      <div class="settings-cloud-card subscription-card">
+        <strong>Subscription</strong>
+        <p id="subscriptionStatusText">Free trial and Stripe billing will be connected in a later build.</p>
+        <button id="cancelSubscriptionBtn" class="settings-secondary-btn" type="button" disabled>Cancel Subscription</button>
+        <span>When billing is connected, cancellation will stop future charges and keep access until the end of the paid period.</span>
+      </div>
+
+      <div class="settings-cloud-card legal-card">
+        <strong>Legal & Support</strong>
+        <nav class="settings-legal-links" aria-label="Legal and support links">
+          <a href="./privacy.html" target="_blank" rel="noopener">Privacy Policy</a>
+          <a href="./terms.html" target="_blank" rel="noopener">Terms of Service</a>
+          <a href="./refunds.html" target="_blank" rel="noopener">Refund Policy</a>
+          <a href="./contact.html" target="_blank" rel="noopener">Contact Support</a>
+        </nav>
+      </div>
+
+      <div class="settings-cloud-card danger-zone-card">
+        <strong>Danger Zone</strong>
+        <p>Delete your BarrierCheck account, company profile, inspections, evidence photos and stored app data.</p>
+        <button id="deleteAccountBtn" class="settings-danger-btn" type="button">Delete Account</button>
+      </div>
+
       <button id="settingsSignOutBtn" class="settings-signout-btn" type="button">Sign out</button>
     </div>
 
@@ -1441,6 +1464,25 @@
     <div class="delete-sheet-actions">
       <button id="deleteSheetCancelBtn" class="sheet-secondary-btn" type="button">Keep Editing</button>
       <button id="deleteSheetConfirmBtn" class="sheet-danger-btn" type="button">Delete Inspection</button>
+    </div>
+  </section>
+</div>
+
+<div id="accountDeleteOverlay" class="bottom-sheet-overlay" hidden>
+  <section class="delete-sheet account-delete-sheet" role="dialog" aria-modal="true" aria-labelledby="accountDeleteTitle">
+    <div class="sheet-handle" aria-hidden="true"></div>
+    <h2 id="accountDeleteTitle">Delete account?</h2>
+    <p>This will permanently delete your BarrierCheck account, company profile, inspections, evidence photos and stored app data.</p>
+    <p>If you have an active subscription, future billing cancellation will be connected when Stripe billing is implemented.</p>
+    <p><strong>This action cannot be undone.</strong></p>
+    <label class="delete-confirm-field">
+      <span>Type DELETE to confirm</span>
+      <input id="accountDeleteConfirmInput" type="text" autocomplete="off" inputmode="text" />
+    </label>
+    <p id="accountDeleteStatus" class="profile-status"></p>
+    <div class="delete-sheet-actions">
+      <button id="accountDeleteCancelBtn" class="sheet-secondary-btn" type="button">Cancel</button>
+      <button id="accountDeleteConfirmBtn" class="sheet-danger-btn" type="button">Delete My Account</button>
     </div>
   </section>
 </div>

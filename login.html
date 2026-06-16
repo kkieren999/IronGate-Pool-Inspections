@@ -37,6 +37,16 @@
           <input id="loginPassword" type="password" autocomplete="current-password" required />
         </label>
 
+        <label class="legal-check-row">
+          <input id="legalAcceptCheck" type="checkbox" />
+          <span>I agree to the <a href="./terms.html" target="_blank" rel="noopener">Terms of Service</a>, <a href="./privacy.html" target="_blank" rel="noopener">Privacy Policy</a>, and <a href="./refunds.html" target="_blank" rel="noopener">Refund Policy</a>.</span>
+        </label>
+
+        <label class="legal-check-row optional">
+          <input id="marketingOptInCheck" type="checkbox" />
+          <span>Send me BarrierCheck product updates and marketing emails. I can unsubscribe later.</span>
+        </label>
+
         <button class="login-primary-btn" type="submit">Sign in</button>
         <button id="createAccountBtn" class="login-secondary-btn" type="button">Create account</button>
       </form>
@@ -49,15 +59,22 @@
 
       <div id="pendingBox" class="login-pending-box" hidden>
         <strong>Account pending approval</strong>
-        <p>Your account has been created, but it needs to be approved in Firebase before you can use the inspection app.</p>
+        <p>Your account has been created and is pending inspector verification. We aim to review new accounts within 24 hours.</p>
         <button id="pendingSignOutBtn" class="login-google-btn" type="button">Sign out</button>
       </div>
 
       <p id="loginStatus" class="login-status">Checking Firebase...</p>
 
       <p class="login-note">
-        New accounts can be created, but they stay pending until you approve them in Firebase.
+        New accounts are for pool safety inspectors only. We verify inspector details before approving access.
       </p>
+
+      <nav class="legal-link-row" aria-label="Legal and support links">
+        <a href="./privacy.html" target="_blank" rel="noopener">Privacy</a>
+        <a href="./terms.html" target="_blank" rel="noopener">Terms</a>
+        <a href="./refunds.html" target="_blank" rel="noopener">Refunds</a>
+        <a href="./contact.html" target="_blank" rel="noopener">Support</a>
+      </nav>
     </section>
   </main>
 </body>

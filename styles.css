@@ -2932,3 +2932,131 @@ body.profile-required .settings-card {
 .brand-mark.login-logo {
   font-size: 2rem;
 }
+
+
+/* Compliance/account safety build additions */
+.legal-check-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: start;
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.legal-check-row.optional {
+  margin-top: -2px;
+}
+
+.legal-check-row input {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  accent-color: var(--gate);
+}
+
+.legal-check-row a,
+.legal-link-row a,
+.settings-legal-links a {
+  color: var(--gate);
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.legal-check-row a:hover,
+.legal-link-row a:hover,
+.settings-legal-links a:hover {
+  text-decoration: underline;
+}
+
+.legal-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 14px;
+  margin-top: 16px;
+  font-size: 0.82rem;
+}
+
+.settings-legal-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin-top: 10px;
+  font-size: 0.86rem;
+}
+
+.subscription-card,
+.legal-card,
+.danger-zone-card {
+  display: grid;
+  gap: 8px;
+}
+
+.settings-secondary-btn,
+.settings-danger-btn {
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.settings-secondary-btn {
+  color: var(--gate);
+  background: #edf7ff;
+}
+
+.settings-secondary-btn:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.danger-zone-card {
+  border-color: rgba(229, 57, 53, 0.22);
+  background: #fffafa;
+}
+
+.settings-danger-btn {
+  color: white;
+  background: linear-gradient(135deg, #b42318, var(--danger));
+}
+
+.delete-confirm-field {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  color: var(--iron);
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.delete-confirm-field input {
+  width: 100%;
+  border: 1px solid rgba(229, 57, 53, 0.26);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: #fffafa;
+  color: var(--text);
+  font: inherit;
+  font-weight: 850;
+}
+
+.delete-confirm-field input:focus {
+  outline: 2px solid rgba(229, 57, 53, 0.18);
+  border-color: var(--danger);
+}
+
+.account-delete-sheet .profile-status {
+  margin-top: 10px;
+}
+
+@media (max-width: 560px) {
+  .settings-legal-links {
+    grid-template-columns: 1fr;
+  }
+}

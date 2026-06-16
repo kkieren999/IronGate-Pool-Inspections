@@ -53,6 +53,7 @@ var profileCompleted = false;
 var settingsOverlayMandatory = false;
 var currentInspectorSnapshot = null;
 var pendingDeleteInspectionId = null;
+var accountDeleteBusy = false;
 
 function qs(selector) {
   return document.querySelector(selector);
@@ -692,6 +693,206 @@ function confirmPendingDeleteInspection() {
   var id = pendingDeleteInspectionId;
   closeDeleteInspectionSheet();
   if (id) performDeleteInspection(id);
+}
+
+function setAccountDeleteStatus(message, isError) {
+  var status = qs("#accountDeleteStatus");
+  if (!status) return;
+  status.textContent = message || "";
+  status.classList.toggle("error", !!isError);
+}
+
+function openDeleteAccountSheet() {
+  if (accountDeleteBusy) return;
+  var input = qs("#accountDeleteConfirmInput");
+  if (input) input.value = "";
+  setAccountDeleteStatus("", false);
+  var overlay = qs("#accountDeleteOverlay");
+  if (overlay) overlay.hidden = false;
+  setTimeout(function () {
+    if (input) input.focus();
+  }, 50);
+}
+
+function closeDeleteAccountSheet() {
+  if (accountDeleteBusy) return;
+  var overlay = qs("#accountDeleteOverlay");
+  if (overlay) overlay.hidden = true;
+  setAccountDeleteStatus("", false);
+}
+
+function deleteKnownAccountPhotosFromStorage() {
+  var paths = [];
+
+  function addPathsFromInspection(inspection) {
+    collectPhotoPaths(inspection || {}).forEach(function (path) {
+      if (path && paths.indexOf(path) === -1) paths.push(path);
+    });
+  }
+
+  getInspections().forEach(addPathsFromInspection);
+  if (currentInspectionId) addPathsFromInspection(gatherInspectionData());
+
+  return Promise.all(paths.map(function (path) {
+    return deletePhotoFromStorage({ path: path });
+  }));
+}
+
+function deleteStorageFolderRecursively(ref) {
+  if (!ref || typeof ref.listAll !== "function") return Promise.resolve();
+
+  return ref.listAll().then(function (result) {
+    var fileDeletes = (result.items || []).map(function (itemRef) {
+      return itemRef.delete().catch(function (error) {
+        console.warn("Could not delete Storage item", error);
+      });
+    });
+
+    var folderDeletes = (result.prefixes || []).map(function (folderRef) {
+      return deleteStorageFolderRecursively(folderRef);
+    });
+
+    return Promise.all(fileDeletes.concat(folderDeletes));
+  }).catch(function (error) {
+    console.warn("Could not list Storage folder for deletion", error);
+  });
+}
+
+function deleteFirestoreInspectionDocsForCurrentUser() {
+  if (!firebaseDb || !firebaseUser) return Promise.resolve();
+
+  var collectionRef = firebaseDb.collection("users").doc(firebaseUser.uid).collection("inspections");
+
+  return collectionRef.get().then(function (snapshot) {
+    if (snapshot.empty) return Promise.resolve();
+
+    var batches = [];
+    var batch = firebaseDb.batch();
+    var count = 0;
+
+    snapshot.forEach(function (doc) {
+      batch.delete(doc.ref);
+      count += 1;
+      if (count >= 450) {
+        batches.push(batch.commit());
+        batch = firebaseDb.batch();
+        count = 0;
+      }
+    });
+
+    if (count > 0) batches.push(batch.commit());
+    return Promise.all(batches);
+  });
+}
+
+function reauthenticateCurrentUserForDeletion(user) {
+  if (!user || typeof user.reauthenticateWithCredential !== "function") return Promise.resolve();
+
+  var providers = user.providerData || [];
+  var hasGoogle = providers.some(function (provider) {
+    return provider.providerId === "google.com";
+  });
+  var hasPassword = providers.some(function (provider) {
+    return provider.providerId === "password";
+  });
+
+  if (hasGoogle && firebase.auth && firebase.auth.GoogleAuthProvider) {
+    setAccountDeleteStatus("Confirming your Google sign-in...", false);
+    var googleProvider = new firebase.auth.GoogleAuthProvider();
+    return user.reauthenticateWithPopup(googleProvider);
+  }
+
+  if (hasPassword && firebase.auth && firebase.auth.EmailAuthProvider) {
+    var password = window.prompt("For security, enter your current BarrierCheck password to delete your account.");
+    if (!password) return Promise.reject(new Error("Account deletion cancelled because password confirmation was not completed."));
+    setAccountDeleteStatus("Confirming your password...", false);
+    var credential = firebase.auth.EmailAuthProvider.credential(user.email || getAuthEmail(), password);
+    return user.reauthenticateWithCredential(credential);
+  }
+
+  return Promise.resolve();
+}
+
+function performAccountDeletion() {
+  if (accountDeleteBusy) return;
+
+  var input = qs("#accountDeleteConfirmInput");
+  var confirmText = input ? input.value.trim().toUpperCase() : "";
+  if (confirmText !== "DELETE") {
+    setAccountDeleteStatus("Type DELETE to confirm account deletion.", true);
+    return;
+  }
+
+  if (!firebaseEnabled || !firebaseUser || !firebaseDb) {
+    setAccountDeleteStatus("You must be signed in before deleting your account.", true);
+    return;
+  }
+
+  var user = firebaseUser;
+  var uid = user.uid;
+  var confirmBtn = qs("#accountDeleteConfirmBtn");
+  var cancelBtn = qs("#accountDeleteCancelBtn");
+  accountDeleteBusy = true;
+  if (confirmBtn) confirmBtn.disabled = true;
+  if (cancelBtn) cancelBtn.disabled = true;
+  setAccountDeleteStatus("Deleting account data...", false);
+
+  if (cloudUnsubscribe) {
+    cloudUnsubscribe();
+    cloudUnsubscribe = null;
+  }
+
+  Promise.resolve()
+    .then(function () {
+      return reauthenticateCurrentUserForDeletion(user);
+    })
+    .then(function () {
+      setAccountDeleteStatus("Deleting account data...", false);
+      return firebaseDb.collection("users").doc(uid).set({
+        accountDeletionRequestedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        subscriptionCancelRequested: true,
+        subscriptionCancelRequestedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true }).catch(function (error) {
+        console.warn("Could not mark account deletion request", error);
+      });
+    })
+    .then(function () {
+      setAccountDeleteStatus("Deleting evidence photos...", false);
+      return deleteKnownAccountPhotosFromStorage();
+    })
+    .then(function () {
+      if (!firebaseStorage || !firebaseStorage.ref) return Promise.resolve();
+      return deleteStorageFolderRecursively(firebaseStorage.ref().child("users/" + uid));
+    })
+    .then(function () {
+      setAccountDeleteStatus("Deleting inspections...", false);
+      return deleteFirestoreInspectionDocsForCurrentUser();
+    })
+    .then(function () {
+      setAccountDeleteStatus("Deleting profile...", false);
+      return firebaseDb.collection("users").doc(uid).delete();
+    })
+    .then(function () {
+      setAccountDeleteStatus("Deleting sign-in account...", false);
+      return user.delete();
+    })
+    .then(function () {
+      currentInspectionId = null;
+      inspectionStarted = false;
+      cloudInspections = [];
+      window.location.replace("login.html?accountDeleted=1");
+    })
+    .catch(function (error) {
+      console.error(error);
+      var message = error && error.code === "auth/requires-recent-login"
+        ? "For security, sign out and sign back in, then delete your account again. Some app data may already have been removed."
+        : "Could not delete account: " + (error && error.message ? error.message : "Unknown error");
+      setAccountDeleteStatus(message, true);
+      accountDeleteBusy = false;
+      if (confirmBtn) confirmBtn.disabled = false;
+      if (cancelBtn) cancelBtn.disabled = false;
+    });
 }
 
 function updateWorkflowBodyClasses(tabName) {
@@ -5157,6 +5358,9 @@ function createPendingProfileForCurrentUser() {
     displayName: firebaseUser.displayName || "",
     approved: false,
     role: "pending",
+    verificationStatus: "pending",
+    verificationMethod: "pool_safety_inspector_register",
+    trialStatus: "not_started",
     providerIds: providerIds,
     inspectorProfile: normalizeInspectorProfile({}),
     profileCompleted: false,
@@ -5223,6 +5427,29 @@ function ensureAuthUI() {
 
   var settingsSignOutBtn = qs("#settingsSignOutBtn");
   if (settingsSignOutBtn) settingsSignOutBtn.addEventListener("click", signOutCurrentUser);
+
+  var deleteAccountBtn = qs("#deleteAccountBtn");
+  if (deleteAccountBtn) deleteAccountBtn.addEventListener("click", openDeleteAccountSheet);
+
+  var accountDeleteCancelBtn = qs("#accountDeleteCancelBtn");
+  if (accountDeleteCancelBtn) accountDeleteCancelBtn.addEventListener("click", closeDeleteAccountSheet);
+
+  var accountDeleteConfirmBtn = qs("#accountDeleteConfirmBtn");
+  if (accountDeleteConfirmBtn) accountDeleteConfirmBtn.addEventListener("click", performAccountDeletion);
+
+  var accountDeleteOverlay = qs("#accountDeleteOverlay");
+  if (accountDeleteOverlay) {
+    accountDeleteOverlay.addEventListener("click", function (event) {
+      if (event.target === accountDeleteOverlay) closeDeleteAccountSheet();
+    });
+  }
+
+  var cancelSubscriptionBtn = qs("#cancelSubscriptionBtn");
+  if (cancelSubscriptionBtn) {
+    cancelSubscriptionBtn.addEventListener("click", function () {
+      alert("Stripe billing is not connected yet. When it is connected, this will cancel future billing and keep access until the end of the paid period.");
+    });
+  }
 
   var profileForm = qs("#profileForm");
   if (profileForm) profileForm.addEventListener("submit", saveInspectorProfile);
