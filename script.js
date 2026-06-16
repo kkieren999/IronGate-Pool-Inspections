@@ -36,11 +36,15 @@ var firebaseApp = null;
 var firebaseAuth = null;
 var firebaseDb = null;
 var firebaseStorage = null;
+var firebaseFunctions = null;
 var firebaseUser = null;
 var firebaseEnabled = false;
 var firebaseDataLoaded = false;
 var firebaseApprovalChecked = false;
 var firebaseApproved = false;
+var firebaseBillingActive = false;
+var firebaseBillingMessage = "Billing status not checked yet.";
+var firebaseBillingState = null;
 var firebaseLoadError = "";
 var cloudInspections = [];
 var cloudUnsubscribe = null;
@@ -72,6 +76,123 @@ function getTodayDateString() {
 }
 
 
+function toDateFromMaybeTimestamp(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value.toDate === "function") return value.toDate();
+  if (typeof value.seconds === "number") return new Date(value.seconds * 1000);
+  if (typeof value === "string") {
+    var parsed = new Date(value);
+    return isNaN(parsed.getTime()) ? null : parsed;
+  }
+  return null;
+}
+
+function formatShortDate(value) {
+  var date = toDateFromMaybeTimestamp(value);
+  if (!date) return "";
+  try {
+    return date.toLocaleDateString("en-AU", { year: "numeric", month: "short", day: "numeric" });
+  } catch (error) {
+    return date.toISOString().slice(0, 10);
+  }
+}
+
+function dateIsFuture(value) {
+  var date = toDateFromMaybeTimestamp(value);
+  return !!(date && date.getTime() > Date.now());
+}
+
+function isCurrentUserAdmin() {
+  return !!(currentUserProfile && (currentUserProfile.role === "admin" || currentUserProfile.admin === true));
+}
+
+function getBillingAccessState(profile) {
+  var p = profile || {};
+  var status = cleanText(p.subscriptionStatus || p.trialStatus || p.billingStatus || "").toLowerCase();
+  var trialEndsAt = p.trialEndsAt || p.trialEndAt || null;
+  var periodEndsAt = p.currentPeriodEndsAt || p.cancelAccessEndsAt || null;
+
+  // Backward-compatible mode: approved legacy users without trial/subscription fields remain usable
+  // until Stripe billing is fully enforced.
+  if (!status || status === "not_started" || status === "pending_verification") {
+    if (p.approved === true && !trialEndsAt && !periodEndsAt) {
+      return {
+        active: true,
+        legacy: true,
+        status: status || "legacy-approved",
+        message: "Approved account. Trial/subscription tracking is ready, but billing is not enforced for this legacy profile yet."
+      };
+    }
+    return {
+      active: false,
+      status: status || "pending_verification",
+      message: "Pending inspector verification. Your 1-month trial starts after approval."
+    };
+  }
+
+  if (status === "active") {
+    return {
+      active: true,
+      status: status,
+      message: periodEndsAt ? "Subscription active until " + formatShortDate(periodEndsAt) + "." : "Subscription active."
+    };
+  }
+
+  if (status === "trialing" || status === "trial") {
+    if (dateIsFuture(trialEndsAt)) {
+      return {
+        active: true,
+        status: "trialing",
+        message: "Free trial active until " + formatShortDate(trialEndsAt) + "."
+      };
+    }
+    return {
+      active: false,
+      status: "trial_expired",
+      message: "Your free trial has ended. A subscription is required to start or edit inspections."
+    };
+  }
+
+  if (status === "cancelled" || status === "canceled") {
+    if (dateIsFuture(periodEndsAt)) {
+      return {
+        active: true,
+        status: "cancelled",
+        message: "Subscription cancelled. Access remains until " + formatShortDate(periodEndsAt) + "."
+      };
+    }
+    return {
+      active: false,
+      status: "cancelled",
+      message: "Subscription cancelled and the paid period has ended."
+    };
+  }
+
+  if (status === "past_due") {
+    return {
+      active: false,
+      status: status,
+      message: "Payment is past due. Update billing to continue using BarrierCheck."
+    };
+  }
+
+  if (status === "expired" || status === "trial_expired") {
+    return {
+      active: false,
+      status: status,
+      message: "Trial or subscription access has expired."
+    };
+  }
+
+  return {
+    active: false,
+    status: status,
+    message: "Trial or subscription access is not active."
+  };
+}
+
+
 
 
 
@@ -87,7 +208,7 @@ function setInspections(inspections) {
 }
 
 function canUseApp() {
-  return !!firebaseUser && firebaseApproved && firebaseDataLoaded && profileCompleted;
+  return !!firebaseUser && firebaseApproved && firebaseBillingActive && firebaseDataLoaded && profileCompleted;
 }
 
 function redirectToLogin(reason) {
@@ -572,6 +693,9 @@ function updateSettingsDisplay() {
   var signedIn = qs("#settingsSignedIn");
   var cloudEmail = qs("#settingsCloudEmail");
   var profileBtn = qs("#profileSettingsBtn small");
+  var subscriptionText = qs("#subscriptionStatusText");
+  var cancelSubscriptionBtn = qs("#cancelSubscriptionBtn");
+  var adminConsoleLink = qs("#adminConsoleLink");
 
   if (signedIn) signedIn.textContent = email ? "Signed in as " + email : "Not signed in";
   if (cloudEmail) cloudEmail.textContent = email || "Not signed in";
@@ -580,6 +704,14 @@ function updateSettingsDisplay() {
       ? (p.inspectorName ? p.inspectorName + " · " + p.licenceNumber : "Inspector details saved")
       : "Required before inspections can be started";
   }
+
+  var billing = firebaseBillingState || getBillingAccessState(currentUserProfile || {});
+  if (subscriptionText) subscriptionText.textContent = billing.message || "Trial/subscription status unavailable.";
+  if (cancelSubscriptionBtn) {
+    cancelSubscriptionBtn.disabled = true;
+    cancelSubscriptionBtn.textContent = "Cancel Subscription";
+  }
+  if (adminConsoleLink) adminConsoleLink.hidden = !isCurrentUserAdmin();
 
   renderAvatarElement(qs("#settingsAvatar"), p.profileIcon);
 }
@@ -721,6 +853,16 @@ function closeDeleteAccountSheet() {
   setAccountDeleteStatus("", false);
 }
 
+
+function callFirebaseFunction(name, payload) {
+  if (!firebaseFunctions || typeof firebaseFunctions.httpsCallable !== "function") {
+    return Promise.reject(new Error("Firebase Functions is not available in this build."));
+  }
+  return firebaseFunctions.httpsCallable(name)(payload || {}).then(function (result) {
+    return result ? result.data : null;
+  });
+}
+
 function deleteKnownAccountPhotosFromStorage() {
   var paths = [];
 
@@ -847,6 +989,30 @@ function performAccountDeletion() {
       return reauthenticateCurrentUserForDeletion(user);
     })
     .then(function () {
+      if (firebaseFunctions && typeof firebaseFunctions.httpsCallable === "function") {
+        setAccountDeleteStatus("Requesting secure backend deletion...", false);
+        return callFirebaseFunction("deleteMyAccount", { confirm: "DELETE" })
+          .then(function () {
+            currentInspectionId = null;
+            inspectionStarted = false;
+            cloudInspections = [];
+            if (firebaseAuth && firebaseAuth.signOut) {
+              return firebaseAuth.signOut().catch(function () {}).then(function () {
+                window.location.replace("login.html?accountDeleted=1");
+              });
+            }
+            window.location.replace("login.html?accountDeleted=1");
+            return Promise.reject({ handledRedirect: true });
+          })
+          .catch(function (error) {
+            if (error && error.handledRedirect) return Promise.reject(error);
+            console.warn("Backend account deletion failed or is not deployed yet. Falling back to client deletion.", error);
+            setAccountDeleteStatus("Secure backend deletion is not available yet. Trying client-side deletion...", false);
+          });
+      }
+      return Promise.resolve();
+    })
+    .then(function () {
       setAccountDeleteStatus("Deleting account data...", false);
       return firebaseDb.collection("users").doc(uid).set({
         accountDeletionRequestedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -884,6 +1050,7 @@ function performAccountDeletion() {
       window.location.replace("login.html?accountDeleted=1");
     })
     .catch(function (error) {
+      if (error && error.handledRedirect) return;
       console.error(error);
       var message = error && error.code === "auth/requires-recent-login"
         ? "For security, sign out and sign back in, then delete your account again. Some app data may already have been removed."
@@ -926,7 +1093,7 @@ function showTab(tabName) {
 
 function updateNavLock() {
   qsa(".tab").forEach(function (tab) {
-    var locked = !inspectionStarted || !profileCompleted;
+    var locked = !inspectionStarted || !profileCompleted || !firebaseBillingActive;
     tab.classList.toggle("locked", locked);
     tab.disabled = locked;
   });
@@ -1009,6 +1176,11 @@ function startNewInspection() {
 
   if (!profileCompleted) {
     requireProfileBeforeAppUse();
+    return;
+  }
+
+  if (!firebaseBillingActive) {
+    alert(firebaseBillingMessage || "A current trial or subscription is required before inspections can be started.");
     return;
   }
 
@@ -5360,7 +5532,10 @@ function createPendingProfileForCurrentUser() {
     role: "pending",
     verificationStatus: "pending",
     verificationMethod: "pool_safety_inspector_register",
-    trialStatus: "not_started",
+    subscriptionStatus: "pending_verification",
+    billingAccess: "pending_verification",
+    trialStartedAt: null,
+    trialEndsAt: null,
     providerIds: providerIds,
     inspectorProfile: normalizeInspectorProfile({}),
     profileCompleted: false,
@@ -5487,39 +5662,64 @@ function updateAuthUI() {
   ensureAuthUI();
 
   var newBtn = qs("#newInspectionBtn");
+  var billingGateCard = qs("#billingGateCard");
+  var billingGateText = qs("#billingGateText");
   var hasSignedInApprovedUser = !!(firebaseEnabled && firebaseUser && firebaseApproved);
-  var readyForInspections = !!(hasSignedInApprovedUser && firebaseDataLoaded && profileCompleted);
+  var readyForInspections = !!(hasSignedInApprovedUser && firebaseBillingActive && firebaseDataLoaded && profileCompleted);
 
   updateSettingsDisplay();
 
+  if (billingGateCard) {
+    var showBillingGate = !!(firebaseEnabled && firebaseUser && firebaseApproved && firebaseDataLoaded && profileCompleted && !firebaseBillingActive);
+    billingGateCard.hidden = !showBillingGate;
+    if (billingGateText) billingGateText.textContent = firebaseBillingMessage || "A current trial or subscription is required.";
+  }
+
   if (firebaseEnabled && firebaseUser && firebaseApproved) {
-    setFirebaseStatus(firebaseDataLoaded
-      ? (profileCompleted ? "Signed in and saving online" : "Profile required before inspections can start")
-      : "Approved. Loading inspections...", !profileCompleted && firebaseDataLoaded);
+    var statusMessage = "Approved. Loading inspections...";
+    var isError = false;
+    if (firebaseDataLoaded) {
+      if (!profileCompleted) {
+        statusMessage = "Profile required before inspections can start";
+        isError = true;
+      } else if (!firebaseBillingActive) {
+        statusMessage = firebaseBillingMessage || "Trial/subscription required before inspections can start";
+        isError = true;
+      } else {
+        statusMessage = "Signed in and saving online";
+      }
+    }
+
+    setFirebaseStatus(statusMessage, isError);
     document.body.classList.remove("firebase-signed-out");
     document.body.classList.remove("auth-checking");
     document.body.classList.toggle("profile-required", firebaseDataLoaded && !profileCompleted);
+    document.body.classList.toggle("billing-required", firebaseDataLoaded && profileCompleted && !firebaseBillingActive);
     if (newBtn) newBtn.disabled = !readyForInspections;
     if (firebaseDataLoaded && !profileCompleted) requireProfileBeforeAppUse();
   } else if (firebaseEnabled && firebaseUser && firebaseApprovalChecked && !firebaseApproved) {
     setFirebaseStatus("Account pending approval. Redirecting to login page...", true);
     document.body.classList.remove("profile-required");
+    document.body.classList.remove("billing-required");
     if (newBtn) newBtn.disabled = true;
     redirectToLogin("pending=1");
   } else if (firebaseEnabled && firebaseUser) {
     setFirebaseStatus("Checking account approval...", false);
     document.body.classList.remove("profile-required");
+    document.body.classList.remove("billing-required");
     if (newBtn) newBtn.disabled = true;
   } else if (firebaseEnabled) {
     setFirebaseStatus("Not signed in. Redirecting...", false);
     document.body.classList.add("firebase-signed-out");
     document.body.classList.remove("profile-required");
+    document.body.classList.remove("billing-required");
     if (newBtn) newBtn.disabled = true;
     redirectToLogin();
   } else {
     setFirebaseStatus(firebaseLoadError || "Firebase could not load.", true);
     document.body.classList.add("firebase-signed-out");
     document.body.classList.remove("profile-required");
+    document.body.classList.remove("billing-required");
     if (newBtn) newBtn.disabled = true;
   }
 }
@@ -5540,6 +5740,7 @@ function initFirebase() {
     firebaseAuth = firebase.auth();
     firebaseDb = firebase.firestore();
     firebaseStorage = firebase.storage ? firebase.storage() : null;
+    firebaseFunctions = firebase.functions ? firebase.functions() : null;
     firebaseEnabled = true;
 
     firebaseAuth.onAuthStateChanged(function (user) {
@@ -5547,6 +5748,9 @@ function initFirebase() {
       firebaseDataLoaded = false;
       firebaseApprovalChecked = false;
       firebaseApproved = false;
+      firebaseBillingActive = false;
+      firebaseBillingMessage = "Billing status not checked yet.";
+      firebaseBillingState = null;
       currentUserProfile = {};
       inspectorProfile = null;
       profileCompleted = false;
@@ -5574,6 +5778,9 @@ function initFirebase() {
           inspectorProfile = normalizeInspectorProfile(currentUserProfile.inspectorProfile || {});
           profileCompleted = !!(currentUserProfile.profileCompleted === true && isInspectorProfileComplete(inspectorProfile));
           firebaseApproved = !!(profile && profile.approved === true);
+          firebaseBillingState = getBillingAccessState(currentUserProfile || {});
+          firebaseBillingActive = !!firebaseBillingState.active;
+          firebaseBillingMessage = firebaseBillingState.message || "Trial/subscription status unavailable.";
 
           if (!firebaseApproved) {
             firebaseDataLoaded = true;

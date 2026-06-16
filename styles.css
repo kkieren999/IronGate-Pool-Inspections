@@ -3060,3 +3060,206 @@ body.profile-required .settings-card {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Phase 3: billing gate and admin console */
+.billing-gate-card {
+  border: 1px solid rgba(229, 57, 53, 0.18);
+  border-radius: 22px;
+  padding: 16px;
+  background: #fff7f7;
+  color: var(--text);
+  box-shadow: 0 10px 24px rgba(229, 57, 53, 0.08);
+}
+
+.billing-gate-card strong {
+  display: block;
+  color: var(--danger);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.billing-gate-card p {
+  margin: 6px 0 12px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.billing-gate-card a,
+.admin-page a {
+  color: var(--gate);
+  font-weight: 850;
+}
+
+.admin-console-link {
+  text-decoration: none;
+}
+
+.admin-page-body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  background: linear-gradient(180deg, #eaf5fc 0%, #f8fbff 100%);
+  color: var(--text);
+}
+
+.admin-shell {
+  width: min(1040px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 24px 0 48px;
+}
+
+.admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.admin-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-brand h1 {
+  margin: 0;
+  color: var(--iron);
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  line-height: 1;
+}
+
+.admin-brand p,
+.admin-muted {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.admin-card {
+  background: white;
+  border: 1px solid rgba(13, 130, 216, 0.16);
+  border-radius: 26px;
+  box-shadow: 0 14px 34px rgba(3, 40, 106, 0.10);
+  padding: 20px;
+  margin: 16px 0;
+}
+
+.admin-card h2 {
+  margin: 0 0 8px;
+  color: var(--iron);
+  font-size: 1.25rem;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.admin-primary-btn,
+.admin-secondary-btn,
+.admin-danger-btn {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.admin-primary-btn {
+  color: white;
+  background: linear-gradient(135deg, var(--iron), var(--gate));
+}
+
+.admin-secondary-btn {
+  color: var(--gate);
+  background: #edf7ff;
+}
+
+.admin-danger-btn {
+  color: var(--danger);
+  background: #fff3f3;
+}
+
+.admin-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.admin-status.error {
+  color: var(--danger);
+  font-weight: 850;
+}
+
+.pending-user-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.pending-user-card {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 16px;
+  background: #fbfdff;
+}
+
+.pending-user-card h3 {
+  margin: 0;
+  color: var(--iron);
+  font-size: 1.05rem;
+}
+
+.pending-user-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.pending-user-grid strong {
+  color: var(--text);
+}
+
+.admin-empty {
+  margin: 12px 0 0;
+  padding: 14px;
+  border: 1px dashed rgba(3, 40, 106, 0.18);
+  border-radius: 16px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.admin-note {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #edf7ff;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.admin-note code {
+  font-size: 0.86rem;
+}
+
+@media (max-width: 720px) {
+  .admin-topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .pending-user-grid {
+    grid-template-columns: 1fr;
+  }
+}

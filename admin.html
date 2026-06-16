@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin | BarrierCheck</title>
+  <link rel="stylesheet" href="./styles.css?v=20260616phase3" />
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js" defer></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-functions-compat.js" defer></script>
+  <script src="./admin.js?v=20260616phase3" defer></script>
+</head>
+<body class="admin-page-body">
+  <main class="admin-shell admin-page">
+    <header class="admin-topbar">
+      <div class="admin-brand">
+        <div class="brand-mark login-logo" aria-hidden="true">BC</div>
+        <div>
+          <h1><span class="iron">Barrier</span><span class="gate">Check</span></h1>
+          <p>Admin Console</p>
+        </div>
+      </div>
+      <nav class="legal-link-row" aria-label="Admin navigation">
+        <a href="./index.html">Open app</a>
+        <a href="./login.html">Login</a>
+      </nav>
+    </header>
+
+    <section class="admin-card">
+      <h2>Inspector approval workflow</h2>
+      <p class="admin-status" id="adminStatus">Checking admin access...</p>
+      <p class="admin-note">Use this screen after verifying the user against the relevant Queensland pool safety inspector register. Approval starts the user's 1-month free trial.</p>
+      <div class="admin-actions">
+        <button id="refreshPendingBtn" class="admin-secondary-btn" type="button">Refresh Pending Users</button>
+        <button id="signOutAdminBtn" class="admin-danger-btn" type="button">Sign Out</button>
+      </div>
+    </section>
+
+    <section class="admin-card">
+      <h2>Pending inspector accounts</h2>
+      <div id="pendingUsersList" class="pending-user-list"></div>
+      <p id="pendingEmptyState" class="admin-empty" hidden>No pending users found.</p>
+    </section>
+
+    <section class="admin-card">
+      <h2>Deployment note</h2>
+      <p class="admin-status">This page will call Firebase Cloud Functions named <code>approveUser</code> and <code>rejectUser</code> when they are deployed. For development, it includes a Firestore fallback that only works if your security rules allow your admin account to update user documents.</p>
+    </section>
+  </main>
+</body>
+</html>

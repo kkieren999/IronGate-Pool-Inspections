@@ -110,7 +110,10 @@ function createPendingProfile(user) {
     role: "pending",
     verificationStatus: "pending",
     verificationMethod: "pool_safety_inspector_register",
-    trialStatus: "not_started",
+    subscriptionStatus: "pending_verification",
+    billingAccess: "pending_verification",
+    trialStartedAt: null,
+    trialEndsAt: null,
     providerIds: providerIds,
     inspectorProfile: buildInitialInspectorProfile(user),
     profileCompleted: false,
@@ -173,7 +176,7 @@ function checkApprovalAndContinue(user) {
       }
 
       setPendingVisible(true);
-      setLoginStatus("Your account is pending inspector verification. We aim to review new accounts within 24 hours.", true);
+      setLoginStatus("Your account is pending inspector verification. We aim to review new accounts within 24 hours. Your 1-month trial starts after approval.", true);
     })
     .catch(function (error) {
       authStateBusy = false;
