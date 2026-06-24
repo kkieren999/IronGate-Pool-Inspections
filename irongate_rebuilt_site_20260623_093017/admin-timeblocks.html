@@ -3,83 +3,87 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin Time Blocks | IronGate Pool Inspections</title>
+  <title>Inspection Availability Manager | IronGate Pool Inspections</title>
   <meta name="robots" content="noindex, nofollow" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css" />
   <style>
-    body.timeblock-admin { background: #f4f8fc; }
-    .timeblock-shell { display: grid; gap: 22px; }
-    .timeblock-hero { display: flex; justify-content: space-between; gap: 20px; align-items: center; padding: 30px; border-radius: 28px; color: #fff; background: linear-gradient(135deg, #061b39, #08294f); box-shadow: var(--shadow); }
-    .timeblock-hero h1 { color: #fff; font-size: clamp(2rem, 4vw, 3.4rem); }
-    .timeblock-hero p { margin: 10px 0 0; color: rgba(255,255,255,.82); max-width: 850px; }
-    .timeblock-status { padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,.12); font-weight: 900; white-space: nowrap; }
-    .timeblock-card { background: #fff; border: 1px solid rgba(7,24,52,.08); border-radius: 28px; padding: 28px; box-shadow: var(--shadow); }
-    .timeblock-card h2 { color: var(--navy); margin-top: 0; }
-    .timeblock-form { display: grid; gap: 16px; }
-    .timeblock-form label { display: grid; gap: 8px; font-weight: 800; color: var(--navy); }
-    .timeblock-form input { width: 100%; border: 1px solid #d7e1ec; border-radius: 14px; padding: 14px 15px; background: #f9fbfe; }
-    .timeblock-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; }
-    .timeblock-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-    .timeblock-work-grid { display: grid; grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr); gap: 22px; align-items: start; }
-    .timeblock-quick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-    .quick-time { border: 1px solid rgba(21,158,232,.28); background: #eef9ff; color: var(--navy); border-radius: 12px; min-height: 44px; font-weight: 900; cursor: pointer; }
-    .quick-time:hover { background: #dff4ff; }
-    .timeblock-list { display: grid; gap: 10px; margin-top: 16px; }
-    .timeblock-item { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 14px 16px; border-radius: 16px; background: #f4fbff; border: 1px solid rgba(21,158,232,.16); }
-    .timeblock-item strong { display: block; color: var(--navy); }
-    .timeblock-item span { color: var(--muted); font-size: .92rem; }
-    .remove-block { border: 0; border-radius: 999px; padding: 8px 12px; background: #fff1f1; color: #d61f1f; font-weight: 900; cursor: pointer; }
-    .timeblock-empty { padding: 18px; border-radius: 16px; background: #f7fafc; color: var(--muted); font-weight: 700; }
-    .summary-pill { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; background: #eaf8ff; color: var(--blue); font-weight: 900; }
-    .bulk-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
-    .bulk-days label { display: flex; justify-content: center; align-items: center; gap: 6px; border: 1px solid #d7e1ec; border-radius: 12px; padding: 10px; background: #f9fbfe; }
-    .danger-btn { background: #fff1f1 !important; color: #d61f1f !important; border-color: rgba(214,31,31,.22) !important; }
-    .soft-btn { background: #f5f9fd !important; color: var(--navy) !important; border-color: rgba(7,24,52,.08) !important; }
-    .form-note[data-type="success"] { color: #0f8a43 !important; }
-    .form-note[data-type="error"] { color: #d61f1f !important; }
-    .big-calendar-card { padding: clamp(22px, 3vw, 36px); }
-    .calendar-head { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 20px; }
-    .calendar-head h2 { font-size: clamp(1.85rem, 3vw, 2.7rem); margin-bottom: 4px; }
-    .calendar-head p { color: var(--muted); margin: 0; font-weight: 700; }
-    .calendar-nav { display: inline-flex; gap: 10px; align-items: center; padding: 8px; border-radius: 999px; background: #f4fbff; border: 1px solid rgba(21,158,232,.16); }
-    .calendar-nav strong { min-width: 190px; text-align: center; color: var(--navy); font-size: 1.2rem; }
-    .calendar-nav button { width: 46px; height: 46px; border: 1px solid #d7e1ec; border-radius: 999px; background: #fff; color: var(--navy); font-size: 1.8rem; line-height: 1; font-weight: 900; cursor: pointer; }
-    .calendar-nav button:hover { border-color: var(--blue); color: var(--blue); }
-    .calendar-weekdays, .admin-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
+    body.availability-admin { background: #f4f8fc; }
+    [hidden] { display: none !important; }
+    .admin-shell { display: grid; gap: 22px; }
+    .admin-hero-clean { display: flex; justify-content: space-between; gap: 22px; align-items: center; padding: 30px; border-radius: 30px; color: #fff; background: linear-gradient(135deg, #061b39, #08294f); box-shadow: var(--shadow); }
+    .admin-hero-clean h1 { color: #fff; font-size: clamp(2rem, 4vw, 3.4rem); margin: 0; }
+    .admin-hero-clean p { margin: 10px 0 0; color: rgba(255,255,255,.82); max-width: 760px; }
+    .admin-status { padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,.12); font-weight: 900; white-space: nowrap; }
+    .admin-card { background: #fff; border: 1px solid rgba(7,24,52,.08); border-radius: 28px; padding: clamp(20px, 3vw, 30px); box-shadow: var(--shadow); }
+    .admin-card h2 { color: var(--navy); margin: 0; }
+    .clean-card-heading { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 18px; }
+    .muted-help { color: var(--muted); font-weight: 700; margin: 6px 0 0; }
+    .month-controls { display: inline-flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid rgba(21,158,232,.16); border-radius: 999px; background: #f4fbff; }
+    .month-controls strong { min-width: 190px; text-align: center; color: var(--navy); font-size: 1.12rem; }
+    .month-controls button { width: 44px; height: 44px; border: 1px solid #d7e1ec; border-radius: 999px; background: #fff; color: var(--navy); font-size: 1.7rem; line-height: 1; font-weight: 900; cursor: pointer; }
+    .month-controls button:hover { border-color: var(--blue); color: var(--blue); }
+    .calendar-weekdays, .admin-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
     .calendar-weekdays { margin-bottom: 10px; }
     .calendar-weekdays span { text-align: center; color: var(--muted); font-weight: 900; font-size: .82rem; text-transform: uppercase; letter-spacing: .06em; }
-    .calendar-empty { min-height: 112px; }
-    .calendar-day-admin { min-height: 112px; border: 1px solid #d7e1ec; border-radius: 20px; background: #fff; color: var(--navy); cursor: pointer; text-align: left; padding: 14px; display: grid; align-content: space-between; gap: 10px; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease; }
-    .calendar-day-admin:hover { transform: translateY(-2px); border-color: rgba(21,158,232,.65); box-shadow: 0 16px 30px rgba(4,26,55,.09); }
-    .calendar-day-admin.is-selected { outline: 4px solid rgba(21,158,232,.22); border-color: var(--blue); background: #eef9ff; box-shadow: 0 18px 34px rgba(21,158,232,.14); }
-    .calendar-day-admin.is-range-selected { border-color: #7c3aed; background: #f3efff; box-shadow: inset 0 0 0 2px rgba(124,58,237,.14); }
-    .calendar-day-admin.is-past { opacity: .45; }
+    .calendar-empty { min-height: 106px; }
+    .calendar-day { min-height: 106px; border: 1px solid #d7e1ec; border-radius: 20px; background: #fff; color: var(--navy); cursor: pointer; text-align: left; padding: 14px; display: grid; align-content: space-between; gap: 10px; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease; }
+    .calendar-day:hover { transform: translateY(-2px); border-color: rgba(21,158,232,.65); box-shadow: 0 16px 30px rgba(4,26,55,.09); }
+    .calendar-day.is-past { opacity: .45; }
+    .calendar-day.is-editing { outline: 4px solid rgba(21,158,232,.22); border-color: var(--blue); background: #eef9ff; }
+    .calendar-day.is-range { border-color: #7c3aed; background: #f3efff; box-shadow: inset 0 0 0 2px rgba(124,58,237,.14); }
     .day-number { width: 38px; height: 38px; display: inline-grid; place-items: center; border-radius: 999px; background: #f5f9fd; font-weight: 900; font-size: 1.1rem; }
-    .calendar-day-admin.is-selected .day-number { background: var(--blue); color: #fff; }
-    .calendar-day-admin.is-range-selected .day-number { background: #7c3aed; color: #fff; }
-    .day-status { display: inline-flex; align-items: center; justify-content: center; min-height: 28px; padding: 0 10px; border-radius: 999px; font-size: .76rem; font-weight: 900; color: var(--muted); background: #f5f9fd; }
-    .calendar-day-admin.has-blocks .day-status { color: #0f8a43; background: #eafaf0; }
-    .calendar-day-admin.no-blocks .day-status { color: #d61f1f; background: #fff1f1; }
-    .calendar-legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0 0; color: var(--muted); font-weight: 800; font-size: .93rem; }
+    .calendar-day.is-editing .day-number { background: var(--blue); color: #fff; }
+    .calendar-day.is-range .day-number { background: #7c3aed; color: #fff; }
+    .day-status { display: inline-flex; align-items: center; justify-content: center; min-height: 28px; padding: 0 10px; border-radius: 999px; font-size: .76rem; font-weight: 900; background: #f5f9fd; }
+    .calendar-day.has-blocks .day-status { color: #0f8a43; background: #eafaf0; }
+    .calendar-day.no-blocks .day-status { color: #d61f1f; background: #fff1f1; }
+    .legend-line { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; color: var(--muted); font-weight: 800; font-size: .93rem; }
     .legend-dot { display: inline-block; width: 12px; height: 12px; border-radius: 999px; margin-right: 6px; vertical-align: middle; }
     .legend-green { background: #0f8a43; }
     .legend-red { background: #d61f1f; }
     .legend-blue { background: var(--blue); }
     .legend-purple { background: #7c3aed; }
-    .range-panel { margin-top: 18px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; padding: 16px; border-radius: 20px; background: linear-gradient(135deg, #f4fbff, #f8f5ff); border: 1px solid rgba(21,158,232,.18); }
-    .range-panel strong { color: var(--navy); }
-    .range-panel span { color: var(--muted); font-weight: 800; }
-    .editor-mode-pill { display: inline-flex; margin-bottom: 10px; padding: 8px 12px; border-radius: 999px; font-weight: 900; background: #eef9ff; color: var(--blue); }
-    .editor-mode-pill[data-mode="multi"] { background: #f3efff; color: #7c3aed; }
-    [hidden] { display: none !important; }
-    @media (max-width: 1050px) { .timeblock-work-grid { grid-template-columns: 1fr; } }
-    @media (max-width: 900px) { .timeblock-row { grid-template-columns: 1fr; } .timeblock-quick, .bulk-days { grid-template-columns: repeat(2, minmax(0, 1fr)); } .timeblock-hero, .calendar-head { display: grid; } .calendar-nav { justify-self: stretch; justify-content: space-between; } .calendar-weekdays, .admin-calendar { gap: 6px; } .calendar-empty { min-height: 64px; } .calendar-day-admin { min-height: 72px; padding: 8px; border-radius: 14px; } .day-number { width: 30px; height: 30px; font-size: .95rem; } .day-status { font-size: .64rem; padding: 0 6px; } }
+    .selection-bar { margin-top: 18px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; padding: 16px; border-radius: 20px; background: linear-gradient(135deg, #f4fbff, #f8f5ff); border: 1px solid rgba(21,158,232,.18); }
+    .selection-bar strong { color: var(--navy); }
+    .selection-bar span { color: var(--muted); font-weight: 800; }
+    .work-area { display: grid; grid-template-columns: minmax(280px, .75fr) minmax(0, 1.25fr); gap: 22px; align-items: start; }
+    .editor-mode { display: inline-flex; margin-bottom: 10px; padding: 8px 12px; border-radius: 999px; font-weight: 900; background: #eef9ff; color: var(--blue); }
+    .editor-mode[data-mode="multi"] { background: #f3efff; color: #7c3aed; }
+    .admin-form { display: grid; gap: 16px; }
+    .admin-form label { display: grid; gap: 8px; color: var(--navy); font-weight: 800; }
+    .admin-form input { width: 100%; border: 1px solid #d7e1ec; border-radius: 14px; padding: 14px 15px; background: #f9fbfe; }
+    .time-add-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; }
+    .quick-times { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+    .quick-time { border: 1px solid rgba(21,158,232,.28); background: #eef9ff; color: var(--navy); border-radius: 12px; min-height: 42px; font-weight: 900; cursor: pointer; }
+    .quick-time:hover { background: #dff4ff; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .soft-btn { background: #f5f9fd !important; color: var(--navy) !important; border-color: rgba(7,24,52,.08) !important; }
+    .danger-btn { background: #fff1f1 !important; color: #d61f1f !important; border-color: rgba(214,31,31,.22) !important; }
+    .summary-pill { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; background: #eaf8ff; color: var(--blue); font-weight: 900; margin-bottom: 14px; }
+    .block-list { display: grid; gap: 10px; }
+    .block-item { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 14px 16px; border-radius: 16px; background: #f4fbff; border: 1px solid rgba(21,158,232,.16); }
+    .block-item strong { display: block; color: var(--navy); }
+    .block-item span { color: var(--muted); font-size: .92rem; }
+    .remove-block { border: 0; border-radius: 999px; padding: 8px 12px; background: #fff1f1; color: #d61f1f; font-weight: 900; cursor: pointer; }
+    .empty-blocks { padding: 18px; border-radius: 16px; background: #f7fafc; color: var(--muted); font-weight: 700; }
+    details.clean-details { border: 1px solid rgba(7,24,52,.08); border-radius: 18px; background: #f9fbfe; padding: 0; overflow: hidden; }
+    details.clean-details summary { cursor: pointer; padding: 15px 16px; color: var(--navy); font-weight: 900; list-style: none; }
+    details.clean-details summary::-webkit-details-marker { display: none; }
+    .details-inner { padding: 0 16px 16px; display: grid; gap: 14px; }
+    .bulk-grid { display: grid; gap: 16px; }
+    .bulk-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .bulk-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+    .bulk-days label { display: flex; justify-content: center; align-items: center; gap: 6px; border: 1px solid #d7e1ec; border-radius: 12px; padding: 10px; background: #fff; }
+    .form-note[data-type="success"] { color: #0f8a43 !important; }
+    .form-note[data-type="error"] { color: #d61f1f !important; }
+    @media (max-width: 1050px) { .work-area { grid-template-columns: 1fr; } .quick-times { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+    @media (max-width: 900px) { .admin-hero-clean, .clean-card-heading, .time-add-row, .bulk-row { grid-template-columns: 1fr; display: grid; } .month-controls { justify-content: space-between; } .calendar-weekdays, .admin-calendar-grid { gap: 6px; } .calendar-empty { min-height: 62px; } .calendar-day { min-height: 74px; padding: 8px; border-radius: 14px; } .day-number { width: 30px; height: 30px; font-size: .95rem; } .day-status { font-size: .64rem; padding: 0 6px; } .quick-times, .bulk-days { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   </style>
 </head>
-<body class="timeblock-admin">
+<body class="availability-admin">
   <header class="site-header admin-header" id="top">
     <a class="brand" href="index.html#home" aria-label="IronGate Pool Inspections home">
       <span class="brand-mark" aria-hidden="true"><img src="assets/logo-no-text.png" alt="" /></span>
@@ -97,78 +101,78 @@
 
   <main>
     <section class="section">
-      <div class="container timeblock-shell">
-        <div class="timeblock-hero">
+      <div class="container admin-shell">
+        <div class="admin-hero-clean">
           <div>
             <p class="section-kicker">Admin Console</p>
-            <h1>Available 1-hour blocks</h1>
-            <p>Click one date for single-day editing. Shift-click another date to select multiple days, then add blocks once and apply them to every selected day.</p>
+            <h1>Inspection Availability Manager</h1>
+            <p>Manage the dates and 1-hour inspection times available for online bookings.</p>
           </div>
-          <div class="timeblock-status" id="status-pill">Checking sign in…</div>
+          <div class="admin-status" id="status-pill">Checking sign in…</div>
         </div>
 
-        <section class="timeblock-card" id="login-card">
+        <section class="admin-card" id="login-card">
           <h2>Sign in</h2>
-          <p>Use the admin email you added in Firebase Authentication.</p>
-          <form class="timeblock-form" id="login-form">
+          <p class="muted-help">Use the admin email you added in Firebase Authentication.</p>
+          <form class="admin-form" id="login-form">
             <label>Email <input type="email" id="email" autocomplete="email" required /></label>
             <label>Password <input type="password" id="password" autocomplete="current-password" required /></label>
-            <button class="btn btn-primary" type="submit" id="login-submit">Sign in</button>
+            <button class="btn btn-primary" type="submit">Sign in</button>
             <p class="form-note" id="login-message" role="status" aria-live="polite"></p>
           </form>
         </section>
 
         <section id="console" hidden>
-          <section class="timeblock-card big-calendar-card">
-            <div class="calendar-head">
+          <section class="admin-card">
+            <div class="clean-card-heading">
               <div>
                 <p class="section-kicker">Calendar</p>
-                <h2>Pick a date</h2>
-                <p>Click one date to edit. Shift-click another date to select every day in between.</p>
+                <h2>Booking availability</h2>
+                <p class="muted-help">Click a date to edit one day. Shift-click another date to select a range.</p>
               </div>
-              <div class="calendar-nav">
+              <div class="month-controls">
                 <button type="button" id="prev-month" aria-label="Previous month">‹</button>
                 <strong id="month-title">Loading</strong>
                 <button type="button" id="next-month" aria-label="Next month">›</button>
               </div>
             </div>
+
             <div class="calendar-weekdays" aria-hidden="true">
               <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
             </div>
-            <div class="admin-calendar" id="admin-calendar" aria-label="Admin availability calendar"></div>
-            <div class="calendar-legend">
-              <span><i class="legend-dot legend-green"></i>Saved blocks</span>
-              <span><i class="legend-dot legend-red"></i>No blocks</span>
-              <span><i class="legend-dot legend-blue"></i>Editing day</span>
+            <div class="admin-calendar-grid" id="admin-calendar" aria-label="Admin availability calendar"></div>
+            <div class="legend-line">
+              <span><i class="legend-dot legend-green"></i>Saved times</span>
+              <span><i class="legend-dot legend-red"></i>No times</span>
+              <span><i class="legend-dot legend-blue"></i>Editing</span>
               <span><i class="legend-dot legend-purple"></i>Selected range</span>
             </div>
-            <div class="range-panel">
+            <div class="selection-bar">
               <div>
                 <strong id="selected-range-title">1 day selected</strong><br>
                 <span id="selected-range-help">Shift-click another date to select multiple days.</span>
               </div>
-              <div class="timeblock-actions">
-                <button class="btn btn-primary" type="button" id="apply-selected-days">Apply current blocks to selected days</button>
-                <button class="btn soft-btn" type="button" id="clear-selected-days">Clear multi-day selection</button>
-              </div>
+              <button class="btn soft-btn" type="button" id="clear-selected-days">Back to single day</button>
             </div>
           </section>
 
-          <div class="timeblock-work-grid" style="margin-top:22px;">
-            <section class="timeblock-card">
+          <div class="work-area" style="margin-top:22px;">
+            <section class="admin-card">
               <p class="section-kicker" id="editor-kicker">Selected Day</p>
-              <span class="editor-mode-pill" id="editor-mode-pill">Single-day edit</span>
+              <span class="editor-mode" id="editor-mode-pill">Single-day edit</span>
               <h2 id="selected-heading">No date selected</h2>
-              <p id="editor-help">Add the 1-hour blocks you are available for this date.</p>
-              <form class="timeblock-form" id="day-form">
+              <p class="muted-help" id="editor-help">Add the 1-hour times you are available for this date.</p>
+
+              <form class="admin-form" id="day-form">
                 <label>Date <input type="date" id="selected-date" required /></label>
-                <div class="timeblock-row">
+                <div class="time-add-row">
                   <label>Start time <input type="time" id="slot-start" step="3600" value="08:00" /></label>
-                  <button class="btn btn-primary" type="button" id="add-block">Add 1-hour block</button>
+                  <button class="btn btn-primary" type="button" id="add-block">Add time</button>
                 </div>
+
                 <div>
                   <span class="field-title">Quick add</span>
-                  <div class="timeblock-quick" id="quick-times">
+                  <div class="quick-times" id="quick-times">
                     <button type="button" class="quick-time" data-time="07:00">7 AM</button>
                     <button type="button" class="quick-time" data-time="08:00">8 AM</button>
                     <button type="button" class="quick-time" data-time="09:00">9 AM</button>
@@ -183,56 +187,64 @@
                     <button type="button" class="quick-time" data-time="18:00">6 PM</button>
                   </div>
                 </div>
-                <label>Public note <input type="text" id="day-note" placeholder="Example: Please choose one available time below" /></label>
-                <label>Internal note / closed reason <input type="text" id="day-reason" placeholder="Example: Extra Saturday / normal day / closed" /></label>
-                <div class="timeblock-actions">
+
+                <details class="clean-details">
+                  <summary>More options</summary>
+                  <div class="details-inner">
+                    <label>Public note <input type="text" id="day-note" placeholder="Example: Please choose one available time below" /></label>
+                    <label>Internal note / closed reason <input type="text" id="day-reason" placeholder="Example: Extra Saturday / normal day / closed" /></label>
+                  </div>
+                </details>
+
+                <div class="actions">
                   <button class="btn btn-primary" type="submit" id="save-day">Save this date</button>
-                  <button class="btn soft-btn" type="button" id="clear-blocks">Clear blocks</button>
+                  <button class="btn soft-btn" type="button" id="clear-blocks">Clear times</button>
                   <button class="btn danger-btn" type="button" id="delete-day">Delete date</button>
                 </div>
                 <p class="form-note" id="day-message" role="status" aria-live="polite"></p>
               </form>
             </section>
 
-            <section class="timeblock-card">
-              <div class="summary-pill"><strong id="block-count">0</strong> available block/s in the editor</div>
-              <div class="timeblock-list" id="block-list"></div>
+            <section class="admin-card">
+              <div class="summary-pill"><strong id="block-count">0</strong> available time/s in the editor</div>
+              <div class="block-list" id="block-list"></div>
             </section>
           </div>
 
-          <section class="timeblock-card" style="margin-top:22px;">
-            <p class="section-kicker">Bulk Setup</p>
-            <h2>Create blocks across a date range</h2>
-            <p>Example: Monday to Friday, 8 AM to 2 PM creates 8–9, 9–10, 10–11, 11–12, 12–1 and 1–2 on every selected day.</p>
-            <form class="timeblock-form" id="bulk-form">
-              <div class="timeblock-row">
-                <label>From date <input type="date" id="bulk-start" required /></label>
-                <label>To date <input type="date" id="bulk-end" required /></label>
-              </div>
-              <div class="timeblock-row">
-                <label>Start time <input type="time" id="bulk-start-time" step="3600" value="08:00" required /></label>
-                <label>Finish time <input type="time" id="bulk-end-time" step="3600" value="14:00" required /></label>
-              </div>
-              <div>
-                <span class="field-title">Apply to days</span>
-                <div class="bulk-days">
-                  <label><input type="checkbox" class="bulk-day" value="1" checked /> Mon</label>
-                  <label><input type="checkbox" class="bulk-day" value="2" checked /> Tue</label>
-                  <label><input type="checkbox" class="bulk-day" value="3" checked /> Wed</label>
-                  <label><input type="checkbox" class="bulk-day" value="4" checked /> Thu</label>
-                  <label><input type="checkbox" class="bulk-day" value="5" checked /> Fri</label>
-                  <label><input type="checkbox" class="bulk-day" value="6" /> Sat</label>
-                  <label><input type="checkbox" class="bulk-day" value="0" /> Sun</label>
+          <details class="admin-card clean-details" style="margin-top:22px;">
+            <summary>Advanced: bulk setup and range deletion</summary>
+            <div class="details-inner">
+              <p class="muted-help">Use this when you want to create or delete availability across a large date range.</p>
+              <form class="admin-form bulk-grid" id="bulk-form">
+                <div class="bulk-row">
+                  <label>From date <input type="date" id="bulk-start" required /></label>
+                  <label>To date <input type="date" id="bulk-end" required /></label>
                 </div>
-              </div>
-              <label>Note <input type="text" id="bulk-note" placeholder="Example: Regular inspection hours" /></label>
-              <div class="timeblock-actions">
-                <button class="btn btn-primary" type="submit" id="bulk-save">Create blocks for range</button>
-                <button class="btn danger-btn" type="button" id="bulk-delete">Delete range availability</button>
-              </div>
-              <p class="form-note" id="bulk-message" role="status" aria-live="polite"></p>
-            </form>
-          </section>
+                <div class="bulk-row">
+                  <label>Start time <input type="time" id="bulk-start-time" step="3600" value="08:00" required /></label>
+                  <label>Finish time <input type="time" id="bulk-end-time" step="3600" value="14:00" required /></label>
+                </div>
+                <div>
+                  <span class="field-title">Apply to days</span>
+                  <div class="bulk-days">
+                    <label><input type="checkbox" class="bulk-day" value="1" checked /> Mon</label>
+                    <label><input type="checkbox" class="bulk-day" value="2" checked /> Tue</label>
+                    <label><input type="checkbox" class="bulk-day" value="3" checked /> Wed</label>
+                    <label><input type="checkbox" class="bulk-day" value="4" checked /> Thu</label>
+                    <label><input type="checkbox" class="bulk-day" value="5" checked /> Fri</label>
+                    <label><input type="checkbox" class="bulk-day" value="6" /> Sat</label>
+                    <label><input type="checkbox" class="bulk-day" value="0" /> Sun</label>
+                  </div>
+                </div>
+                <label>Note <input type="text" id="bulk-note" placeholder="Example: Regular inspection hours" /></label>
+                <div class="actions">
+                  <button class="btn btn-primary" type="submit" id="bulk-save">Create times for range</button>
+                  <button class="btn danger-btn" type="button" id="bulk-delete">Delete range availability</button>
+                </div>
+                <p class="form-note" id="bulk-message" role="status" aria-live="polite"></p>
+              </form>
+            </div>
+          </details>
         </section>
       </div>
     </section>
@@ -347,7 +359,7 @@
       if (startMinutes === null) throw new Error("Choose a valid start time.");
       if (startMinutes % 60 !== 0) throw new Error("Use full-hour times only, for example 08:00 or 14:00.");
       const endMinutes = startMinutes + 60;
-      if (endMinutes > 24 * 60) throw new Error("The 1-hour block cannot finish after midnight.");
+      if (endMinutes > 24 * 60) throw new Error("The 1-hour time cannot finish after midnight.");
       const start = timeFromMinutes(startMinutes);
       const end = timeFromMinutes(endMinutes);
       return { id: start.replace(":", "_"), start, end, label: `${labelTime(start)} – ${labelTime(end)}`, available: true, booked: false };
@@ -417,24 +429,16 @@
       const count = selectedDates.size || (currentDate ? 1 : 0);
       const multi = count > 1;
       if (selectedRangeTitle) selectedRangeTitle.textContent = `${count} day${count === 1 ? "" : "s"} selected`;
-      if (selectedRangeHelp) {
-        selectedRangeHelp.textContent = multi
-          ? "The editor below now applies to every selected purple date."
-          : "Shift-click another date to select multiple days.";
-      }
-      if (editorKicker) editorKicker.textContent = multi ? "Selected Days" : "Selected Day";
+      if (selectedRangeHelp) selectedRangeHelp.textContent = multi ? "The editor below now applies to every selected purple date." : "Shift-click another date to select multiple days.";
+      if (editorKicker) editorKicker.textContent = multi ? "Selected Dates" : "Selected Date";
       if (editorModePill) {
         editorModePill.textContent = multi ? "Multi-day edit" : "Single-day edit";
         editorModePill.dataset.mode = multi ? "multi" : "single";
       }
       if (selectedHeading) selectedHeading.textContent = selectedRangeLabel();
-      if (editorHelp) {
-        editorHelp.textContent = multi
-          ? `Add the 1-hour blocks you are available on all ${count} selected days. Saving applies these blocks to every selected date.`
-          : "Add the 1-hour blocks you are available for this date.";
-      }
-      if (saveDayButton) saveDayButton.textContent = multi ? `Apply to ${count} selected days` : "Save this date";
-      if (deleteDayButton) deleteDayButton.textContent = multi ? "Delete editing day" : "Delete date";
+      if (editorHelp) editorHelp.textContent = multi ? `Add times once, then apply them to all ${count} selected dates.` : "Add the 1-hour times you are available for this date.";
+      if (saveDayButton) saveDayButton.textContent = multi ? `Apply to ${count} selected dates` : "Save this date";
+      if (deleteDayButton) deleteDayButton.textContent = multi ? "Delete editing date" : "Delete date";
     }
 
     function renderBlocks() {
@@ -443,17 +447,17 @@
       blockList.innerHTML = "";
       updateEditorLabels();
       if (!blocks.length) {
-        blockList.innerHTML = '<div class="timeblock-empty">No available blocks added yet.</div>';
+        blockList.innerHTML = '<div class="empty-blocks">No available times added yet.</div>';
         return;
       }
       blocks.forEach((block) => {
         const row = document.createElement("div");
-        row.className = "timeblock-item";
+        row.className = "block-item";
         row.innerHTML = `<div><strong>${block.label}</strong><span>${block.start} to ${block.end}</span></div><button type="button" class="remove-block">Remove</button>`;
         row.querySelector("button").addEventListener("click", () => {
           blocks = blocks.filter((item) => item.id !== block.id);
           renderBlocks();
-          msg(dayMessage, isMultiSelect() ? "Block removed from the multi-day editor. Click Apply when finished." : "Block removed. Click Save this date when finished.", "success");
+          msg(dayMessage, isMultiSelect() ? "Time removed from the multi-day editor. Click Apply when finished." : "Time removed. Click Save this date when finished.", "success");
         });
         blockList.appendChild(row);
       });
@@ -484,11 +488,11 @@
         const count = getSavedBlockCount(key);
         const button = document.createElement("button");
         button.type = "button";
-        button.className = `calendar-day-admin ${count ? "has-blocks" : "no-blocks"}`;
+        button.className = `calendar-day ${count ? "has-blocks" : "no-blocks"}`;
         if (isPastDate(date)) button.classList.add("is-past");
-        if (key === currentDate) button.classList.add("is-selected");
-        if (selectedDates.has(key) && key !== currentDate) button.classList.add("is-range-selected");
-        button.innerHTML = `<span class="day-number">${day}</span><span class="day-status">${count ? `${count} block${count === 1 ? "" : "s"}` : "No blocks"}</span>`;
+        if (key === currentDate) button.classList.add("is-editing");
+        if (selectedDates.has(key) && key !== currentDate) button.classList.add("is-range");
+        button.innerHTML = `<span class="day-number">${day}</span><span class="day-status">${count ? `${count} time${count === 1 ? "" : "s"}` : "No times"}</span>`;
         button.addEventListener("click", (event) => handleCalendarDateClick(key, event.shiftKey));
         calendarEl.appendChild(button);
       }
@@ -500,7 +504,7 @@
         selectedDates = new Set(getDateKeysBetween(anchorDate, key));
         currentDate = key;
         dateInput.value = key;
-        msg(dayMessage, `${selectedDates.size} days selected. The blocks below will apply to all selected days.`, "success");
+        msg(dayMessage, `${selectedDates.size} dates selected. The times below will apply to all selected dates.`, "success");
         renderCalendar();
         renderBlocks();
         return;
@@ -544,7 +548,7 @@
         renderBlocks();
         msg(dayMessage, isMultiSelect() ? `${block.label} added to the multi-day editor. Click Apply when finished.` : `${block.label} added. Click Save this date when finished.`, "success");
       } catch (error) {
-        msg(dayMessage, error.message || "Could not add block.", "error");
+        msg(dayMessage, error.message || "Could not add time.", "error");
       }
     }
 
@@ -566,11 +570,11 @@
           blocks = normaliseBlocks(data);
           $("#day-note").value = data.note || "";
           $("#day-reason").value = data.reason || "";
-          msg(dayMessage, `Loaded ${blocks.length} saved block${blocks.length === 1 ? "" : "s"} for ${displayDate(dateKey)}.`, "success");
+          msg(dayMessage, `Loaded ${blocks.length} saved time${blocks.length === 1 ? "" : "s"} for ${displayDate(dateKey)}.`, "success");
         } else {
           $("#day-note").value = "";
           $("#day-reason").value = "";
-          msg(dayMessage, `No saved blocks for ${displayDate(dateKey)} yet. Add blocks below.`, "");
+          msg(dayMessage, `No saved times for ${displayDate(dateKey)} yet. Add times below.`, "");
         }
       } catch (error) {
         console.error(error);
@@ -589,7 +593,7 @@
         availableSlotCount: blockList.length,
         slots: blocksToMap(blockList),
         note: $("#day-note").value.trim(),
-        reason: $("#day-reason").value.trim() || (blockList.length ? "" : "No available blocks"),
+        reason: $("#day-reason").value.trim() || (blockList.length ? "" : "No available times"),
         updatedAt: serverTimestamp(),
         updatedBy: auth.currentUser?.email || ADMIN_EMAIL
       };
@@ -601,7 +605,7 @@
       const targets = selectedDateList().length ? selectedDateList() : [currentDate];
       const multi = targets.length > 1;
       if (multi) {
-        const confirmed = window.confirm(`Apply the current ${blocks.length} block(s) to ${targets.length} selected day(s)? This replaces availability on those days.`);
+        const confirmed = window.confirm(`Apply the current ${blocks.length} time(s) to ${targets.length} selected date(s)? This replaces availability on those dates.`);
         if (!confirmed) return;
       }
       try {
@@ -610,7 +614,7 @@
         await batch.commit();
         targets.forEach((key) => monthAvailability.set(key, { slots: blocksToMap(blocks) }));
         renderCalendar();
-        msg(dayMessage, multi ? `Applied ${blocks.length} block(s) to ${targets.length} selected day(s).` : `${displayDate(currentDate)} saved with ${blocks.length} block${blocks.length === 1 ? "" : "s"}.`, "success");
+        msg(dayMessage, multi ? `Applied ${blocks.length} time(s) to ${targets.length} selected date(s).` : `${displayDate(currentDate)} saved with ${blocks.length} time${blocks.length === 1 ? "" : "s"}.`, "success");
       } catch (error) {
         console.error(error);
         msg(dayMessage, "Could not save. Check Firestore rules and that you are signed in as admin.", "error");
@@ -640,7 +644,7 @@
       const end = minutesFromTime(endTime);
       if (start === null || end === null) throw new Error("Choose valid start and finish times.");
       if (end <= start) throw new Error("Finish time must be later than start time.");
-      if ((end - start) % 60 !== 0) throw new Error("Use full 1-hour blocks only, for example 08:00 to 14:00.");
+      if ((end - start) % 60 !== 0) throw new Error("Use full 1-hour times only, for example 08:00 to 14:00.");
       const list = [];
       for (let minute = start; minute < end; minute += 60) list.push(makeBlock(timeFromMinutes(minute)));
       return list;
@@ -662,7 +666,7 @@
         if (!selectedDays.length) throw new Error("Choose at least one weekday.");
         const dates = buildDateRange(startKey, endKey).filter((date) => selectedDays.includes(date.getDay()));
         if (!dates.length) throw new Error("No dates matched your selected days.");
-        if (!window.confirm(`Create ${newBlocks.length} block(s) on ${dates.length} date(s)? This replaces those dates.`)) return;
+        if (!window.confirm(`Create ${newBlocks.length} time(s) on ${dates.length} date(s)? This replaces those dates.`)) return;
         const batch = writeBatch(db);
         dates.forEach((date) => {
           const key = toDateKey(date);
@@ -680,7 +684,7 @@
           }, { merge: true });
         });
         await batch.commit();
-        msg(bulkMessage, `Created ${newBlocks.length} block(s) on ${dates.length} date(s).`, "success");
+        msg(bulkMessage, `Created ${newBlocks.length} time(s) on ${dates.length} date(s).`, "success");
         await loadMonthAvailability();
         if (currentDate && selectedDates.size === 1) loadSingleDate(currentDate);
       } catch (error) {
@@ -731,10 +735,9 @@
       loadSingleDate(dateInput.value);
     });
     $("#add-block").addEventListener("click", () => addBlock(startInput.value));
-    $("#clear-blocks").addEventListener("click", () => { blocks = []; renderBlocks(); msg(dayMessage, isMultiSelect() ? "Blocks cleared from the multi-day editor. Click Apply when finished." : "Blocks cleared. Click Save this date when finished.", "success"); });
+    $("#clear-blocks").addEventListener("click", () => { blocks = []; renderBlocks(); msg(dayMessage, isMultiSelect() ? "Times cleared from the multi-day editor. Click Apply when finished." : "Times cleared. Click Save this date when finished.", "success"); });
     $("#delete-day").addEventListener("click", deleteDate);
     $("#day-form").addEventListener("submit", saveCurrentSelection);
-    $("#apply-selected-days").addEventListener("click", saveCurrentSelection);
     $("#clear-selected-days").addEventListener("click", () => {
       selectedDates = currentDate ? new Set([currentDate]) : new Set();
       anchorDate = currentDate;
