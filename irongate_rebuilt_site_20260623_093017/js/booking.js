@@ -28,10 +28,32 @@ const inspectionPriceDisplay = "$249 inc GST";
 const maxUploadBytes = 10 * 1024 * 1024;
 const GEOAPIFY_API_KEY = "8d1bacfb41584094b808c255bc8ef70c";
 const QBCC_POOL_REGISTER_URL = "https://my.qbcc.qld.gov.au/myQBCC/s/pool-register";
+const QLD_POOL_REGISTER_RESOURCE_ID = "bb059c35-d826-4ccd-af31-24de4716864a";
+const QLD_DATASTORE_SEARCH_URL = "https://www.data.qld.gov.au/api/3/action/datastore_search";
 
-// Later this should be set to a Firebase Function / Cloud Run URL.
-// Until then, the page attempts verification, then shows the safe manual fail-safe.
+// Leave blank while Firebase Functions billing is blocked.
+// The page will try the Queensland Open Data lookup directly from the browser first.
 const POOL_REGISTER_LOOKUP_ENDPOINT = "";
+
+const STREET_TYPE_MAP = {
+  "ALLEY": "ALLEY", "ALLY": "ALLEY",
+  "AV": "AVENUE", "AVE": "AVENUE", "AVENUE": "AVENUE",
+  "BVD": "BOULEVARD", "BLVD": "BOULEVARD", "BOULEVARD": "BOULEVARD",
+  "CCT": "CIRCUIT", "CIRCUIT": "CIRCUIT",
+  "CL": "CLOSE", "CLOSE": "CLOSE",
+  "CT": "COURT", "COURT": "COURT",
+  "CRES": "CRESCENT", "CR": "CRESCENT", "CRESCENT": "CRESCENT",
+  "DR": "DRIVE", "DRIVE": "DRIVE",
+  "ESPL": "ESPLANADE", "ESPLANADE": "ESPLANADE",
+  "HWY": "HIGHWAY", "HIGHWAY": "HIGHWAY",
+  "LANE": "LANE", "LN": "LANE",
+  "PDE": "PARADE", "PARADE": "PARADE",
+  "PL": "PLACE", "PLACE": "PLACE",
+  "RD": "ROAD", "ROAD": "ROAD",
+  "ST": "STREET", "STREET": "STREET",
+  "TCE": "TERRACE", "TERRACE": "TERRACE",
+  "WAY": "WAY"
+};
 
 const monthNames = [
   "January", "February", "March", "April", "May", "June",
@@ -45,7 +67,6 @@ let availabilityByDate = new Map();
 let calendarMonth = startOfMonth(new Date());
 let firebaseModulesPromise = null;
 let addressSearchTimer = null;
-
 let poolRegisterStatus = "not_checked";
 let poolRegisterMessage = "";
 let poolRegisterDetails = null;
@@ -370,6 +391,211 @@ function sanitizeFileName(name) {
     .slice(0, 120);
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function cleanText(value) {
+  return String(value || "")
+    .toUpperCase()
+    .replace(/&/g, " AND ")
+    .replace(/[^A-Z0-9\s/.-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normaliseStreetType(value) {
+  const cleaned = cleanText(value).replace(/\./g, "");
+  return STREET_TYPE_MAP[cleaned] || cleaned;
+}
+
+function normaliseStreetName(value) {
+  return cleanText(value)
+    .replace(/\b(STREET|ST|ROAD|RD|AVENUE|AVE|DRIVE|DR|COURT|CT|CRESCENT|CRES|PLACE|PL|PARADE|PDE|TERRACE|TCE|BOULEVARD|BLVD|BVD|CIRCUIT|CCT|CLOSE|CL|LANE|LN|HIGHWAY|HWY|WAY)\b$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normaliseStreetNumber(value) {
+  const cleaned = cleanText(value);
+  const match = cleaned.match(/\d+[A-Z]?(?:-\d+[A-Z]?)?/);
+  return match ? match[0] : cleaned;
+}
+
+function splitStreetLine(addressLine1) {
+  const cleaned = cleanText(addressLine1);
+  const parts = cleaned.split(" ").filter(Boolean);
+  let streetNumber = "";
+  let streetType = "";
+  let streetName = "";
+
+  const numberIndex = parts.findIndex((part) => /\d/.test(part));
+  if (numberIndex >= 0) streetNumber = normaliseStreetNumber(parts[numberIndex]);
+
+  const lastPart = parts[parts.length - 1] || "";
+  if (STREET_TYPE_MAP[lastPart]) {
+    streetType = STREET_TYPE_MAP[lastPart];
+    streetName = parts.slice(numberIndex + 1, -1).join(" ");
+  } else {
+    streetName = parts.slice(numberIndex + 1).join(" ");
+  }
+
+  return {
+    streetNumber,
+    streetName: normaliseStreetName(streetName),
+    streetType
+  };
+}
+
+function getPoolAddressParts(address = {}) {
+  const parsed = splitStreetLine(address.addressLine1 || address.formattedAddress || "");
+  return {
+    streetNumber: normaliseStreetNumber(address.houseNumber || address.housenumber || parsed.streetNumber),
+    streetName: normaliseStreetName(address.street || parsed.streetName),
+    streetType: normaliseStreetType(address.streetType || parsed.streetType),
+    suburb: cleanText(address.suburb || address.city || address.town || address.village),
+    postcode: cleanText(address.postcode),
+    formattedAddress: address.formattedAddress || ""
+  };
+}
+
+function recordValue(record, key) {
+  return record?.[key] ?? record?.[key.replace(/ /g, " ")] ?? "";
+}
+
+function numberMatches(inputNumber, recordNumber) {
+  const input = normaliseStreetNumber(inputNumber);
+  const record = normaliseStreetNumber(recordNumber);
+  if (!input || !record) return false;
+  if (input === record) return true;
+  const inputDigits = input.match(/\d+/)?.[0] || "";
+  const recordDigits = record.match(/\d+/)?.[0] || "";
+  return Boolean(inputDigits && recordDigits && inputDigits === recordDigits);
+}
+
+function scorePoolRecord(parts, record) {
+  let score = 0;
+  const recordStreetNumber = recordValue(record, "Street Number");
+  const recordStreetName = recordValue(record, "Street Name");
+  const recordStreetType = recordValue(record, "Street Type");
+  const recordSuburb = recordValue(record, "Suburb");
+  const recordPostcode = recordValue(record, "Post Code");
+
+  if (parts.postcode && cleanText(recordPostcode) === parts.postcode) score += 25;
+  if (parts.suburb && cleanText(recordSuburb) === parts.suburb) score += 25;
+  if (parts.streetName && normaliseStreetName(recordStreetName) === parts.streetName) score += 30;
+  if (parts.streetType && normaliseStreetType(recordStreetType) === parts.streetType) score += 10;
+  if (numberMatches(parts.streetNumber, recordStreetNumber)) score += 40;
+  return score;
+}
+
+function formatPoolRecordAddress(record) {
+  const unitNumber = cleanText(recordValue(record, "Unit Number"));
+  const streetNumber = cleanText(recordValue(record, "Street Number"));
+  const streetName = cleanText(recordValue(record, "Street Name"));
+  const streetType = cleanText(recordValue(record, "Street Type"));
+  const suburb = cleanText(recordValue(record, "Suburb"));
+  const postcode = cleanText(recordValue(record, "Post Code"));
+  const unitPrefix = unitNumber ? `UNIT ${unitNumber}/` : "";
+  return `${unitPrefix}${streetNumber} ${streetName} ${streetType}, ${suburb} ${postcode}`.replace(/\s+/g, " ").trim();
+}
+
+async function fetchPoolRecordsWithFilters(filters, q = "") {
+  const params = new URLSearchParams({
+    resource_id: QLD_POOL_REGISTER_RESOURCE_ID,
+    limit: "1000",
+    filters: JSON.stringify(filters)
+  });
+  if (q) params.set("q", q);
+
+  const response = await fetch(`${QLD_DATASTORE_SEARCH_URL}?${params.toString()}`, {
+    headers: { "Accept": "application/json" }
+  });
+  if (!response.ok) throw new Error(`Queensland Open Data returned HTTP ${response.status}`);
+  const data = await response.json();
+  if (!data?.success) throw new Error("Queensland Open Data lookup was not successful");
+  return data.result?.records || [];
+}
+
+async function queryQueenslandPoolRegister(parts) {
+  const attempts = [];
+  if (parts.postcode && parts.suburb) attempts.push({ "Post Code": parts.postcode, "Suburb": parts.suburb });
+  if (parts.postcode) attempts.push({ "Post Code": parts.postcode });
+  if (parts.suburb) attempts.push({ "Suburb": parts.suburb });
+
+  const seen = new Set();
+  const records = [];
+
+  for (const filters of attempts) {
+    const batch = await fetchPoolRecordsWithFilters(filters, parts.streetName || "");
+    for (const record of batch) {
+      const key = String(record._id || JSON.stringify(record));
+      if (!seen.has(key)) {
+        seen.add(key);
+        records.push(record);
+      }
+    }
+    if (records.length) break;
+  }
+
+  return records;
+}
+
+async function directPoolRegisterLookup(address) {
+  const addressParts = getPoolAddressParts(address);
+  if (!addressParts.postcode || !addressParts.suburb || !addressParts.streetName) {
+    return {
+      registered: false,
+      status: "insufficient_address",
+      reason: "The selected address did not include enough searchable details.",
+      addressParts
+    };
+  }
+
+  const records = await queryQueenslandPoolRegister(addressParts);
+  const scored = records
+    .map((record) => ({ record, score: scorePoolRecord(addressParts, record) }))
+    .sort((a, b) => b.score - a.score);
+
+  const best = scored[0] || null;
+  const registered = Boolean(best && best.score >= 80);
+
+  if (!registered) {
+    return {
+      registered: false,
+      status: "not_found",
+      reason: "No matching registered pool was found for the selected address.",
+      addressParts,
+      checkedRecordCount: records.length,
+      bestScore: best?.score || 0
+    };
+  }
+
+  const record = best.record;
+  return {
+    registered: true,
+    status: "registered",
+    matchConfidence: best.score,
+    matchedAddress: formatPoolRecordAddress(record),
+    siteName: recordValue(record, "Site Name") || "",
+    unitNumber: recordValue(record, "Unit Number") || "",
+    streetNumber: recordValue(record, "Street Number") || "",
+    streetName: recordValue(record, "Street Name") || "",
+    streetType: recordValue(record, "Street Type") || "",
+    suburb: recordValue(record, "Suburb") || "",
+    postcode: recordValue(record, "Post Code") || "",
+    numberOfPools: recordValue(record, "Number of Pools") || "",
+    localGovernmentArea: recordValue(record, "Local Government Authority Area") || "",
+    sharedPoolProperty: recordValue(record, "Shared Pool Property") || "",
+    source: "Queensland Government Open Data Pool safety register"
+  };
+}
+
 function injectPoolRegisterStyles() {
   if (document.querySelector("#pool-register-styles")) return;
   const style = document.createElement("style");
@@ -457,12 +683,12 @@ function renderPoolRegisterPanel() {
 
   if (poolRegisterStatus === "checking") {
     title = "Checking pool registration";
-    text = "Checking the selected address against the pool register. Please wait.";
+    text = "Checking the selected address against the Queensland pool register. Please wait.";
   } else if (poolRegisterStatus === "registered") {
     icon = "✓";
     title = "Registered pool found";
     text = "A registered pool was found for this address. Does this look right?";
-    details = poolRegisterDetails?.summary || "Registered pool details matched the selected address.";
+    details = poolRegisterDetails?.summary || poolRegisterDetails?.matchedAddress || "Registered pool details matched the selected address.";
     body = `
       <div class="option-stack">
         <label class="option-card">
@@ -487,7 +713,7 @@ function renderPoolRegisterPanel() {
   } else {
     title = "Pool register verification unavailable";
     text = "Automatic verification could not be completed. Try another address, check/register the pool with QBCC, or use the fail-safe if you know there is a pool at this property.";
-    details = "The backend pool-register lookup is not connected yet. This fail-safe lets a genuine booking continue without blocking the customer.";
+    details = "The direct Queensland Open Data lookup could not be completed from this browser session. A genuine booking can still continue using the fail-safe.";
     body = `
       <div class="option-stack">
         <label class="option-card">
@@ -502,11 +728,11 @@ function renderPoolRegisterPanel() {
     <div class="pool-register-header">
       <span class="pool-register-icon">${icon}</span>
       <div>
-        <strong class="pool-register-title">${title}</strong>
-        <div class="pool-register-text">${text}</div>
+        <strong class="pool-register-title">${escapeHtml(title)}</strong>
+        <div class="pool-register-text">${escapeHtml(text)}</div>
       </div>
     </div>
-    ${details ? `<div class="pool-register-details">${details}</div>` : ""}
+    ${details ? `<div class="pool-register-details">${escapeHtml(details)}</div>` : ""}
     ${body}
     ${actions}
   `;
@@ -569,25 +795,24 @@ async function verifyPoolRegistration() {
   poolRegisterOverrideConfirmed = false;
   setPoolRegisterState("checking", "Checking pool registration");
 
-  if (!POOL_REGISTER_LOOKUP_ENDPOINT) {
-    window.setTimeout(() => {
-      setPoolRegisterState("manual_required", "Pool register verification unavailable", null);
-    }, 650);
-    return;
-  }
-
   try {
-    const response = await fetch(POOL_REGISTER_LOOKUP_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ address: selectedAddress })
-    });
-    if (!response.ok) throw new Error(`Pool register lookup failed: ${response.status}`);
-    const result = await response.json();
+    let result;
+    if (POOL_REGISTER_LOOKUP_ENDPOINT) {
+      const response = await fetch(POOL_REGISTER_LOOKUP_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ address: selectedAddress })
+      });
+      if (!response.ok) throw new Error(`Pool register lookup failed: ${response.status}`);
+      result = await response.json();
+    } else {
+      result = await directPoolRegisterLookup(selectedAddress);
+    }
 
     if (result?.registered === true) {
       const detailParts = [
-        result.numberOfPools ? `${result.numberOfPools} registered pool${Number(result.numberOfPools) === 1 ? "" : "s"}` : "Registered pool found",
+        result.matchedAddress || "Registered pool found",
+        result.numberOfPools ? `${result.numberOfPools} registered pool${Number(result.numberOfPools) === 1 ? "" : "s"}` : "",
         result.localGovernmentArea ? `LGA: ${result.localGovernmentArea}` : "",
         result.sharedPoolProperty ? `Shared pool: ${result.sharedPoolProperty}` : ""
       ].filter(Boolean);
@@ -601,7 +826,7 @@ async function verifyPoolRegistration() {
     setPoolRegisterState("not_found", "No registered pool found", result || null);
   } catch (error) {
     console.error("Pool register lookup error:", error);
-    setPoolRegisterState("manual_required", "Pool register verification unavailable", null);
+    setPoolRegisterState("manual_required", "Pool register verification unavailable", { error: error.message });
   }
 }
 
@@ -656,7 +881,12 @@ function selectGeoapifyAddress(result) {
     longitude: result.lon || null,
     addressLine1: result.address_line1 || "",
     addressLine2: result.address_line2 || "",
+    houseNumber: result.housenumber || result.house_number || "",
+    street: result.street || "",
     suburb: result.suburb || result.city || result.town || result.village || "",
+    city: result.city || "",
+    town: result.town || "",
+    village: result.village || "",
     postcode: result.postcode || "",
     state: result.state || "",
     country: result.country || "Australia"
@@ -818,7 +1048,7 @@ async function handleBookingSubmit(event) {
       poolRegisterCheckedAt,
       poolRegisterLooksRight,
       poolRegisterOverrideConfirmed,
-      poolRegisterLookupSource: POOL_REGISTER_LOOKUP_ENDPOINT ? "backend_lookup" : "manual_fail_safe",
+      poolRegisterLookupSource: POOL_REGISTER_LOOKUP_ENDPOINT ? "backend_lookup" : "qld_open_data_direct",
 
       isPropertyOwner: getChecked("#isPropertyOwner"),
       authorisedToBook: getChecked("#authorisedToBook"),
