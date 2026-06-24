@@ -84,4 +84,91 @@ document.addEventListener('DOMContentLoaded', () => {
     if (event.key !== 'Escape') return;
     document.querySelectorAll('.modal-overlay.is-open').forEach(closeModal);
   });
+
+  const tidyPoolRegisterPanel = () => {
+    const panel = document.querySelector('.pool-register-panel');
+    if (!panel) return;
+
+    const status = panel.dataset.status || '';
+    const title = panel.querySelector('#pool-register-title');
+    const text = panel.querySelector('#pool-register-text');
+    const details = panel.querySelector('#pool-register-details');
+    const looksRightLabel = panel.querySelector('#poolRegisterLooksRight')?.closest('.option-card');
+    const overrideLabel = panel.querySelector('#poolRegisterOverride')?.closest('.option-card');
+    const actions = panel.querySelector('.pool-register-actions');
+    const editAddressButton = panel.querySelector('#pool-register-edit-address');
+
+    if (editAddressButton) {
+      editAddressButton.textContent = status === 'not_found' ? 'Try another address' : 'Edit address';
+    }
+
+    if (status === 'checking') {
+      if (title) title.textContent = 'Checking pool registration';
+      if (text) text.textContent = 'Checking the selected address against the pool register. Please wait.';
+      if (details) details.hidden = true;
+      if (looksRightLabel) looksRightLabel.hidden = true;
+      if (overrideLabel) overrideLabel.hidden = true;
+      if (actions) actions.hidden = true;
+      return;
+    }
+
+    if (status === 'registered') {
+      if (title) title.textContent = 'Registered pool found';
+      if (text) text.textContent = 'A registered pool was found for this address. Does this look right?';
+      if (looksRightLabel) {
+        looksRightLabel.hidden = false;
+        const labelText = looksRightLabel.querySelector('span');
+        if (labelText) labelText.textContent = 'Yes, this looks right.';
+      }
+      if (overrideLabel) overrideLabel.hidden = true;
+      if (actions) actions.hidden = false;
+      return;
+    }
+
+    if (status === 'not_found') {
+      if (title) title.textContent = 'No registered pool found';
+      if (text) text.textContent = 'We could not find a registered pool for this selected address. Try another address, check/register the pool with QBCC, or use the fail-safe if you know there is a pool at this property.';
+      if (looksRightLabel) looksRightLabel.hidden = true;
+      if (overrideLabel) {
+        overrideLabel.hidden = false;
+        const labelText = overrideLabel.querySelector('span');
+        if (labelText) {
+          labelText.innerHTML = 'There is a pool at this property. Continue anyway.<small>Use this only if the lookup is wrong, unavailable, or the pool is listed under slightly different address details.</small>';
+        }
+      }
+      if (actions) actions.hidden = false;
+      return;
+    }
+
+    if (status === 'manual_required') {
+      if (title) title.textContent = 'Pool register verification unavailable';
+      if (text) text.textContent = 'Automatic verification could not be completed. Try another address, check/register the pool with QBCC, or use the fail-safe if you know there is a pool at this property.';
+      if (looksRightLabel) looksRightLabel.hidden = true;
+      if (overrideLabel) {
+        overrideLabel.hidden = false;
+        const labelText = overrideLabel.querySelector('span');
+        if (labelText) {
+          labelText.innerHTML = 'There is a pool at this property. Continue anyway.<small>Use this only if the register check is wrong, unavailable, or the pool is listed under slightly different address details.</small>';
+        }
+      }
+      if (actions) actions.hidden = false;
+    }
+  };
+
+  const poolRegisterObserver = new MutationObserver(tidyPoolRegisterPanel);
+  const watchForPoolRegisterPanel = () => {
+    const panel = document.querySelector('.pool-register-panel');
+    if (!panel) return;
+    tidyPoolRegisterPanel();
+    poolRegisterObserver.observe(panel, { attributes: true, childList: true, subtree: true, attributeFilter: ['data-status', 'hidden'] });
+  };
+
+  watchForPoolRegisterPanel();
+  const bodyObserver = new MutationObserver(() => {
+    if (document.querySelector('.pool-register-panel')) {
+      watchForPoolRegisterPanel();
+      bodyObserver.disconnect();
+    }
+  });
+  bodyObserver.observe(document.body, { childList: true, subtree: true });
 });
