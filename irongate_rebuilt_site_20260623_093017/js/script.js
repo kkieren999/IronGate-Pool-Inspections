@@ -143,8 +143,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const compactStyle = document.createElement('style');
   compactStyle.textContent = `
+    .address-suggestions[hidden],
+    .address-suggestions:empty {
+      display: none !important;
+      padding: 0 !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      margin: 0 !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
+    .address-status[data-type="success"] {
+      display: none !important;
+      margin: 0 !important;
+      height: 0 !important;
+      overflow: hidden !important;
+    }
     .pool-register-panel.is-compact {
-      margin-top: 8px !important;
+      margin-top: 6px !important;
       padding: 0 !important;
       border: 0 !important;
       border-radius: 0 !important;
@@ -157,7 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
       align-items: center;
       flex-wrap: wrap;
       gap: 8px;
-      margin: 8px 0 0;
+      margin: 6px 0 0;
       font-size: .88rem;
       font-weight: 800;
       line-height: 1.35;
