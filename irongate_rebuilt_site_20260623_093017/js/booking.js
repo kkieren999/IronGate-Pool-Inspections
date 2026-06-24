@@ -11,9 +11,25 @@ const preferredTimeSlotInput = document.querySelector("#preferredTimeSlot");
 const selectedDateLabel = document.querySelector("#selected-date-label");
 const selectedSlotLabel = document.querySelector("#selected-slot-label");
 const bookingSlotGrid = document.querySelector("#booking-slot-grid");
+const addressInput = document.querySelector("#propertyAddress");
+const addressSelectedInput = document.querySelector("#propertyAddressSelected");
+const propertyPlaceIdInput = document.querySelector("#propertyPlaceId");
+const addressStatus = document.querySelector("#address-status");
+const exemptionToggle = document.querySelector("#hasPoolExemption");
+const exemptionPanel = document.querySelector("#exemption-upload-panel");
+const exemptionFileInput = document.querySelector("#exemptionFile");
+const animalsOnPropertyInput = document.querySelector("#animalsOnProperty");
+const animalsOffLeashInput = document.querySelector("#animalsOffLeash");
+const animalPanel = document.querySelector("#animal-restraint-panel");
 
 const inspectionPriceCents = 24900;
 const inspectionPriceDisplay = "$249 inc GST";
+const maxUploadBytes = 10 * 1024 * 1024;
+
+// Add your Google Places API key here to activate address suggestions.
+// The form is already wired for Google Places Autocomplete.
+const GOOGLE_PLACES_API_KEY = "";
+
 const monthNames = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
@@ -21,9 +37,11 @@ const monthNames = [
 
 let selectedDate = "";
 let selectedTimeSlot = null;
+let selectedAddress = null;
 let availabilityByDate = new Map();
 let calendarMonth = startOfMonth(new Date());
 let firebaseModulesPromise = null;
+let googlePlacesReady = false;
 
 if (priceNotice) {
   priceNotice.textContent = `Pool Safety Inspection & Certificate — ${inspectionPriceDisplay}`;
@@ -34,16 +52,26 @@ function getValue(selector) {
   return element ? element.value.trim() : "";
 }
 
-function setLoading(isLoading) {
+function getChecked(selector) {
+  return document.querySelector(selector)?.checked === true;
+}
+
+function setLoading(isLoading, text = "Saving...") {
   if (!submitButton) return;
   submitButton.disabled = isLoading;
-  submitButton.textContent = isLoading ? "Saving..." : "Save Booking Test";
+  submitButton.textContent = isLoading ? text : "Save Booking Test";
 }
 
 function showMessage(text, type = "") {
   if (!message) return;
   message.textContent = text;
   message.dataset.type = type;
+}
+
+function setAddressStatus(text, type = "") {
+  if (!addressStatus) return;
+  addressStatus.textContent = text;
+  addressStatus.dataset.type = type;
 }
 
 function startOfMonth(date) {
@@ -289,16 +317,22 @@ async function getFirebaseModules() {
   if (!firebaseModulesPromise) {
     firebaseModulesPromise = Promise.all([
       import("./firebase-config.js"),
-      import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js")
-    ]).then(([configModule, firestoreModule]) => ({
+      import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.5/firebase-storage.js")
+    ]).then(([configModule, firestoreModule, storageModule]) => ({
       db: configModule.db,
+      app: configModule.app,
       collection: firestoreModule.collection,
-      addDoc: firestoreModule.addDoc,
+      doc: firestoreModule.doc,
+      setDoc: firestoreModule.setDoc,
       serverTimestamp: firestoreModule.serverTimestamp,
       getDocs: firestoreModule.getDocs,
       query: firestoreModule.query,
       where: firestoreModule.where,
-      documentId: firestoreModule.documentId
+      documentId: firestoreModule.documentId,
+      getStorage: storageModule.getStorage,
+      storageRef: storageModule.ref,
+      uploadBytes: storageModule.uploadBytes
     }));
   }
 
@@ -335,6 +369,158 @@ async function loadAvailabilityForMonth() {
   renderTimeSlots();
 }
 
+function toggleConditionalPanels() {
+  const hasExemption = exemptionToggle?.checked === true;
+  const animalConcern = animalsOnPropertyInput?.checked === true || animalsOffLeashInput?.checked === true;
+
+  if (exemptionPanel) exemptionPanel.classList.toggle("is-visible", hasExemption);
+  if (animalPanel) animalPanel.classList.toggle("is-visible", animalConcern);
+}
+
+function normaliseAustralianMobile(value) {
+  const compact = String(value || "").replace(/[\s()-]/g, "");
+  if (/^04\d{8}$/.test(compact)) return compact;
+  if (/^\+614\d{8}$/.test(compact)) return compact;
+  if (/^614\d{8}$/.test(compact)) return `+${compact}`;
+  return "";
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function validateFile(file) {
+  if (!file) return "Please upload the pool exemption document.";
+  const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+  if (!allowedTypes.includes(file.type)) return "The exemption upload must be a PDF, JPG, PNG or WEBP file.";
+  if (file.size > maxUploadBytes) return "The exemption upload must be 10 MB or smaller.";
+  return "";
+}
+
+function sanitizeFileName(name) {
+  return String(name || "exemption-file")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 120);
+}
+
+function validateBookingForm() {
+  const email = getValue("#email");
+  const mobile = normaliseAustralianMobile(getValue("#phone"));
+  const hasAddress = getValue("#propertyAddress").length > 8;
+  const addressSelected = addressSelectedInput?.value === "true";
+  const isOwner = getChecked("#isPropertyOwner");
+  const authorised = getChecked("#authorisedToBook");
+  const animalsNeedAttention = getChecked("#animalsOnProperty") || getChecked("#animalsOffLeash");
+  const hasExemption = getChecked("#hasPoolExemption");
+  const exemptionFile = exemptionFileInput?.files?.[0] || null;
+
+  if (!isValidEmail(email)) return "Please enter a valid email address.";
+  if (!mobile) return "Please enter a valid Australian mobile number, for example 04XX XXX XXX.";
+
+  if (!hasAddress) return "Please enter the property address.";
+  if (googlePlacesReady && !addressSelected) return "Please select the property address from the address suggestions.";
+
+  if (!isOwner && !authorised) {
+    return "Please confirm you are the property owner or authorised to arrange the inspection.";
+  }
+
+  if (!selectedDate) return "Please choose an available inspection date from the calendar.";
+  if (!selectedTimeSlot) return "Please choose one available 1-hour time slot.";
+
+  if (!getChecked("#willBeHomeForInspection") && !getChecked("#accessPermissionIfNotHome")) {
+    return "Please confirm whether you will be home or whether access is permitted if you are not home.";
+  }
+
+  if (animalsNeedAttention && !getChecked("#animalsWillBeSecured")) {
+    return "Please confirm dogs or other animals will be securely restrained away from the inspection area.";
+  }
+
+  if (hasExemption) {
+    const fileError = validateFile(exemptionFile);
+    if (fileError) return fileError;
+  }
+
+  if (!getChecked("#nonComplianceAcknowledged")) {
+    return "Please acknowledge that a certificate cannot be issued until the pool barrier is compliant.";
+  }
+
+  if (!getChecked("#informationAccuracyConfirmed")) {
+    return "Please confirm the information provided is accurate.";
+  }
+
+  if (!getChecked("#termsAccepted")) {
+    return "Please accept the terms, privacy policy and refunds policy.";
+  }
+
+  return "";
+}
+
+function initAddressAutocomplete() {
+  if (!addressInput) return;
+
+  addressInput.addEventListener("input", () => {
+    selectedAddress = null;
+    if (addressSelectedInput) addressSelectedInput.value = "false";
+    if (propertyPlaceIdInput) propertyPlaceIdInput.value = "";
+    if (googlePlacesReady) {
+      setAddressStatus("Please select the property address from the suggestions.", "");
+    }
+  });
+
+  if (!GOOGLE_PLACES_API_KEY) {
+    googlePlacesReady = false;
+    setAddressStatus("Address autocomplete is ready, but a Google Places API key still needs to be added. Manual address entry is temporarily accepted.", "");
+    return;
+  }
+
+  window.initIrongateAddressAutocomplete = () => {
+    if (!window.google?.maps?.places || !addressInput) return;
+
+    googlePlacesReady = true;
+    const autocomplete = new window.google.maps.places.Autocomplete(addressInput, {
+      componentRestrictions: { country: "au" },
+      fields: ["formatted_address", "place_id", "address_components", "geometry", "name"],
+      types: ["address"]
+    });
+
+    autocomplete.addListener("place_changed", () => {
+      const place = autocomplete.getPlace();
+      if (!place?.formatted_address || !place?.place_id) {
+        selectedAddress = null;
+        if (addressSelectedInput) addressSelectedInput.value = "false";
+        setAddressStatus("Please select a full address from the suggestions.", "error");
+        return;
+      }
+
+      selectedAddress = {
+        formattedAddress: place.formatted_address,
+        placeId: place.place_id,
+        latitude: place.geometry?.location?.lat?.() || null,
+        longitude: place.geometry?.location?.lng?.() || null
+      };
+
+      addressInput.value = place.formatted_address;
+      if (addressSelectedInput) addressSelectedInput.value = "true";
+      if (propertyPlaceIdInput) propertyPlaceIdInput.value = place.place_id;
+      setAddressStatus("Address selected.", "success");
+    });
+
+    setAddressStatus("Start typing and select the property address from the suggestions.", "");
+  };
+
+  const script = document.createElement("script");
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_PLACES_API_KEY)}&libraries=places&callback=initIrongateAddressAutocomplete`;
+  script.async = true;
+  script.defer = true;
+  script.onerror = () => {
+    googlePlacesReady = false;
+    setAddressStatus("Address suggestions could not load. Check the Google Places API key.", "error");
+  };
+  document.head.appendChild(script);
+}
+
 if (calendarPrev) {
   calendarPrev.addEventListener("click", () => {
     calendarMonth = startOfMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1));
@@ -349,78 +535,141 @@ if (calendarNext) {
   });
 }
 
+[exemptionToggle, animalsOnPropertyInput, animalsOffLeashInput].forEach((input) => {
+  if (input) input.addEventListener("change", toggleConditionalPanels);
+});
+
 if (form) {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-
     showMessage("");
 
-    if (!selectedDate) {
-      showMessage("Please choose an available inspection date from the calendar.", "error");
-      if (selectedDateLabel) {
-        selectedDateLabel.textContent = "Please choose an available inspection date.";
-        selectedDateLabel.dataset.type = "error";
-      }
+    const validationError = validateBookingForm();
+    if (validationError) {
+      showMessage(validationError, "error");
       return;
     }
 
-    if (!selectedTimeSlot) {
-      showMessage("Please choose one available 1-hour time slot.", "error");
-      if (selectedSlotLabel) {
-        selectedSlotLabel.textContent = "Please choose one available 1-hour time slot.";
-        selectedSlotLabel.dataset.type = "error";
-      }
-      return;
-    }
+    setLoading(true, getChecked("#hasPoolExemption") ? "Uploading..." : "Saving...");
 
-    setLoading(true);
-
-    const termsAccepted = document.querySelector("#termsAccepted")?.checked === true;
-
-    const bookingData = {
-      customerName: getValue("#customerName"),
-      email: getValue("#email"),
-      phone: getValue("#phone"),
-      propertyAddress: getValue("#propertyAddress"),
-      clientType: getValue("#clientType"),
-      preferredDate: selectedDate,
-      preferredDateDisplay: formatDisplayDate(selectedDate),
-      preferredTimeSlot: selectedTimeSlot.id,
-      preferredTimeLabel: selectedTimeSlot.label,
-      preferredTimeStart: selectedTimeSlot.start,
-      preferredTimeEnd: selectedTimeSlot.end,
-      preferredTime: selectedTimeSlot.label,
-      accessInstructions: getValue("#accessInstructions"),
-      notes: getValue("#notes"),
-
-      serviceName: "Pool Safety Inspection & Certificate",
-      priceCents: inspectionPriceCents,
-      priceDisplay: inspectionPriceDisplay,
-      currency: "aud",
-
-      status: "pending_payment",
-      paymentStatus: "unpaid",
-
-      stripeSessionId: null,
-      stripePaymentIntentId: null,
-
-      termsAccepted,
-      privacyAccepted: termsAccepted,
-
-      source: "website_booking_form",
-      createdAt: null,
-      paidAt: null
-    };
+    const termsAccepted = getChecked("#termsAccepted");
+    const mobile = normaliseAustralianMobile(getValue("#phone"));
+    const hasExemption = getChecked("#hasPoolExemption");
+    const exemptionFile = exemptionFileInput?.files?.[0] || null;
 
     try {
-      const { db, collection, addDoc, serverTimestamp } = await getFirebaseModules();
-      bookingData.createdAt = serverTimestamp();
+      const {
+        db,
+        app,
+        collection,
+        doc,
+        setDoc,
+        serverTimestamp,
+        getStorage,
+        storageRef,
+        uploadBytes
+      } = await getFirebaseModules();
 
-      const docRef = await addDoc(collection(db, "bookings"), bookingData);
-      showMessage(`Booking saved successfully. Booking ID: ${docRef.id}`, "success");
+      const bookingDocRef = doc(collection(db, "bookings"));
+      let exemptionFileData = null;
+
+      if (hasExemption && exemptionFile) {
+        setLoading(true, "Uploading file...");
+        const storage = getStorage(app);
+        const fileName = `${Date.now()}-${sanitizeFileName(exemptionFile.name)}`;
+        const filePath = `booking-exemptions/${bookingDocRef.id}/${fileName}`;
+        const fileRef = storageRef(storage, filePath);
+
+        await uploadBytes(fileRef, exemptionFile, {
+          contentType: exemptionFile.type,
+          customMetadata: {
+            bookingId: bookingDocRef.id,
+            originalFileName: exemptionFile.name
+          }
+        });
+
+        exemptionFileData = {
+          uploaded: true,
+          storagePath: filePath,
+          fileName: exemptionFile.name,
+          fileType: exemptionFile.type,
+          fileSize: exemptionFile.size
+        };
+      }
+
+      setLoading(true, "Saving...");
+
+      const bookingData = {
+        customerName: getValue("#customerName"),
+        email: getValue("#email"),
+        phone: mobile,
+        propertyAddress: getValue("#propertyAddress"),
+        propertyAddressSelected: addressSelectedInput?.value === "true",
+        propertyPlaceId: getValue("#propertyPlaceId"),
+        selectedAddress,
+
+        isPropertyOwner: getChecked("#isPropertyOwner"),
+        authorisedToBook: getChecked("#authorisedToBook"),
+        clientType: getChecked("#isPropertyOwner") ? "Property owner" : "Authorised representative",
+
+        inspectionReason: getValue("#inspectionReason"),
+        poolType: getValue("#poolType"),
+        existingCertificateStatus: getValue("#existingCertificateStatus"),
+        poolRegisteredStatus: getValue("#poolRegisteredStatus"),
+
+        preferredDate: selectedDate,
+        preferredDateDisplay: formatDisplayDate(selectedDate),
+        preferredTimeSlot: selectedTimeSlot.id,
+        preferredTimeLabel: selectedTimeSlot.label,
+        preferredTimeStart: selectedTimeSlot.start,
+        preferredTimeEnd: selectedTimeSlot.end,
+        preferredTime: selectedTimeSlot.label,
+
+        willBeHomeForInspection: getChecked("#willBeHomeForInspection"),
+        accessPermissionIfNotHome: getChecked("#accessPermissionIfNotHome"),
+        animalsOnProperty: getChecked("#animalsOnProperty"),
+        animalsOffLeash: getChecked("#animalsOffLeash"),
+        animalsWillBeSecured: getChecked("#animalsWillBeSecured"),
+        accessInstructions: getValue("#accessInstructions"),
+
+        hasPoolExemption: hasExemption,
+        exemptionFileUploaded: Boolean(exemptionFileData),
+        exemptionFile: exemptionFileData,
+
+        minorRepairsContactAccepted: getChecked("#minorRepairsContactAccepted"),
+        nonComplianceAcknowledged: getChecked("#nonComplianceAcknowledged"),
+        informationAccuracyConfirmed: getChecked("#informationAccuracyConfirmed"),
+        notes: getValue("#notes"),
+
+        serviceName: "Pool Safety Inspection & Certificate",
+        priceCents: inspectionPriceCents,
+        priceDisplay: inspectionPriceDisplay,
+        currency: "aud",
+
+        status: "pending_payment",
+        paymentStatus: "unpaid",
+
+        stripeSessionId: null,
+        stripePaymentIntentId: null,
+
+        termsAccepted,
+        privacyAccepted: termsAccepted,
+
+        source: "website_booking_form",
+        createdAt: serverTimestamp(),
+        paidAt: null
+      };
+
+      await setDoc(bookingDocRef, bookingData);
+      showMessage(`Booking saved successfully. Booking ID: ${bookingDocRef.id}`, "success");
       form.reset();
       selectedDate = "";
+      selectedAddress = null;
+      if (addressSelectedInput) addressSelectedInput.value = "false";
+      if (propertyPlaceIdInput) propertyPlaceIdInput.value = "";
+      setAddressStatus(GOOGLE_PLACES_API_KEY ? "Start typing and select the property address from the suggestions." : "Manual address entry is temporarily accepted until Google Places is connected.", "");
       resetSelectedSlot();
+      toggleConditionalPanels();
       if (preferredDateInput) preferredDateInput.value = "";
       if (selectedDateLabel) {
         selectedDateLabel.textContent = "No date selected yet.";
@@ -428,14 +677,16 @@ if (form) {
       }
       renderCalendar();
       renderTimeSlots();
-      console.log("Booking saved:", docRef.id);
+      console.log("Booking saved:", bookingDocRef.id);
     } catch (error) {
       console.error("Error saving booking:", error);
-      showMessage("Something went wrong. Please check your Firestore rules, internet connection and browser console.", "error");
+      showMessage("Something went wrong. Please check Firebase rules, Storage rules, internet connection and browser console.", "error");
     } finally {
       setLoading(false);
     }
   });
 }
 
+initAddressAutocomplete();
+toggleConditionalPanels();
 loadAvailabilityForMonth();
