@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Availability | IronGate Pool Inspections</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="admin-body">
+  <header class="site-header admin-header" id="top">
+    <a class="brand" href="index.html#home" aria-label="IronGate Pool Inspections home">
+      <span class="brand-mark" aria-hidden="true">
+        <img src="assets/logo-no-text.png" alt="" />
+      </span>
+      <span class="brand-copy">
+        <span class="brand-name"><span class="brand-iron">IRON</span><span class="brand-gate">GATE</span></span>
+        <span class="brand-subtitle">POOL INSPECTIONS</span>
+      </span>
+    </a>
+
+    <nav class="main-nav legal-nav admin-nav" aria-label="Admin navigation">
+      <a href="booking.html">Booking page</a>
+      <a href="index.html#home">Website</a>
+      <button class="admin-signout-btn" type="button" id="admin-signout" hidden>Sign out</button>
+    </nav>
+  </header>
+
+  <main>
+    <section class="section admin-hero-section">
+      <div class="container admin-shell">
+        <div class="admin-hero-card">
+          <div>
+            <p class="section-kicker">Admin Console</p>
+            <h1>Availability Manager</h1>
+            <p>Click a date, choose whether it is available, unavailable or fully booked, then save it to Firebase. Changes appear on the client booking calendar.</p>
+          </div>
+          <div class="admin-status-pill" id="admin-connection-status">Checking sign in…</div>
+        </div>
+
+        <section class="admin-login-card" id="admin-login-card">
+          <div class="admin-login-copy">
+            <p class="section-kicker">Secure Access</p>
+            <h2>Sign in to manage availability</h2>
+            <p>Use the admin email you added in Firebase Authentication.</p>
+          </div>
+          <form class="admin-login-form" id="admin-login-form">
+            <label>
+              Email
+              <input type="email" id="admin-email" autocomplete="email" required />
+            </label>
+            <label>
+              Password
+              <input type="password" id="admin-password" autocomplete="current-password" required />
+            </label>
+            <button class="btn btn-primary" type="submit" id="admin-login-submit">Sign in</button>
+            <p class="form-note" id="admin-login-message" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section class="admin-console" id="admin-console" hidden>
+          <div class="admin-grid-layout">
+            <section class="admin-panel admin-calendar-panel" aria-labelledby="admin-calendar-heading">
+              <div class="admin-panel-topline">
+                <div>
+                  <p class="section-kicker">Calendar</p>
+                  <h2 id="admin-calendar-heading">Pick a date</h2>
+                </div>
+                <div class="admin-month-controls">
+                  <button class="calendar-nav-btn" type="button" id="admin-prev-month" aria-label="Previous month">‹</button>
+                  <strong id="admin-calendar-title">Loading</strong>
+                  <button class="calendar-nav-btn" type="button" id="admin-next-month" aria-label="Next month">›</button>
+                </div>
+              </div>
+
+              <div class="admin-legend" aria-label="Availability legend">
+                <span><i class="legend-dot legend-available"></i> Available</span>
+                <span><i class="legend-dot legend-unavailable"></i> Unavailable</span>
+                <span><i class="legend-dot legend-full"></i> Fully booked</span>
+                <span><i class="legend-dot legend-default"></i> Default</span>
+              </div>
+
+              <div class="calendar-weekdays" aria-hidden="true">
+                <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+              </div>
+              <div class="admin-calendar-grid" id="admin-calendar-grid" role="grid" aria-label="Availability admin calendar"></div>
+            </section>
+
+            <aside class="admin-panel admin-editor-panel" aria-labelledby="admin-editor-heading">
+              <p class="section-kicker">Selected Date</p>
+              <h2 id="admin-editor-heading">No date selected</h2>
+              <p class="admin-editor-help" id="admin-selected-help">Choose a date from the calendar to edit its availability.</p>
+
+              <form class="admin-editor-form" id="availability-form">
+                <input type="hidden" id="availability-date" />
+
+                <label>
+                  Availability status
+                  <select id="availability-status" required disabled>
+                    <option value="available">Available</option>
+                    <option value="unavailable">Unavailable</option>
+                    <option value="fully_booked">Fully booked</option>
+                  </select>
+                </label>
+
+                <div class="admin-two-cols">
+                  <label>
+                    Max bookings
+                    <input type="number" id="max-bookings" min="1" max="10" value="1" disabled />
+                  </label>
+                  <label>
+                    Booked count
+                    <input type="number" id="booked-count" min="0" max="10" value="0" disabled />
+                  </label>
+                </div>
+
+                <label>
+                  Public note
+                  <input type="text" id="availability-note" placeholder="Example: Available" disabled />
+                </label>
+
+                <label>
+                  Unavailable reason
+                  <input type="text" id="availability-reason" placeholder="Example: Closed / already booked / public holiday" disabled />
+                </label>
+
+                <div class="admin-actions">
+                  <button class="btn btn-primary" type="submit" id="save-availability" disabled>Save date</button>
+                  <button class="btn admin-danger-btn" type="button" id="delete-availability" disabled>Delete override</button>
+                </div>
+
+                <p class="form-note" id="availability-message" role="status" aria-live="polite"></p>
+              </form>
+            </aside>
+          </div>
+
+          <section class="admin-panel admin-bulk-panel" aria-labelledby="bulk-heading">
+            <div>
+              <p class="section-kicker">Quick Actions</p>
+              <h2 id="bulk-heading">Update a date range</h2>
+              <p>Use this to block holidays, open extra Saturdays, or mark a group of days unavailable.</p>
+            </div>
+
+            <form class="admin-bulk-form" id="bulk-form">
+              <label>
+                From
+                <input type="date" id="bulk-start" required />
+              </label>
+              <label>
+                To
+                <input type="date" id="bulk-end" required />
+              </label>
+              <label>
+                Set status
+                <select id="bulk-status" required>
+                  <option value="unavailable">Unavailable</option>
+                  <option value="available">Available</option>
+                  <option value="fully_booked">Fully booked</option>
+                </select>
+              </label>
+              <label>
+                Note / reason
+                <input type="text" id="bulk-note" placeholder="Example: Holiday closure" />
+              </label>
+              <label class="admin-checkbox-line">
+                <input type="checkbox" id="bulk-weekdays-only" />
+                <span>Weekdays only</span>
+              </label>
+              <div class="admin-actions admin-bulk-actions">
+                <button class="btn btn-primary" type="submit" id="bulk-save">Apply range</button>
+                <button class="btn admin-danger-btn" type="button" id="bulk-delete">Delete range overrides</button>
+              </div>
+              <p class="form-note" id="bulk-message" role="status" aria-live="polite"></p>
+            </form>
+          </section>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/admin-availability.js"></script>
+</body>
+</html>

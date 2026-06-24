@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Book an Inspection | IronGate Pool Inspections</title>
+  <meta name="description" content="Book a pool safety inspection with IronGate Pool Inspections." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="site-header legal-header" id="top">
+    <a class="brand" href="index.html#home" aria-label="IronGate Pool Inspections home">
+      <span class="brand-mark" aria-hidden="true">
+        <img src="assets/logo-no-text.png" alt="" />
+      </span>
+      <span class="brand-copy">
+        <span class="brand-name"><span class="brand-iron">IRON</span><span class="brand-gate">GATE</span></span>
+        <span class="brand-subtitle">POOL INSPECTIONS</span>
+      </span>
+    </a>
+
+    <nav class="main-nav legal-nav" aria-label="Primary navigation">
+      <a href="index.html#home">Home</a>
+      <a href="index.html#services">Service</a>
+      <a href="index.html#about">About</a>
+      <a href="index.html#inspections">Why Irongate</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="section booking-page">
+      <div class="container">
+        <div class="section-heading booking-heading">
+          <p class="section-kicker">Book Online</p>
+          <h1>Book a Pool Safety Inspection</h1>
+          <p class="section-intro">Complete the details below. Choose an available inspection day, enter your details, and submit the booking request. This version saves the booking to Firestore as pending payment.</p>
+        </div>
+
+        <div class="contact-card booking-card">
+          <aside class="booking-summary" aria-label="Booking summary">
+            <p class="section-kicker">Inspection Package</p>
+            <h2>Pool Safety Inspection &amp; Certificate</h2>
+            <p id="booking-price-notice">Pool Safety Inspection &amp; Certificate — $249 inc GST</p>
+            <ul class="contact-points">
+              <li>Full pool barrier inspection</li>
+              <li>Gate, latch and hinge check</li>
+              <li>Written notes and photos</li>
+              <li>Certificate issued if compliant</li>
+              <li>Unlimited reinspections included</li>
+            </ul>
+            <p class="booking-note">Available dates are controlled from your Firestore availability collection. Payment will be connected with Stripe in the next step.</p>
+          </aside>
+
+          <form class="contact-form booking-form" id="booking-form">
+            <label>
+              Full name
+              <input type="text" id="customerName" autocomplete="name" required />
+            </label>
+
+            <label>
+              Email
+              <input type="email" id="email" autocomplete="email" required />
+            </label>
+
+            <label>
+              Phone
+              <input type="tel" id="phone" autocomplete="tel" required />
+            </label>
+
+            <label>
+              Property address
+              <input type="text" id="propertyAddress" autocomplete="street-address" required />
+            </label>
+
+            <label>
+              Client type
+              <select id="clientType" required>
+                <option value="">Select one</option>
+                <option value="Homeowner">Homeowner</option>
+                <option value="Landlord">Landlord</option>
+                <option value="Seller">Seller</option>
+                <option value="Real estate agent">Real estate agent</option>
+                <option value="Property manager">Property manager</option>
+              </select>
+            </label>
+
+            <div class="booking-calendar-section" aria-labelledby="calendar-heading">
+              <div class="booking-calendar-topline">
+                <div>
+                  <span class="field-title" id="calendar-heading">Preferred date</span>
+                  <p class="calendar-help">Choose one of the available days below.</p>
+                </div>
+              </div>
+
+              <div class="booking-calendar" aria-label="Available inspection dates">
+                <div class="booking-calendar-header">
+                  <button class="calendar-nav-btn" type="button" id="calendar-prev" aria-label="Previous month">‹</button>
+                  <h3 id="calendar-title">Loading calendar</h3>
+                  <button class="calendar-nav-btn" type="button" id="calendar-next" aria-label="Next month">›</button>
+                </div>
+
+                <div class="calendar-legend" aria-label="Calendar legend">
+                  <span><i class="legend-dot legend-available"></i> Available</span>
+                  <span><i class="legend-dot legend-unavailable"></i> Unavailable</span>
+                  <span><i class="legend-dot legend-selected"></i> Selected</span>
+                </div>
+
+                <div class="calendar-weekdays" aria-hidden="true">
+                  <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                </div>
+
+                <div class="calendar-grid" id="calendar-grid" role="grid" aria-label="Choose an available inspection date"></div>
+              </div>
+
+              <input type="hidden" id="preferredDate" name="preferredDate" />
+              <p class="selected-date-label" id="selected-date-label" aria-live="polite">No date selected yet.</p>
+            </div>
+
+            <label>
+              Preferred time
+              <select id="preferredTime" required>
+                <option value="">Select one</option>
+                <option value="Morning">Morning</option>
+                <option value="Middle of day">Middle of day</option>
+                <option value="Afternoon">Afternoon</option>
+                <option value="Flexible">Flexible</option>
+              </select>
+            </label>
+
+            <label>
+              Access instructions
+              <textarea id="accessInstructions" rows="4" placeholder="Example: side gate unlocked, tenant home, key with agent, dogs on property."></textarea>
+            </label>
+
+            <label>
+              Extra notes
+              <textarea id="notes" rows="4" placeholder="Anything else we should know?"></textarea>
+            </label>
+
+            <label class="checkbox-label">
+              <input type="checkbox" id="termsAccepted" required />
+              <span>I accept the <a href="terms.html" target="_blank" rel="noopener">Terms &amp; Conditions</a>, <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a> and <a href="refunds.html" target="_blank" rel="noopener">Refunds &amp; Cancellations Policy</a>.</span>
+            </label>
+
+            <button class="btn btn-primary" type="submit" id="booking-submit">
+              Save Booking Test
+            </button>
+
+            <p class="form-note" id="booking-message" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <strong>IronGate Pool Inspections</strong>
+        <span>Pool safety inspections across Brisbane</span>
+      </div>
+      <div class="footer-details">
+        <span>ABN: 25 342 746 679</span>
+        <span>QBCC Pool Safety Inspector Licence: <a href="https://example.com/qbcc-pool-safety-inspector-search" target="_blank" rel="noopener">PSI 000000</a></span>
+        <a href="tel:0481442260">0481 442 260</a>
+        <a href="mailto:irongate.pool.bne@gmail.com">irongate.pool.bne@gmail.com</a>
+      </div>
+      <nav class="footer-links" aria-label="Footer links">
+        <a href="privacy.html">Privacy Policy</a>
+        <a href="terms.html">Terms &amp; Conditions</a>
+        <a href="refunds.html">Refunds &amp; Cancellations</a>
+      </nav>
+      <p class="footer-copy">&copy; <span id="year"></span> IronGate Pool Inspections. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="js/script.js"></script>
+  <script type="module" src="js/booking.js"></script>
+</body>
+</html>

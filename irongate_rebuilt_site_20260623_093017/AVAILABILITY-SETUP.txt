@@ -1,0 +1,55 @@
+IRONGATE AVAILABILITY CALENDAR SETUP
+
+This rebuilt version adds a visible booking calendar to booking.html.
+
+HOW IT WORKS
+- Weekdays are shown as available by default.
+- Weekends are shown as unavailable by default.
+- Past dates are automatically unavailable.
+- You can override any day by creating a Firestore document in the availability collection.
+
+IMPORTANT FIRESTORE COLLECTIONS
+1. bookings
+   Private client booking records.
+   Public website can create bookings only as pending_payment / unpaid.
+
+2. availability
+   Public-safe calendar records.
+   Public website can read these records, but cannot write to them.
+
+PUBLISH THE UPDATED FIRESTORE RULES
+Firebase Console > Firestore Database > Rules
+Paste firestore.rules from this folder
+Click Publish
+
+HOW TO BLOCK A DAY
+Firebase Console > Firestore Database > Data
+Open or create collection: availability
+Create document ID using the date format: YYYY-MM-DD
+Example document ID: 2026-07-03
+Add fields:
+  status    string    unavailable
+  reason    string    Not available
+
+HOW TO MARK A DAY AVAILABLE, INCLUDING A WEEKEND
+Create document in availability with ID YYYY-MM-DD
+Add fields:
+  status       string    available
+  maxBookings  number    1
+  bookedCount  number    0
+  note         string    Available
+
+HOW TO MARK A DAY FULLY BOOKED
+Create or edit document in availability with ID YYYY-MM-DD
+Option A:
+  status    string    fully_booked
+
+Option B:
+  status       string    available
+  maxBookings  number    1
+  bookedCount  number    1
+
+NOTES
+- Do not store customer names, addresses or private details in availability.
+- Customer details belong only in bookings.
+- Later, when Stripe is connected, your backend/webhook can update booking status to paid and can update bookedCount.
