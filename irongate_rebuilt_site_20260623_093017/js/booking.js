@@ -29,8 +29,8 @@ const maxUploadBytes = 10 * 1024 * 1024;
 const GEOAPIFY_API_KEY = "8d1bacfb41584094b808c255bc8ef70c";
 const QBCC_POOL_REGISTER_URL = "https://my.qbcc.qld.gov.au/myQBCC/s/pool-register";
 
-// This must be a backend endpoint later, for example a Firebase Function.
-// Until it is connected, the page shows a verification-unavailable fail-safe after trying.
+// Later this should be set to a Firebase Function / Cloud Run URL.
+// Until then, the page attempts verification, then shows the safe manual fail-safe.
 const POOL_REGISTER_LOOKUP_ENDPOINT = "";
 
 const monthNames = [
@@ -45,6 +45,7 @@ let availabilityByDate = new Map();
 let calendarMonth = startOfMonth(new Date());
 let firebaseModulesPromise = null;
 let addressSearchTimer = null;
+
 let poolRegisterStatus = "not_checked";
 let poolRegisterMessage = "";
 let poolRegisterDetails = null;
@@ -159,11 +160,7 @@ function normaliseSlot(slot) {
 
 function normaliseSlots(saved, date) {
   if (isPastDate(date) || !saved?.slots) return [];
-
-  const rawSlots = Array.isArray(saved.slots)
-    ? saved.slots
-    : Object.values(saved.slots || {});
-
+  const rawSlots = Array.isArray(saved.slots) ? saved.slots : Object.values(saved.slots || {});
   return rawSlots
     .map(normaliseSlot)
     .filter((slot) => slot && slot.available && !slot.booked)
@@ -226,11 +223,7 @@ function renderCalendar() {
     button.setAttribute("aria-label", `${formatDisplayDate(dateKey)}: ${availability.label}`);
     button.setAttribute("aria-pressed", dateKey === selectedDate ? "true" : "false");
     if (dateKey === selectedDate) button.classList.add("is-selected");
-
-    button.innerHTML = `
-      <span class="calendar-day-number">${day}</span>
-      <span class="calendar-day-status">${availability.label}</span>
-    `;
+    button.innerHTML = `<span class="calendar-day-number">${day}</span><span class="calendar-day-status">${availability.label}</span>`;
 
     if (availability.isBookable) button.addEventListener("click", () => selectDate(dateKey));
     calendarGrid.appendChild(button);
@@ -330,11 +323,7 @@ async function loadAvailabilityForMonth() {
     const { db, collection, getDocs, query, where, documentId } = await getFirebaseModules();
     const firstDay = toDateKey(calendarMonth);
     const lastDay = toDateKey(getMonthEnd(calendarMonth));
-    const monthQuery = query(
-      collection(db, "availability"),
-      where(documentId(), ">=", firstDay),
-      where(documentId(), "<=", lastDay)
-    );
+    const monthQuery = query(collection(db, "availability"), where(documentId(), ">=", firstDay), where(documentId(), "<=", lastDay));
     const snapshot = await getDocs(monthQuery);
     snapshot.forEach((item) => availabilityByDate.set(item.id, item.data()));
   } catch (error) {
@@ -405,10 +394,21 @@ function injectPoolRegisterStyles() {
 
 function getContinuationElements() {
   if (!form) return [];
+
   const sections = [...form.querySelectorAll(".form-section")];
-  const propertySectionIndex = sections.findIndex((section) => section.getAttribute("aria-labelledby") === "property-details-heading");
-  const continuationSections = propertySectionIndex >= 0 ? sections.slice(propertySectionIndex + 1) : sections.slice(2);
-  return [...continuationSections, submitButton].filter(Boolean);
+  const propertySection = form.querySelector('[aria-labelledby="property-details-heading"]');
+  const propertySectionIndex = sections.indexOf(propertySection);
+  const elements = [];
+
+  if (propertySection) {
+    elements.push(...propertySection.querySelectorAll(".field-grid > label:not(.address-field-wrap), .option-stack"));
+  }
+
+  if (propertySectionIndex >= 0) elements.push(...sections.slice(propertySectionIndex + 1));
+  else elements.push(...sections.slice(2));
+
+  if (submitButton) elements.push(submitButton);
+  return elements;
 }
 
 function canContinueAfterPoolRegisterCheck() {
@@ -571,11 +571,7 @@ async function verifyPoolRegistration() {
 
   if (!POOL_REGISTER_LOOKUP_ENDPOINT) {
     window.setTimeout(() => {
-      setPoolRegisterState(
-        "manual_required",
-        "Pool register verification unavailable",
-        null
-      );
+      setPoolRegisterState("manual_required", "Pool register verification unavailable", null);
     }, 650);
     return;
   }
@@ -827,7 +823,6 @@ async function handleBookingSubmit(event) {
       isPropertyOwner: getChecked("#isPropertyOwner"),
       authorisedToBook: getChecked("#authorisedToBook"),
       clientType: getChecked("#isPropertyOwner") ? "Property owner" : "Authorised representative",
-
       inspectionReason: getValue("#inspectionReason"),
       poolType: getValue("#poolType"),
       existingCertificateStatus: getValue("#existingCertificateStatus"),
@@ -851,7 +846,6 @@ async function handleBookingSubmit(event) {
       hasPoolExemption: hasExemption,
       exemptionFileUploaded: Boolean(exemptionFileData),
       exemptionFile: exemptionFileData,
-
       minorRepairsContactAccepted: getChecked("#minorRepairsContactAccepted"),
       nonComplianceAcknowledged: getChecked("#nonComplianceAcknowledged"),
       informationAccuracyConfirmed: getChecked("#informationAccuracyConfirmed"),
