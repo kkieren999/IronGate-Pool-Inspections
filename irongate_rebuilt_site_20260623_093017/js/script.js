@@ -140,4 +140,154 @@ document.addEventListener('DOMContentLoaded', () => {
     if (event.key !== 'Escape') return;
     document.querySelectorAll('.modal-overlay.is-open').forEach(closeModal);
   });
+
+  const compactStyle = document.createElement('style');
+  compactStyle.textContent = `
+    .pool-register-panel.is-compact {
+      margin-top: 8px !important;
+      padding: 0 !important;
+      border: 0 !important;
+      border-radius: 0 !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      display: block !important;
+    }
+    .pool-register-compact-line {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 8px 0 0;
+      font-size: .88rem;
+      font-weight: 800;
+      line-height: 1.35;
+    }
+    .pool-register-compact-line.is-green { color: #0f8a43; }
+    .pool-register-compact-line.is-red { color: #d61f1f; }
+    .pool-register-compact-line.is-orange { color: #9a3412; }
+    .pool-register-compact-note {
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .pool-register-compact-btn {
+      border: 0;
+      border-radius: 999px;
+      padding: 6px 11px;
+      background: var(--navy);
+      color: #fff;
+      font-size: .8rem;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    .pool-register-compact-btn:hover,
+    .pool-register-compact-btn:focus {
+      filter: brightness(1.05);
+      outline: 2px solid rgba(21,158,232,.28);
+      outline-offset: 2px;
+    }
+    .pool-register-hidden-control {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      overflow: hidden !important;
+      clip: rect(0 0 0 0) !important;
+      white-space: nowrap !important;
+    }
+  `;
+  document.head.appendChild(compactStyle);
+
+  const cleanOutcomeText = (text) => String(text || '')
+    .replace(/\s+/g, ' ')
+    .replace(/^A registered pool was found for this address\.\s*/i, '')
+    .replace(/^Registered pool details matched the selected address\.\s*/i, '')
+    .trim();
+
+  const compactPoolRegisterPanel = () => {
+    const panel = document.querySelector('.pool-register-panel');
+    if (!panel || panel.hidden) return;
+
+    const status = panel.dataset.status || '';
+    if (!status || panel.dataset.compactStatus === status) return;
+
+    const detailText = cleanOutcomeText(panel.querySelector('.pool-register-details')?.textContent || '');
+    const currentInput = panel.querySelector('#poolRegisterLooksRight, #poolRegisterOverride');
+    const hiddenControl = document.createElement('span');
+    hiddenControl.className = 'pool-register-hidden-control';
+
+    if (currentInput) {
+      hiddenControl.appendChild(currentInput);
+    }
+
+    panel.classList.add('is-compact');
+    panel.dataset.compactStatus = status;
+
+    if (status === 'checking') {
+      panel.innerHTML = '<p class="pool-register-compact-line is-orange">Checking pool registration...</p>';
+      return;
+    }
+
+    if (status === 'registered') {
+      const checkbox = currentInput;
+      if (checkbox && !checkbox.checked) {
+        checkbox.checked = true;
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      panel.innerHTML = `
+        <p class="pool-register-compact-line is-green">
+          <span>✓ Registered pool found</span>
+          ${detailText ? `<span class="pool-register-compact-note">${detailText}</span>` : ''}
+        </p>
+      `;
+      if (checkbox) panel.appendChild(hiddenControl);
+      return;
+    }
+
+    if (status === 'not_found' || status === 'manual_required') {
+      const checkbox = currentInput;
+      const label = status === 'not_found'
+        ? '✕ No registered pool found for this address'
+        : 'Pool register check unavailable';
+
+      panel.innerHTML = `
+        <p class="pool-register-compact-line ${status === 'not_found' ? 'is-red' : 'is-orange'}">
+          <span>${label}</span>
+          <button class="pool-register-compact-btn" type="button" id="pool-register-compact-override">Continue anyway</button>
+        </p>
+      `;
+      if (checkbox) panel.appendChild(hiddenControl);
+
+      const overrideButton = panel.querySelector('#pool-register-compact-override');
+      if (overrideButton && checkbox) {
+        overrideButton.addEventListener('click', () => {
+          checkbox.checked = true;
+          checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+          overrideButton.textContent = 'Continue enabled';
+          overrideButton.disabled = true;
+        });
+      }
+    }
+  };
+
+  const watchForPoolRegisterPanel = () => {
+    const panel = document.querySelector('.pool-register-panel');
+    if (!panel) return false;
+
+    compactPoolRegisterPanel();
+    const observer = new MutationObserver(() => compactPoolRegisterPanel());
+    observer.observe(panel, {
+      attributes: true,
+      childList: true,
+      subtree: true,
+      attributeFilter: ['data-status', 'hidden']
+    });
+    return true;
+  };
+
+  if (!watchForPoolRegisterPanel()) {
+    const bodyObserver = new MutationObserver(() => {
+      if (watchForPoolRegisterPanel()) bodyObserver.disconnect();
+    });
+    bodyObserver.observe(document.body, { childList: true, subtree: true });
+  }
 });
