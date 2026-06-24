@@ -29,8 +29,8 @@ const maxUploadBytes = 10 * 1024 * 1024;
 const GEOAPIFY_API_KEY = "8d1bacfb41584094b808c255bc8ef70c";
 const QBCC_POOL_REGISTER_URL = "https://my.qbcc.qld.gov.au/myQBCC/s/pool-register";
 
-// Later, this can point to your own backend endpoint that checks the Queensland Open Data pool register.
-// Leave blank for now so the form uses the safe manual confirmation fallback.
+// This must be a backend endpoint later, for example a Firebase Function.
+// Until it is connected, the page shows a verification-unavailable fail-safe after trying.
 const POOL_REGISTER_LOOKUP_ENDPOINT = "";
 
 const monthNames = [
@@ -52,13 +52,6 @@ let poolRegisterCheckedAt = null;
 let poolRegisterLooksRight = false;
 let poolRegisterOverrideConfirmed = false;
 let poolRegisterPanel = null;
-let poolRegisterIcon = null;
-let poolRegisterTitle = null;
-let poolRegisterText = null;
-let poolRegisterDetailsEl = null;
-let poolRegisterLooksRightInput = null;
-let poolRegisterOverrideInput = null;
-let poolRegisterEditAddressBtn = null;
 
 if (priceNotice) {
   priceNotice.textContent = `Pool Safety Inspection & Certificate — ${inspectionPriceDisplay}`;
@@ -103,7 +96,7 @@ function toDateKey(date) {
 }
 
 function parseDateKey(dateKey) {
-  const [year, month, day] = dateKey.split("-").map(Number);
+  const [year, month, day] = String(dateKey || "").split("-").map(Number);
   return new Date(year, month - 1, day);
 }
 
@@ -136,7 +129,7 @@ function minutesFromTime(time) {
 }
 
 function formatTimeLabel(time) {
-  const [hours, minutes] = time.split(":").map(Number);
+  const [hours, minutes] = String(time || "00:00").split(":").map(Number);
   const suffix = hours >= 12 ? "PM" : "AM";
   const displayHours = hours % 12 || 12;
   return `${displayHours}:${String(minutes).padStart(2, "0")} ${suffix}`;
@@ -167,12 +160,9 @@ function normaliseSlot(slot) {
 function normaliseSlots(saved, date) {
   if (isPastDate(date) || !saved?.slots) return [];
 
-  let rawSlots = [];
-  if (Array.isArray(saved.slots)) {
-    rawSlots = saved.slots;
-  } else if (typeof saved.slots === "object") {
-    rawSlots = Object.values(saved.slots);
-  }
+  const rawSlots = Array.isArray(saved.slots)
+    ? saved.slots
+    : Object.values(saved.slots || {});
 
   return rawSlots
     .map(normaliseSlot)
@@ -191,10 +181,7 @@ function normaliseAvailability(dateKey, date) {
   const saved = availabilityByDate.get(dateKey) || null;
   const availableSlots = getAvailableSlots(dateKey);
 
-  if (isPastDate(date)) {
-    return { status: "unavailable", label: "Past date", isBookable: false };
-  }
-
+  if (isPastDate(date)) return { status: "unavailable", label: "Past date", isBookable: false };
   if (availableSlots.length > 0) {
     return {
       status: "available",
@@ -202,11 +189,7 @@ function normaliseAvailability(dateKey, date) {
       isBookable: true
     };
   }
-
-  if (saved?.reason) {
-    return { status: "unavailable", label: saved.reason, isBookable: false };
-  }
-
+  if (saved?.reason) return { status: "unavailable", label: saved.reason, isBookable: false };
   return { status: "unavailable", label: "No times", isBookable: false };
 }
 
@@ -234,30 +217,22 @@ function renderCalendar() {
     const date = new Date(year, month, day);
     const dateKey = toDateKey(date);
     const availability = normaliseAvailability(dateKey, date);
-
     const button = document.createElement("button");
+
     button.type = "button";
     button.className = `calendar-day calendar-day--${availability.status}`;
     button.dataset.date = dateKey;
     button.disabled = !availability.isBookable;
     button.setAttribute("aria-label", `${formatDisplayDate(dateKey)}: ${availability.label}`);
-
-    if (dateKey === selectedDate) {
-      button.classList.add("is-selected");
-      button.setAttribute("aria-pressed", "true");
-    } else {
-      button.setAttribute("aria-pressed", "false");
-    }
+    button.setAttribute("aria-pressed", dateKey === selectedDate ? "true" : "false");
+    if (dateKey === selectedDate) button.classList.add("is-selected");
 
     button.innerHTML = `
       <span class="calendar-day-number">${day}</span>
       <span class="calendar-day-status">${availability.label}</span>
     `;
 
-    if (availability.isBookable) {
-      button.addEventListener("click", () => selectDate(dateKey));
-    }
-
+    if (availability.isBookable) button.addEventListener("click", () => selectDate(dateKey));
     calendarGrid.appendChild(button);
   }
 }
@@ -274,20 +249,17 @@ function resetSelectedSlot() {
 function selectDate(dateKey) {
   selectedDate = dateKey;
   resetSelectedSlot();
-
   if (preferredDateInput) preferredDateInput.value = dateKey;
   if (selectedDateLabel) {
     selectedDateLabel.textContent = `Selected date: ${formatDisplayDate(dateKey)}`;
     selectedDateLabel.dataset.type = "selected";
   }
-
   renderCalendar();
   renderTimeSlots();
 }
 
 function renderTimeSlots() {
   if (!bookingSlotGrid) return;
-
   bookingSlotGrid.innerHTML = "";
 
   if (!selectedDate) {
@@ -296,7 +268,6 @@ function renderTimeSlots() {
   }
 
   const slots = getAvailableSlots(selectedDate);
-
   if (!slots.length) {
     bookingSlotGrid.innerHTML = '<p class="slot-placeholder">No available time slots for this date. Please choose another date.</p>';
     return;
@@ -308,13 +279,8 @@ function renderTimeSlots() {
     button.className = "booking-slot-btn";
     button.dataset.slotId = slot.id;
     button.innerHTML = `<strong>${slot.label}</strong><span>${slot.start} to ${slot.end}</span>`;
-
-    if (selectedTimeSlot?.id === slot.id) {
-      button.classList.add("is-selected");
-      button.setAttribute("aria-pressed", "true");
-    } else {
-      button.setAttribute("aria-pressed", "false");
-    }
+    button.setAttribute("aria-pressed", selectedTimeSlot?.id === slot.id ? "true" : "false");
+    if (selectedTimeSlot?.id === slot.id) button.classList.add("is-selected");
 
     button.addEventListener("click", () => {
       selectedTimeSlot = slot;
@@ -352,31 +318,25 @@ async function getFirebaseModules() {
       uploadBytes: storageModule.uploadBytes
     }));
   }
-
   return firebaseModulesPromise;
 }
 
 async function loadAvailabilityForMonth() {
   renderCalendar();
   renderTimeSlots();
-
-  const firstDay = toDateKey(calendarMonth);
-  const lastDay = toDateKey(getMonthEnd(calendarMonth));
   availabilityByDate = new Map();
 
   try {
     const { db, collection, getDocs, query, where, documentId } = await getFirebaseModules();
-
+    const firstDay = toDateKey(calendarMonth);
+    const lastDay = toDateKey(getMonthEnd(calendarMonth));
     const monthQuery = query(
       collection(db, "availability"),
       where(documentId(), ">=", firstDay),
       where(documentId(), "<=", lastDay)
     );
-
     const snapshot = await getDocs(monthQuery);
-    snapshot.forEach((doc) => {
-      availabilityByDate.set(doc.id, doc.data());
-    });
+    snapshot.forEach((item) => availabilityByDate.set(item.id, item.data()));
   } catch (error) {
     console.error("Error loading availability:", error);
     showMessage("Could not load availability from Firestore. Please refresh or try again.", "error");
@@ -389,7 +349,6 @@ async function loadAvailabilityForMonth() {
 function toggleConditionalPanels() {
   const hasExemption = exemptionToggle?.checked === true;
   const animalConcern = animalsOnPropertyInput?.checked === true || animalsOffLeashInput?.checked === true;
-
   if (exemptionPanel) exemptionPanel.classList.toggle("is-visible", hasExemption);
   if (animalPanel) animalPanel.classList.toggle("is-visible", animalConcern);
 }
@@ -423,77 +382,23 @@ function sanitizeFileName(name) {
 }
 
 function injectPoolRegisterStyles() {
-  if (document.querySelector("#pool-register-failsafe-styles")) return;
+  if (document.querySelector("#pool-register-styles")) return;
   const style = document.createElement("style");
-  style.id = "pool-register-failsafe-styles";
+  style.id = "pool-register-styles";
   style.textContent = `
-    .pool-register-panel {
-      margin-top: 12px;
-      padding: 16px;
-      border-radius: 18px;
-      border: 1px solid rgba(7,24,52,.10);
-      background: #f9fbfe;
-      display: grid;
-      gap: 14px;
-    }
-    .pool-register-panel[data-status="registered"] {
-      background: #eefbf3;
-      border-color: rgba(15,138,67,.28);
-    }
-    .pool-register-panel[data-status="not_found"] {
-      background: #fff1f1;
-      border-color: rgba(214,31,31,.24);
-    }
-    .pool-register-panel[data-status="manual_required"],
-    .pool-register-panel[data-status="checking"] {
-      background: #fff7ed;
-      border-color: rgba(234,88,12,.24);
-    }
-    .pool-register-header {
-      display: flex;
-      gap: 12px;
-      align-items: flex-start;
-    }
-    .pool-register-icon {
-      width: 34px;
-      height: 34px;
-      border-radius: 999px;
-      display: inline-grid;
-      place-items: center;
-      color: #fff;
-      background: #ea580c;
-      font-weight: 900;
-      flex: 0 0 auto;
-    }
+    .pool-register-panel { margin-top: 12px; padding: 16px; border-radius: 18px; border: 1px solid rgba(7,24,52,.10); background: #f9fbfe; display: grid; gap: 14px; }
+    .pool-register-panel[data-status="registered"] { background: #eefbf3; border-color: rgba(15,138,67,.28); }
+    .pool-register-panel[data-status="not_found"] { background: #fff1f1; border-color: rgba(214,31,31,.24); }
+    .pool-register-panel[data-status="manual_required"], .pool-register-panel[data-status="checking"] { background: #fff7ed; border-color: rgba(234,88,12,.24); }
+    .pool-register-header { display: flex; gap: 12px; align-items: flex-start; }
+    .pool-register-icon { width: 34px; height: 34px; border-radius: 999px; display: inline-grid; place-items: center; color: #fff; background: #ea580c; font-weight: 900; flex: 0 0 auto; }
     .pool-register-panel[data-status="registered"] .pool-register-icon { background: #0f8a43; }
     .pool-register-panel[data-status="not_found"] .pool-register-icon { background: #d61f1f; }
-    .pool-register-title {
-      color: var(--navy);
-      display: block;
-      font-weight: 900;
-      margin-bottom: 3px;
-    }
-    .pool-register-text, .pool-register-details {
-      color: var(--muted);
-      font-weight: 750;
-      line-height: 1.45;
-    }
-    .pool-register-details {
-      padding: 12px 14px;
-      border-radius: 14px;
-      background: rgba(255,255,255,.72);
-      border: 1px solid rgba(7,24,52,.06);
-    }
-    .pool-register-actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-    }
-    .pool-register-actions a,
-    .pool-register-actions button {
-      text-decoration: none;
-    }
+    .pool-register-title { color: var(--navy); display: block; font-weight: 900; margin-bottom: 3px; }
+    .pool-register-text, .pool-register-details { color: var(--muted); font-weight: 750; line-height: 1.45; }
+    .pool-register-details { padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.72); border: 1px solid rgba(7,24,52,.06); }
+    .pool-register-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .pool-register-actions a, .pool-register-actions button { text-decoration: none; }
   `;
   document.head.appendChild(style);
 }
@@ -510,7 +415,8 @@ function canContinueAfterPoolRegisterCheck() {
   const addressSelected = addressSelectedInput?.value === "true";
   if (!addressSelected) return false;
   if (poolRegisterStatus === "registered") return poolRegisterLooksRight;
-  return poolRegisterOverrideConfirmed;
+  if (poolRegisterStatus === "not_found" || poolRegisterStatus === "manual_required") return poolRegisterOverrideConfirmed;
+  return false;
 }
 
 function updateContinuationVisibility() {
@@ -520,26 +426,131 @@ function updateContinuationVisibility() {
   });
 }
 
-function setPoolRegisterPanelStatus(status, title, text, details = "") {
-  poolRegisterStatus = status;
-  poolRegisterMessage = text;
-  poolRegisterCheckedAt = new Date().toISOString();
+function createPoolRegisterPanel() {
+  if (!addressStatus || poolRegisterPanel) return;
+  injectPoolRegisterStyles();
+  poolRegisterPanel = document.createElement("div");
+  poolRegisterPanel.className = "pool-register-panel";
+  poolRegisterPanel.hidden = true;
+  addressStatus.insertAdjacentElement("afterend", poolRegisterPanel);
+}
 
+function renderPoolRegisterPanel() {
+  createPoolRegisterPanel();
   if (!poolRegisterPanel) return;
+
+  if (poolRegisterStatus === "not_checked") {
+    poolRegisterPanel.hidden = true;
+    updateContinuationVisibility();
+    return;
+  }
+
   poolRegisterPanel.hidden = false;
-  poolRegisterPanel.dataset.status = status;
-  if (poolRegisterIcon) {
-    if (status === "registered") poolRegisterIcon.textContent = "✓";
-    else if (status === "not_found") poolRegisterIcon.textContent = "×";
-    else poolRegisterIcon.textContent = "!";
+  poolRegisterPanel.dataset.status = poolRegisterStatus;
+
+  let icon = "!";
+  let title = "Pool register verification";
+  let text = "";
+  let details = "";
+  let body = "";
+  let actions = "";
+
+  if (poolRegisterStatus === "checking") {
+    title = "Checking pool registration";
+    text = "Checking the selected address against the pool register. Please wait.";
+  } else if (poolRegisterStatus === "registered") {
+    icon = "✓";
+    title = "Registered pool found";
+    text = "A registered pool was found for this address. Does this look right?";
+    details = poolRegisterDetails?.summary || "Registered pool details matched the selected address.";
+    body = `
+      <div class="option-stack">
+        <label class="option-card">
+          <input type="checkbox" id="poolRegisterLooksRight" ${poolRegisterLooksRight ? "checked" : ""} />
+          <span>Yes, this looks right.</span>
+        </label>
+      </div>`;
+    actions = `<div class="pool-register-actions"><button class="btn btn-secondary" type="button" id="pool-register-edit-address">Edit address</button></div>`;
+  } else if (poolRegisterStatus === "not_found") {
+    icon = "×";
+    title = "No registered pool found";
+    text = "We could not find a registered pool for this selected address. Try another address, check/register the pool with QBCC, or use the fail-safe if you know there is a pool at this property.";
+    details = "Address matching can fail because of unit numbers, spelling, street abbreviations, lot/plan details, or register data differences.";
+    body = `
+      <div class="option-stack">
+        <label class="option-card">
+          <input type="checkbox" id="poolRegisterOverride" ${poolRegisterOverrideConfirmed ? "checked" : ""} />
+          <span>There is a pool at this property. Continue anyway.<small>Use this only if the lookup is wrong, unavailable, or the pool is listed under slightly different address details.</small></span>
+        </label>
+      </div>`;
+    actions = `<div class="pool-register-actions"><a class="btn btn-primary" href="${QBCC_POOL_REGISTER_URL}" target="_blank" rel="noopener">Check or register with QBCC</a><button class="btn btn-secondary" type="button" id="pool-register-edit-address">Try another address</button></div>`;
+  } else {
+    title = "Pool register verification unavailable";
+    text = "Automatic verification could not be completed. Try another address, check/register the pool with QBCC, or use the fail-safe if you know there is a pool at this property.";
+    details = "The backend pool-register lookup is not connected yet. This fail-safe lets a genuine booking continue without blocking the customer.";
+    body = `
+      <div class="option-stack">
+        <label class="option-card">
+          <input type="checkbox" id="poolRegisterOverride" ${poolRegisterOverrideConfirmed ? "checked" : ""} />
+          <span>There is a pool at this property. Continue anyway.<small>Use this only if the register check is wrong, unavailable, or the pool is listed under slightly different address details.</small></span>
+        </label>
+      </div>`;
+    actions = `<div class="pool-register-actions"><a class="btn btn-primary" href="${QBCC_POOL_REGISTER_URL}" target="_blank" rel="noopener">Check or register with QBCC</a><button class="btn btn-secondary" type="button" id="pool-register-edit-address">Try another address</button></div>`;
   }
-  if (poolRegisterTitle) poolRegisterTitle.textContent = title;
-  if (poolRegisterText) poolRegisterText.textContent = text;
-  if (poolRegisterDetailsEl) {
-    poolRegisterDetailsEl.textContent = details;
-    poolRegisterDetailsEl.hidden = !details;
+
+  poolRegisterPanel.innerHTML = `
+    <div class="pool-register-header">
+      <span class="pool-register-icon">${icon}</span>
+      <div>
+        <strong class="pool-register-title">${title}</strong>
+        <div class="pool-register-text">${text}</div>
+      </div>
+    </div>
+    ${details ? `<div class="pool-register-details">${details}</div>` : ""}
+    ${body}
+    ${actions}
+  `;
+
+  const looksRightInput = poolRegisterPanel.querySelector("#poolRegisterLooksRight");
+  if (looksRightInput) {
+    looksRightInput.addEventListener("change", () => {
+      poolRegisterLooksRight = looksRightInput.checked;
+      updateContinuationVisibility();
+    });
   }
+
+  const overrideInput = poolRegisterPanel.querySelector("#poolRegisterOverride");
+  if (overrideInput) {
+    overrideInput.addEventListener("change", () => {
+      poolRegisterOverrideConfirmed = overrideInput.checked;
+      updateContinuationVisibility();
+    });
+  }
+
+  const editButton = poolRegisterPanel.querySelector("#pool-register-edit-address");
+  if (editButton) {
+    editButton.addEventListener("click", () => {
+      if (addressInput) {
+        addressInput.focus();
+        addressInput.select();
+      }
+      selectedAddress = null;
+      if (addressSelectedInput) addressSelectedInput.value = "false";
+      if (propertyPlaceIdInput) propertyPlaceIdInput.value = "";
+      resetPoolRegisterState();
+      setAddressStatus("Edit the address, then select the correct suggestion.", "");
+    });
+  }
+
   updateContinuationVisibility();
+}
+
+function setPoolRegisterState(status, message = "", details = null) {
+  poolRegisterStatus = status;
+  poolRegisterMessage = message;
+  poolRegisterDetails = details;
+  poolRegisterCheckedAt = status === "not_checked" ? null : new Date().toISOString();
+  renderPoolRegisterPanel();
 }
 
 function resetPoolRegisterState() {
@@ -549,98 +560,23 @@ function resetPoolRegisterState() {
   poolRegisterCheckedAt = null;
   poolRegisterLooksRight = false;
   poolRegisterOverrideConfirmed = false;
-  if (poolRegisterLooksRightInput) poolRegisterLooksRightInput.checked = false;
-  if (poolRegisterOverrideInput) poolRegisterOverrideInput.checked = false;
-  if (poolRegisterPanel) poolRegisterPanel.hidden = true;
-  updateContinuationVisibility();
+  renderPoolRegisterPanel();
 }
 
-function initPoolRegisterFailSafe() {
-  if (!addressStatus || !addressStatus.parentElement) return;
-  injectPoolRegisterStyles();
-
-  poolRegisterPanel = document.createElement("div");
-  poolRegisterPanel.className = "pool-register-panel";
-  poolRegisterPanel.hidden = true;
-  poolRegisterPanel.dataset.status = "manual_required";
-  poolRegisterPanel.innerHTML = `
-    <div class="pool-register-header">
-      <span class="pool-register-icon" id="pool-register-icon">!</span>
-      <div>
-        <strong class="pool-register-title" id="pool-register-title">Pool registration check</strong>
-        <div class="pool-register-text" id="pool-register-text">Select an address to check the pool registration status.</div>
-      </div>
-    </div>
-    <div class="pool-register-details" id="pool-register-details" hidden></div>
-    <div class="option-stack">
-      <label class="option-card">
-        <input type="checkbox" id="poolRegisterLooksRight" />
-        <span>Yes, this address and pool registration information looks right.</span>
-      </label>
-      <label class="option-card">
-        <input type="checkbox" id="poolRegisterOverride" />
-        <span>There is a pool at this property. Continue even if the register check cannot confirm it.<small>Use this fail-safe if the register lookup is wrong, unavailable, or the pool is listed under slightly different address details.</small></span>
-      </label>
-    </div>
-    <div class="pool-register-actions">
-      <a class="btn btn-primary" href="${QBCC_POOL_REGISTER_URL}" target="_blank" rel="noopener">Check or register with QBCC</a>
-      <button class="btn btn-secondary" type="button" id="pool-register-edit-address">No, edit address</button>
-    </div>
-  `;
-
-  addressStatus.insertAdjacentElement("afterend", poolRegisterPanel);
-  poolRegisterIcon = poolRegisterPanel.querySelector("#pool-register-icon");
-  poolRegisterTitle = poolRegisterPanel.querySelector("#pool-register-title");
-  poolRegisterText = poolRegisterPanel.querySelector("#pool-register-text");
-  poolRegisterDetailsEl = poolRegisterPanel.querySelector("#pool-register-details");
-  poolRegisterLooksRightInput = poolRegisterPanel.querySelector("#poolRegisterLooksRight");
-  poolRegisterOverrideInput = poolRegisterPanel.querySelector("#poolRegisterOverride");
-  poolRegisterEditAddressBtn = poolRegisterPanel.querySelector("#pool-register-edit-address");
-
-  poolRegisterLooksRightInput?.addEventListener("change", () => {
-    poolRegisterLooksRight = poolRegisterLooksRightInput.checked;
-    updateContinuationVisibility();
-  });
-
-  poolRegisterOverrideInput?.addEventListener("change", () => {
-    poolRegisterOverrideConfirmed = poolRegisterOverrideInput.checked;
-    updateContinuationVisibility();
-  });
-
-  poolRegisterEditAddressBtn?.addEventListener("click", () => {
-    if (addressInput) {
-      addressInput.focus();
-      addressInput.select();
-    }
-    selectedAddress = null;
-    if (addressSelectedInput) addressSelectedInput.value = "false";
-    if (propertyPlaceIdInput) propertyPlaceIdInput.value = "";
-    resetPoolRegisterState();
-    setAddressStatus("Edit the address, then select the correct suggestion.", "");
-  });
-
-  updateContinuationVisibility();
-}
-
-async function checkPoolRegisterForSelectedAddress() {
+async function verifyPoolRegistration() {
   if (!selectedAddress) return;
-
-  setPoolRegisterPanelStatus(
-    "checking",
-    "Checking pool registration",
-    "Checking the selected address against the pool register workflow...",
-    ""
-  );
+  poolRegisterLooksRight = false;
+  poolRegisterOverrideConfirmed = false;
+  setPoolRegisterState("checking", "Checking pool registration");
 
   if (!POOL_REGISTER_LOOKUP_ENDPOINT) {
     window.setTimeout(() => {
-      setPoolRegisterPanelStatus(
+      setPoolRegisterState(
         "manual_required",
-        "Please confirm pool registration details",
-        "Automatic pool-register lookup is not connected yet. Use the fail-safe below if there is a pool at this property and you want to continue.",
-        "If no pool is registered or the details do not look right, use the QBCC link to check or register the pool before continuing."
+        "Pool register verification unavailable",
+        null
       );
-    }, 350);
+    }, 650);
     return;
   }
 
@@ -652,32 +588,24 @@ async function checkPoolRegisterForSelectedAddress() {
     });
     if (!response.ok) throw new Error(`Pool register lookup failed: ${response.status}`);
     const result = await response.json();
-    poolRegisterDetails = result;
 
     if (result?.registered === true) {
-      const detailText = [
+      const detailParts = [
         result.numberOfPools ? `${result.numberOfPools} registered pool${Number(result.numberOfPools) === 1 ? "" : "s"}` : "Registered pool found",
         result.localGovernmentArea ? `LGA: ${result.localGovernmentArea}` : "",
         result.sharedPoolProperty ? `Shared pool: ${result.sharedPoolProperty}` : ""
-      ].filter(Boolean).join(" · ");
-      setPoolRegisterPanelStatus("registered", "Registered pool found", "Does this look right? Confirm below to continue.", detailText);
+      ].filter(Boolean);
+      setPoolRegisterState("registered", "Registered pool found", {
+        ...result,
+        summary: detailParts.join(" · ") || "Registered pool found"
+      });
       return;
     }
 
-    setPoolRegisterPanelStatus(
-      "not_found",
-      "No registered pool found for this address",
-      "No registered pool was found for the selected address. If that is wrong, use the fail-safe below to continue.",
-      "Address matching can fail because of unit numbers, spelling, street abbreviations, lot/plan details, or register data differences."
-    );
+    setPoolRegisterState("not_found", "No registered pool found", result || null);
   } catch (error) {
     console.error("Pool register lookup error:", error);
-    setPoolRegisterPanelStatus(
-      "manual_required",
-      "Pool register check unavailable",
-      "The pool register check could not be completed. Use the fail-safe below if there is a pool at this property and you want to continue.",
-      "You can also open the QBCC pool register to check or register the pool."
-    );
+    setPoolRegisterState("manual_required", "Pool register verification unavailable", null);
   }
 }
 
@@ -694,49 +622,27 @@ function validateBookingForm() {
 
   if (!isValidEmail(email)) return "Please enter a valid email address.";
   if (!mobile) return "Please enter a valid Australian mobile number, for example 04XX XXX XXX.";
-
   if (!hasAddress) return "Please enter the property address.";
   if (!addressSelected) return "Please select the property address from the address suggestions.";
 
   if (!canContinueAfterPoolRegisterCheck()) {
-    if (poolRegisterStatus === "registered") {
-      return "Please confirm the pool registration information looks right before continuing.";
-    }
-    return "Please confirm there is a pool at this property using the fail-safe option, or check/register the pool with QBCC.";
+    if (poolRegisterStatus === "checking") return "Please wait for the pool register check to finish.";
+    if (poolRegisterStatus === "registered") return "Please confirm the pool registration information looks right before continuing.";
+    return "Please try another address, check/register the pool with QBCC, or confirm there is a pool at this property using the fail-safe option.";
   }
 
-  if (!isOwner && !authorised) {
-    return "Please confirm you are the property owner or authorised to arrange the inspection.";
-  }
-
+  if (!isOwner && !authorised) return "Please confirm you are the property owner or authorised to arrange the inspection.";
   if (!selectedDate) return "Please choose an available inspection date from the calendar.";
   if (!selectedTimeSlot) return "Please choose one available 1-hour time slot.";
-
-  if (!getChecked("#willBeHomeForInspection") && !getChecked("#accessPermissionIfNotHome")) {
-    return "Please confirm whether you will be home or whether access is permitted if you are not home.";
-  }
-
-  if (animalsNeedAttention && !getChecked("#animalsWillBeSecured")) {
-    return "Please confirm dogs or other animals will be securely restrained away from the inspection area.";
-  }
-
+  if (!getChecked("#willBeHomeForInspection") && !getChecked("#accessPermissionIfNotHome")) return "Please confirm whether you will be home or whether access is permitted if you are not home.";
+  if (animalsNeedAttention && !getChecked("#animalsWillBeSecured")) return "Please confirm dogs or other animals will be securely restrained away from the inspection area.";
   if (hasExemption) {
     const fileError = validateFile(exemptionFile);
     if (fileError) return fileError;
   }
-
-  if (!getChecked("#nonComplianceAcknowledged")) {
-    return "Please acknowledge that a certificate cannot be issued until the pool barrier is compliant.";
-  }
-
-  if (!getChecked("#informationAccuracyConfirmed")) {
-    return "Please confirm the information provided is accurate.";
-  }
-
-  if (!getChecked("#termsAccepted")) {
-    return "Please accept the terms, privacy policy and refunds policy.";
-  }
-
+  if (!getChecked("#nonComplianceAcknowledged")) return "Please acknowledge that a certificate cannot be issued until the pool barrier is compliant.";
+  if (!getChecked("#informationAccuracyConfirmed")) return "Please confirm the information provided is accurate.";
+  if (!getChecked("#termsAccepted")) return "Please accept the terms, privacy policy and refunds policy.";
   return "";
 }
 
@@ -765,8 +671,7 @@ function selectGeoapifyAddress(result) {
   if (propertyPlaceIdInput) propertyPlaceIdInput.value = selectedAddress.placeId;
   setAddressStatus("Address selected.", "success");
   clearAddressSuggestions();
-  resetPoolRegisterState();
-  checkPoolRegisterForSelectedAddress();
+  verifyPoolRegistration();
 }
 
 function renderAddressSuggestions(results) {
@@ -807,7 +712,6 @@ async function searchGeoapifyAddresses(text) {
       limit: "6",
       apiKey: GEOAPIFY_API_KEY
     });
-
     const response = await fetch(`https://api.geoapify.com/v1/geocode/autocomplete?${params.toString()}`);
     if (!response.ok) throw new Error(`Geoapify request failed: ${response.status}`);
     const data = await response.json();
@@ -821,7 +725,6 @@ async function searchGeoapifyAddresses(text) {
 
 function initAddressAutocomplete() {
   if (!addressInput) return;
-
   setAddressStatus("Start typing and select the property address from the suggestions.", "");
 
   addressInput.addEventListener("input", () => {
@@ -829,196 +732,178 @@ function initAddressAutocomplete() {
     if (addressSelectedInput) addressSelectedInput.value = "false";
     if (propertyPlaceIdInput) propertyPlaceIdInput.value = "";
     resetPoolRegisterState();
-
     window.clearTimeout(addressSearchTimer);
-    const text = addressInput.value.trim();
-    addressSearchTimer = window.setTimeout(() => searchGeoapifyAddresses(text), 300);
+    addressSearchTimer = window.setTimeout(() => searchGeoapifyAddresses(addressInput.value.trim()), 300);
   });
 
   document.addEventListener("click", (event) => {
-    if (!addressInput.contains(event.target) && !addressSuggestions?.contains(event.target)) {
-      clearAddressSuggestions();
-    }
+    if (!addressInput.contains(event.target) && !addressSuggestions?.contains(event.target)) clearAddressSuggestions();
   });
 }
 
-if (calendarPrev) {
-  calendarPrev.addEventListener("click", () => {
-    calendarMonth = startOfMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1));
-    loadAvailabilityForMonth();
+function wireBasicEvents() {
+  if (calendarPrev) {
+    calendarPrev.addEventListener("click", () => {
+      calendarMonth = startOfMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1));
+      loadAvailabilityForMonth();
+    });
+  }
+
+  if (calendarNext) {
+    calendarNext.addEventListener("click", () => {
+      calendarMonth = startOfMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1));
+      loadAvailabilityForMonth();
+    });
+  }
+
+  [exemptionToggle, animalsOnPropertyInput, animalsOffLeashInput].forEach((input) => {
+    if (input) input.addEventListener("change", toggleConditionalPanels);
   });
 }
 
-if (calendarNext) {
-  calendarNext.addEventListener("click", () => {
-    calendarMonth = startOfMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1));
-    loadAvailabilityForMonth();
+async function uploadExemptionIfNeeded(bookingId) {
+  const hasExemption = getChecked("#hasPoolExemption");
+  const exemptionFile = exemptionFileInput?.files?.[0] || null;
+  if (!hasExemption || !exemptionFile) return null;
+
+  const { app, getStorage, storageRef, uploadBytes } = await getFirebaseModules();
+  const storage = getStorage(app);
+  const fileName = `${Date.now()}-${sanitizeFileName(exemptionFile.name)}`;
+  const filePath = `booking-exemptions/${bookingId}/${fileName}`;
+  const fileRef = storageRef(storage, filePath);
+
+  await uploadBytes(fileRef, exemptionFile, {
+    contentType: exemptionFile.type,
+    customMetadata: { bookingId, originalFileName: exemptionFile.name }
   });
+
+  return {
+    uploaded: true,
+    storagePath: filePath,
+    fileName: exemptionFile.name,
+    fileType: exemptionFile.type,
+    fileSize: exemptionFile.size
+  };
 }
 
-[exemptionToggle, animalsOnPropertyInput, animalsOffLeashInput].forEach((input) => {
-  if (input) input.addEventListener("change", toggleConditionalPanels);
-});
+async function handleBookingSubmit(event) {
+  event.preventDefault();
+  showMessage("");
 
-if (form) {
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    showMessage("");
+  const validationError = validateBookingForm();
+  if (validationError) {
+    showMessage(validationError, "error");
+    return;
+  }
 
-    const validationError = validateBookingForm();
-    if (validationError) {
-      showMessage(validationError, "error");
-      return;
-    }
+  setLoading(true, getChecked("#hasPoolExemption") ? "Uploading..." : "Saving...");
 
-    setLoading(true, getChecked("#hasPoolExemption") ? "Uploading..." : "Saving...");
-
+  try {
+    const { db, collection, doc, setDoc, serverTimestamp } = await getFirebaseModules();
+    const bookingDocRef = doc(collection(db, "bookings"));
+    const exemptionFileData = await uploadExemptionIfNeeded(bookingDocRef.id);
     const termsAccepted = getChecked("#termsAccepted");
-    const mobile = normaliseAustralianMobile(getValue("#phone"));
     const hasExemption = getChecked("#hasPoolExemption");
-    const exemptionFile = exemptionFileInput?.files?.[0] || null;
 
-    try {
-      const {
-        db,
-        app,
-        collection,
-        doc,
-        setDoc,
-        serverTimestamp,
-        getStorage,
-        storageRef,
-        uploadBytes
-      } = await getFirebaseModules();
+    setLoading(true, "Saving...");
 
-      const bookingDocRef = doc(collection(db, "bookings"));
-      let exemptionFileData = null;
+    const bookingData = {
+      customerName: getValue("#customerName"),
+      email: getValue("#email"),
+      phone: normaliseAustralianMobile(getValue("#phone")),
+      propertyAddress: getValue("#propertyAddress"),
+      propertyAddressSelected: addressSelectedInput?.value === "true",
+      propertyPlaceId: getValue("#propertyPlaceId"),
+      selectedAddress,
 
-      if (hasExemption && exemptionFile) {
-        setLoading(true, "Uploading file...");
-        const storage = getStorage(app);
-        const fileName = `${Date.now()}-${sanitizeFileName(exemptionFile.name)}`;
-        const filePath = `booking-exemptions/${bookingDocRef.id}/${fileName}`;
-        const fileRef = storageRef(storage, filePath);
+      poolRegisterStatus,
+      poolRegisterMessage,
+      poolRegisterDetails,
+      poolRegisterCheckedAt,
+      poolRegisterLooksRight,
+      poolRegisterOverrideConfirmed,
+      poolRegisterLookupSource: POOL_REGISTER_LOOKUP_ENDPOINT ? "backend_lookup" : "manual_fail_safe",
 
-        await uploadBytes(fileRef, exemptionFile, {
-          contentType: exemptionFile.type,
-          customMetadata: {
-            bookingId: bookingDocRef.id,
-            originalFileName: exemptionFile.name
-          }
-        });
+      isPropertyOwner: getChecked("#isPropertyOwner"),
+      authorisedToBook: getChecked("#authorisedToBook"),
+      clientType: getChecked("#isPropertyOwner") ? "Property owner" : "Authorised representative",
 
-        exemptionFileData = {
-          uploaded: true,
-          storagePath: filePath,
-          fileName: exemptionFile.name,
-          fileType: exemptionFile.type,
-          fileSize: exemptionFile.size
-        };
-      }
+      inspectionReason: getValue("#inspectionReason"),
+      poolType: getValue("#poolType"),
+      existingCertificateStatus: getValue("#existingCertificateStatus"),
+      poolRegisteredStatus: getValue("#poolRegisteredStatus"),
 
-      setLoading(true, "Saving...");
+      preferredDate: selectedDate,
+      preferredDateDisplay: formatDisplayDate(selectedDate),
+      preferredTimeSlot: selectedTimeSlot.id,
+      preferredTimeLabel: selectedTimeSlot.label,
+      preferredTimeStart: selectedTimeSlot.start,
+      preferredTimeEnd: selectedTimeSlot.end,
+      preferredTime: selectedTimeSlot.label,
 
-      const bookingData = {
-        customerName: getValue("#customerName"),
-        email: getValue("#email"),
-        phone: mobile,
-        propertyAddress: getValue("#propertyAddress"),
-        propertyAddressSelected: addressSelectedInput?.value === "true",
-        propertyPlaceId: getValue("#propertyPlaceId"),
-        selectedAddress,
+      willBeHomeForInspection: getChecked("#willBeHomeForInspection"),
+      accessPermissionIfNotHome: getChecked("#accessPermissionIfNotHome"),
+      animalsOnProperty: getChecked("#animalsOnProperty"),
+      animalsOffLeash: getChecked("#animalsOffLeash"),
+      animalsWillBeSecured: getChecked("#animalsWillBeSecured"),
+      accessInstructions: getValue("#accessInstructions"),
 
-        poolRegisterStatus,
-        poolRegisterMessage,
-        poolRegisterDetails,
-        poolRegisterCheckedAt,
-        poolRegisterLooksRight,
-        poolRegisterOverrideConfirmed,
-        poolRegisterLookupSource: POOL_REGISTER_LOOKUP_ENDPOINT ? "backend_lookup" : "manual_fail_safe",
+      hasPoolExemption: hasExemption,
+      exemptionFileUploaded: Boolean(exemptionFileData),
+      exemptionFile: exemptionFileData,
 
-        isPropertyOwner: getChecked("#isPropertyOwner"),
-        authorisedToBook: getChecked("#authorisedToBook"),
-        clientType: getChecked("#isPropertyOwner") ? "Property owner" : "Authorised representative",
+      minorRepairsContactAccepted: getChecked("#minorRepairsContactAccepted"),
+      nonComplianceAcknowledged: getChecked("#nonComplianceAcknowledged"),
+      informationAccuracyConfirmed: getChecked("#informationAccuracyConfirmed"),
+      notes: getValue("#notes"),
 
-        inspectionReason: getValue("#inspectionReason"),
-        poolType: getValue("#poolType"),
-        existingCertificateStatus: getValue("#existingCertificateStatus"),
-        poolRegisteredStatus: getValue("#poolRegisteredStatus"),
+      serviceName: "Pool Safety Inspection & Certificate",
+      priceCents: inspectionPriceCents,
+      priceDisplay: inspectionPriceDisplay,
+      currency: "aud",
+      status: "pending_payment",
+      paymentStatus: "unpaid",
+      stripeSessionId: null,
+      stripePaymentIntentId: null,
+      termsAccepted,
+      privacyAccepted: termsAccepted,
+      source: "website_booking_form",
+      createdAt: serverTimestamp(),
+      paidAt: null
+    };
 
-        preferredDate: selectedDate,
-        preferredDateDisplay: formatDisplayDate(selectedDate),
-        preferredTimeSlot: selectedTimeSlot.id,
-        preferredTimeLabel: selectedTimeSlot.label,
-        preferredTimeStart: selectedTimeSlot.start,
-        preferredTimeEnd: selectedTimeSlot.end,
-        preferredTime: selectedTimeSlot.label,
+    await setDoc(bookingDocRef, bookingData);
+    showMessage(`Booking saved successfully. Booking ID: ${bookingDocRef.id}`, "success");
 
-        willBeHomeForInspection: getChecked("#willBeHomeForInspection"),
-        accessPermissionIfNotHome: getChecked("#accessPermissionIfNotHome"),
-        animalsOnProperty: getChecked("#animalsOnProperty"),
-        animalsOffLeash: getChecked("#animalsOffLeash"),
-        animalsWillBeSecured: getChecked("#animalsWillBeSecured"),
-        accessInstructions: getValue("#accessInstructions"),
-
-        hasPoolExemption: hasExemption,
-        exemptionFileUploaded: Boolean(exemptionFileData),
-        exemptionFile: exemptionFileData,
-
-        minorRepairsContactAccepted: getChecked("#minorRepairsContactAccepted"),
-        nonComplianceAcknowledged: getChecked("#nonComplianceAcknowledged"),
-        informationAccuracyConfirmed: getChecked("#informationAccuracyConfirmed"),
-        notes: getValue("#notes"),
-
-        serviceName: "Pool Safety Inspection & Certificate",
-        priceCents: inspectionPriceCents,
-        priceDisplay: inspectionPriceDisplay,
-        currency: "aud",
-
-        status: "pending_payment",
-        paymentStatus: "unpaid",
-
-        stripeSessionId: null,
-        stripePaymentIntentId: null,
-
-        termsAccepted,
-        privacyAccepted: termsAccepted,
-
-        source: "website_booking_form",
-        createdAt: serverTimestamp(),
-        paidAt: null
-      };
-
-      await setDoc(bookingDocRef, bookingData);
-      showMessage(`Booking saved successfully. Booking ID: ${bookingDocRef.id}`, "success");
-      form.reset();
-      selectedDate = "";
-      selectedAddress = null;
-      if (addressSelectedInput) addressSelectedInput.value = "false";
-      if (propertyPlaceIdInput) propertyPlaceIdInput.value = "";
-      setAddressStatus("Start typing and select the property address from the suggestions.", "");
-      resetPoolRegisterState();
-      resetSelectedSlot();
-      toggleConditionalPanels();
-      if (preferredDateInput) preferredDateInput.value = "";
-      if (selectedDateLabel) {
-        selectedDateLabel.textContent = "No date selected yet.";
-        selectedDateLabel.dataset.type = "";
-      }
-      renderCalendar();
-      renderTimeSlots();
-      console.log("Booking saved:", bookingDocRef.id);
-    } catch (error) {
-      console.error("Error saving booking:", error);
-      showMessage("Something went wrong. Please check Firebase rules, Storage rules, internet connection and browser console.", "error");
-    } finally {
-      setLoading(false);
+    form.reset();
+    selectedDate = "";
+    selectedAddress = null;
+    if (addressSelectedInput) addressSelectedInput.value = "false";
+    if (propertyPlaceIdInput) propertyPlaceIdInput.value = "";
+    setAddressStatus("Start typing and select the property address from the suggestions.", "");
+    resetPoolRegisterState();
+    resetSelectedSlot();
+    toggleConditionalPanels();
+    if (preferredDateInput) preferredDateInput.value = "";
+    if (selectedDateLabel) {
+      selectedDateLabel.textContent = "No date selected yet.";
+      selectedDateLabel.dataset.type = "";
     }
-  });
+    renderCalendar();
+    renderTimeSlots();
+    console.log("Booking saved:", bookingDocRef.id);
+  } catch (error) {
+    console.error("Error saving booking:", error);
+    showMessage("Something went wrong. Please check Firebase rules, Storage rules, internet connection and browser console.", "error");
+  } finally {
+    setLoading(false);
+  }
 }
 
-initPoolRegisterFailSafe();
+wireBasicEvents();
+createPoolRegisterPanel();
 initAddressAutocomplete();
 toggleConditionalPanels();
 updateContinuationVisibility();
+if (form) form.addEventListener("submit", handleBookingSubmit);
 loadAvailabilityForMonth();
