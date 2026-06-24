@@ -139,6 +139,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const style = document.createElement("style");
   style.textContent = `
+    .booking-form [hidden],
+    .pool-gated-hidden {
+      display: none !important;
+    }
     .address-suggestions[hidden], .address-suggestions:empty {
       display: none !important;
       padding: 0 !important;
@@ -300,6 +304,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function setContinuationVisible(isVisible) {
     propertyContinuationElements().forEach((element) => {
       element.hidden = !isVisible;
+      element.classList.toggle("pool-gated-hidden", !isVisible);
+      element.style.display = isVisible ? "" : "none";
     });
   }
 
