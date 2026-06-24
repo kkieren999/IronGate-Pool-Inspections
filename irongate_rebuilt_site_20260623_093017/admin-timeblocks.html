@@ -14,15 +14,16 @@
     .timeblock-shell { display: grid; gap: 22px; }
     .timeblock-hero { display: flex; justify-content: space-between; gap: 20px; align-items: center; padding: 30px; border-radius: 28px; color: #fff; background: linear-gradient(135deg, #061b39, #08294f); box-shadow: var(--shadow); }
     .timeblock-hero h1 { color: #fff; font-size: clamp(2rem, 4vw, 3.4rem); }
-    .timeblock-hero p { margin: 10px 0 0; color: rgba(255,255,255,.82); max-width: 760px; }
+    .timeblock-hero p { margin: 10px 0 0; color: rgba(255,255,255,.82); max-width: 820px; }
     .timeblock-status { padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,.12); font-weight: 900; white-space: nowrap; }
     .timeblock-card { background: #fff; border: 1px solid rgba(7,24,52,.08); border-radius: 28px; padding: 28px; box-shadow: var(--shadow); }
-    .timeblock-grid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: 22px; align-items: start; }
+    .timeblock-card h2 { color: var(--navy); margin-top: 0; }
     .timeblock-form { display: grid; gap: 16px; }
     .timeblock-form label { display: grid; gap: 8px; font-weight: 800; color: var(--navy); }
     .timeblock-form input { width: 100%; border: 1px solid #d7e1ec; border-radius: 14px; padding: 14px 15px; background: #f9fbfe; }
     .timeblock-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; }
     .timeblock-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .timeblock-work-grid { display: grid; grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr); gap: 22px; align-items: start; }
     .timeblock-quick { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
     .quick-time { border: 1px solid rgba(21,158,232,.28); background: #eef9ff; color: var(--navy); border-radius: 12px; min-height: 44px; font-weight: 900; cursor: pointer; }
     .quick-time:hover { background: #dff4ff; }
@@ -39,29 +40,35 @@
     .soft-btn { background: #f5f9fd !important; color: var(--navy) !important; border-color: rgba(7,24,52,.08) !important; }
     .form-note[data-type="success"] { color: #0f8a43 !important; }
     .form-note[data-type="error"] { color: #d61f1f !important; }
-    .calendar-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
-    .calendar-head strong { color: var(--navy); font-size: 1.15rem; }
-    .calendar-nav { display: inline-flex; gap: 8px; align-items: center; }
-    .calendar-nav button { width: 42px; height: 42px; border: 1px solid #d7e1ec; border-radius: 999px; background: #fff; color: var(--navy); font-size: 1.6rem; line-height: 1; font-weight: 900; cursor: pointer; }
-    .calendar-weekdays, .admin-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
-    .calendar-weekdays { margin-bottom: 8px; }
-    .calendar-weekdays span { text-align: center; color: var(--muted); font-weight: 900; font-size: .78rem; }
-    .calendar-empty { min-height: 76px; }
-    .calendar-day-admin { min-height: 76px; border: 1px solid #d7e1ec; border-radius: 16px; background: #fff; color: var(--navy); cursor: pointer; text-align: left; padding: 10px; display: grid; align-content: space-between; gap: 6px; }
-    .calendar-day-admin:hover { border-color: rgba(21,158,232,.55); box-shadow: 0 10px 24px rgba(4,26,55,.08); }
-    .calendar-day-admin.is-selected { outline: 3px solid rgba(21,158,232,.24); border-color: var(--blue); background: #eef9ff; }
-    .calendar-day-admin.is-past { opacity: .44; }
-    .day-number { font-weight: 900; font-size: 1.05rem; }
-    .day-status { font-size: .75rem; font-weight: 900; color: var(--muted); }
-    .calendar-day-admin.has-blocks .day-status { color: #0f8a43; }
-    .calendar-day-admin.no-blocks .day-status { color: #d61f1f; }
-    .calendar-legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 0; color: var(--muted); font-weight: 800; font-size: .9rem; }
-    .legend-dot { display: inline-block; width: 11px; height: 11px; border-radius: 999px; margin-right: 6px; vertical-align: middle; }
+    .big-calendar-card { padding: clamp(22px, 3vw, 36px); }
+    .calendar-head { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 20px; }
+    .calendar-head h2 { font-size: clamp(1.85rem, 3vw, 2.7rem); margin-bottom: 4px; }
+    .calendar-head p { color: var(--muted); margin: 0; font-weight: 700; }
+    .calendar-nav { display: inline-flex; gap: 10px; align-items: center; padding: 8px; border-radius: 999px; background: #f4fbff; border: 1px solid rgba(21,158,232,.16); }
+    .calendar-nav strong { min-width: 190px; text-align: center; color: var(--navy); font-size: 1.2rem; }
+    .calendar-nav button { width: 46px; height: 46px; border: 1px solid #d7e1ec; border-radius: 999px; background: #fff; color: var(--navy); font-size: 1.8rem; line-height: 1; font-weight: 900; cursor: pointer; }
+    .calendar-nav button:hover { border-color: var(--blue); color: var(--blue); }
+    .calendar-weekdays, .admin-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
+    .calendar-weekdays { margin-bottom: 10px; }
+    .calendar-weekdays span { text-align: center; color: var(--muted); font-weight: 900; font-size: .82rem; text-transform: uppercase; letter-spacing: .06em; }
+    .calendar-empty { min-height: 112px; }
+    .calendar-day-admin { min-height: 112px; border: 1px solid #d7e1ec; border-radius: 20px; background: #fff; color: var(--navy); cursor: pointer; text-align: left; padding: 14px; display: grid; align-content: space-between; gap: 10px; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease; }
+    .calendar-day-admin:hover { transform: translateY(-2px); border-color: rgba(21,158,232,.65); box-shadow: 0 16px 30px rgba(4,26,55,.09); }
+    .calendar-day-admin.is-selected { outline: 4px solid rgba(21,158,232,.22); border-color: var(--blue); background: #eef9ff; box-shadow: 0 18px 34px rgba(21,158,232,.14); }
+    .calendar-day-admin.is-past { opacity: .45; }
+    .day-number { width: 38px; height: 38px; display: inline-grid; place-items: center; border-radius: 999px; background: #f5f9fd; font-weight: 900; font-size: 1.1rem; }
+    .calendar-day-admin.is-selected .day-number { background: var(--blue); color: #fff; }
+    .day-status { display: inline-flex; align-items: center; justify-content: center; min-height: 28px; padding: 0 10px; border-radius: 999px; font-size: .76rem; font-weight: 900; color: var(--muted); background: #f5f9fd; }
+    .calendar-day-admin.has-blocks .day-status { color: #0f8a43; background: #eafaf0; }
+    .calendar-day-admin.no-blocks .day-status { color: #d61f1f; background: #fff1f1; }
+    .calendar-legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0 0; color: var(--muted); font-weight: 800; font-size: .93rem; }
+    .legend-dot { display: inline-block; width: 12px; height: 12px; border-radius: 999px; margin-right: 6px; vertical-align: middle; }
     .legend-green { background: #0f8a43; }
     .legend-red { background: #d61f1f; }
     .legend-blue { background: var(--blue); }
     [hidden] { display: none !important; }
-    @media (max-width: 900px) { .timeblock-grid, .timeblock-row { grid-template-columns: 1fr; } .timeblock-quick, .bulk-days { grid-template-columns: repeat(2, minmax(0, 1fr)); } .timeblock-hero { display: grid; } .calendar-weekdays, .admin-calendar { gap: 5px; } .calendar-day-admin { min-height: 60px; padding: 7px; } .day-status { font-size: .65rem; } }
+    @media (max-width: 1050px) { .timeblock-work-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .timeblock-row { grid-template-columns: 1fr; } .timeblock-quick, .bulk-days { grid-template-columns: repeat(2, minmax(0, 1fr)); } .timeblock-hero, .calendar-head { display: grid; } .calendar-nav { justify-self: stretch; justify-content: space-between; } .calendar-weekdays, .admin-calendar { gap: 6px; } .calendar-empty { min-height: 64px; } .calendar-day-admin { min-height: 72px; padding: 8px; border-radius: 14px; } .day-number { width: 30px; height: 30px; font-size: .95rem; } .day-status { font-size: .64rem; padding: 0 6px; } }
   </style>
 </head>
 <body class="timeblock-admin">
@@ -87,7 +94,7 @@
           <div>
             <p class="section-kicker">Admin Console</p>
             <h1>Available 1-hour blocks</h1>
-            <p>Use the calendar to pick a day, add the exact 1-hour blocks you are available, then save. Clients will only see those saved times and can choose one slot.</p>
+            <p>Use the big calendar to pick a day, add the exact 1-hour blocks you are available, then save. Clients only see saved available times and can choose one slot.</p>
           </div>
           <div class="timeblock-status" id="status-pill">Checking sign in…</div>
         </div>
@@ -104,34 +111,35 @@
         </section>
 
         <section id="console" hidden>
-          <div class="timeblock-grid">
-            <section class="timeblock-card">
-              <div class="calendar-head">
-                <div>
-                  <p class="section-kicker">Calendar</p>
-                  <h2>Pick a date</h2>
-                </div>
-                <div class="calendar-nav">
-                  <button type="button" id="prev-month" aria-label="Previous month">‹</button>
-                  <strong id="month-title">Loading</strong>
-                  <button type="button" id="next-month" aria-label="Next month">›</button>
-                </div>
+          <section class="timeblock-card big-calendar-card">
+            <div class="calendar-head">
+              <div>
+                <p class="section-kicker">Calendar</p>
+                <h2>Pick a date</h2>
+                <p>Green days already have saved blocks. Red days have no saved client booking times.</p>
               </div>
-              <div class="calendar-weekdays" aria-hidden="true">
-                <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+              <div class="calendar-nav">
+                <button type="button" id="prev-month" aria-label="Previous month">‹</button>
+                <strong id="month-title">Loading</strong>
+                <button type="button" id="next-month" aria-label="Next month">›</button>
               </div>
-              <div class="admin-calendar" id="admin-calendar" aria-label="Admin availability calendar"></div>
-              <div class="calendar-legend">
-                <span><i class="legend-dot legend-green"></i>Saved blocks</span>
-                <span><i class="legend-dot legend-red"></i>No blocks</span>
-                <span><i class="legend-dot legend-blue"></i>Selected</span>
-              </div>
-            </section>
+            </div>
+            <div class="calendar-weekdays" aria-hidden="true">
+              <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+            </div>
+            <div class="admin-calendar" id="admin-calendar" aria-label="Admin availability calendar"></div>
+            <div class="calendar-legend">
+              <span><i class="legend-dot legend-green"></i>Saved blocks</span>
+              <span><i class="legend-dot legend-red"></i>No blocks</span>
+              <span><i class="legend-dot legend-blue"></i>Selected day</span>
+            </div>
+          </section>
 
+          <div class="timeblock-work-grid" style="margin-top:22px;">
             <section class="timeblock-card">
               <p class="section-kicker">Selected Day</p>
               <h2 id="selected-heading">No date selected</h2>
-              <p>Click a calendar date or use the date field below. Then add the 1-hour blocks you are available.</p>
+              <p>Click a calendar date, then add the 1-hour blocks you are available.</p>
               <form class="timeblock-form" id="day-form">
                 <label>Date <input type="date" id="selected-date" required /></label>
                 <div class="timeblock-row">
@@ -165,12 +173,12 @@
                 <p class="form-note" id="day-message" role="status" aria-live="polite"></p>
               </form>
             </section>
-          </div>
 
-          <section class="timeblock-card" style="margin-top:22px;">
-            <div class="summary-pill"><strong id="block-count">0</strong> available block/s for selected day</div>
-            <div class="timeblock-list" id="block-list"></div>
-          </section>
+            <section class="timeblock-card">
+              <div class="summary-pill"><strong id="block-count">0</strong> available block/s for selected day</div>
+              <div class="timeblock-list" id="block-list"></div>
+            </section>
+          </div>
 
           <section class="timeblock-card" style="margin-top:22px;">
             <p class="section-kicker">Bulk Setup</p>
@@ -640,7 +648,6 @@
       signout.hidden = !isAdmin;
       statusPill.textContent = isAdmin ? "Signed in" : (user ? "Wrong admin email" : "Not signed in");
       if (isAdmin) {
-        await loadMonthAvailability();
         if (!dateInput.value) {
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
