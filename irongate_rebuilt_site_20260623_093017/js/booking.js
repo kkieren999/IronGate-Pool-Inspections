@@ -27,6 +27,11 @@ const inspectionPriceCents = 24900;
 const inspectionPriceDisplay = "$249 inc GST";
 const maxUploadBytes = 10 * 1024 * 1024;
 const GEOAPIFY_API_KEY = "8d1bacfb41584094b808c255bc8ef70c";
+const QBCC_POOL_REGISTER_URL = "https://my.qbcc.qld.gov.au/myQBCC/s/pool-register";
+
+// Later, this can point to your own backend endpoint that checks the Queensland Open Data pool register.
+// Leave blank for now so the form uses the safe manual confirmation fallback.
+const POOL_REGISTER_LOOKUP_ENDPOINT = "";
 
 const monthNames = [
   "January", "February", "March", "April", "May", "June",
@@ -40,6 +45,20 @@ let availabilityByDate = new Map();
 let calendarMonth = startOfMonth(new Date());
 let firebaseModulesPromise = null;
 let addressSearchTimer = null;
+let poolRegisterStatus = "not_checked";
+let poolRegisterMessage = "";
+let poolRegisterDetails = null;
+let poolRegisterCheckedAt = null;
+let poolRegisterLooksRight = false;
+let poolRegisterOverrideConfirmed = false;
+let poolRegisterPanel = null;
+let poolRegisterIcon = null;
+let poolRegisterTitle = null;
+let poolRegisterText = null;
+let poolRegisterDetailsEl = null;
+let poolRegisterLooksRightInput = null;
+let poolRegisterOverrideInput = null;
+let poolRegisterEditAddressBtn = null;
 
 if (priceNotice) {
   priceNotice.textContent = `Pool Safety Inspection & Certificate — ${inspectionPriceDisplay}`;
@@ -403,6 +422,265 @@ function sanitizeFileName(name) {
     .slice(0, 120);
 }
 
+function injectPoolRegisterStyles() {
+  if (document.querySelector("#pool-register-failsafe-styles")) return;
+  const style = document.createElement("style");
+  style.id = "pool-register-failsafe-styles";
+  style.textContent = `
+    .pool-register-panel {
+      margin-top: 12px;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(7,24,52,.10);
+      background: #f9fbfe;
+      display: grid;
+      gap: 14px;
+    }
+    .pool-register-panel[data-status="registered"] {
+      background: #eefbf3;
+      border-color: rgba(15,138,67,.28);
+    }
+    .pool-register-panel[data-status="not_found"] {
+      background: #fff1f1;
+      border-color: rgba(214,31,31,.24);
+    }
+    .pool-register-panel[data-status="manual_required"],
+    .pool-register-panel[data-status="checking"] {
+      background: #fff7ed;
+      border-color: rgba(234,88,12,.24);
+    }
+    .pool-register-header {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .pool-register-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      display: inline-grid;
+      place-items: center;
+      color: #fff;
+      background: #ea580c;
+      font-weight: 900;
+      flex: 0 0 auto;
+    }
+    .pool-register-panel[data-status="registered"] .pool-register-icon { background: #0f8a43; }
+    .pool-register-panel[data-status="not_found"] .pool-register-icon { background: #d61f1f; }
+    .pool-register-title {
+      color: var(--navy);
+      display: block;
+      font-weight: 900;
+      margin-bottom: 3px;
+    }
+    .pool-register-text, .pool-register-details {
+      color: var(--muted);
+      font-weight: 750;
+      line-height: 1.45;
+    }
+    .pool-register-details {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(7,24,52,.06);
+    }
+    .pool-register-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+    .pool-register-actions a,
+    .pool-register-actions button {
+      text-decoration: none;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function getContinuationElements() {
+  if (!form) return [];
+  const sections = [...form.querySelectorAll(".form-section")];
+  const propertySectionIndex = sections.findIndex((section) => section.getAttribute("aria-labelledby") === "property-details-heading");
+  const continuationSections = propertySectionIndex >= 0 ? sections.slice(propertySectionIndex + 1) : sections.slice(2);
+  return [...continuationSections, submitButton].filter(Boolean);
+}
+
+function canContinueAfterPoolRegisterCheck() {
+  const addressSelected = addressSelectedInput?.value === "true";
+  if (!addressSelected) return false;
+  if (poolRegisterStatus === "registered") return poolRegisterLooksRight;
+  return poolRegisterOverrideConfirmed;
+}
+
+function updateContinuationVisibility() {
+  const canContinue = canContinueAfterPoolRegisterCheck();
+  getContinuationElements().forEach((element) => {
+    element.hidden = !canContinue;
+  });
+}
+
+function setPoolRegisterPanelStatus(status, title, text, details = "") {
+  poolRegisterStatus = status;
+  poolRegisterMessage = text;
+  poolRegisterCheckedAt = new Date().toISOString();
+
+  if (!poolRegisterPanel) return;
+  poolRegisterPanel.hidden = false;
+  poolRegisterPanel.dataset.status = status;
+  if (poolRegisterIcon) {
+    if (status === "registered") poolRegisterIcon.textContent = "✓";
+    else if (status === "not_found") poolRegisterIcon.textContent = "×";
+    else poolRegisterIcon.textContent = "!";
+  }
+  if (poolRegisterTitle) poolRegisterTitle.textContent = title;
+  if (poolRegisterText) poolRegisterText.textContent = text;
+  if (poolRegisterDetailsEl) {
+    poolRegisterDetailsEl.textContent = details;
+    poolRegisterDetailsEl.hidden = !details;
+  }
+  updateContinuationVisibility();
+}
+
+function resetPoolRegisterState() {
+  poolRegisterStatus = "not_checked";
+  poolRegisterMessage = "";
+  poolRegisterDetails = null;
+  poolRegisterCheckedAt = null;
+  poolRegisterLooksRight = false;
+  poolRegisterOverrideConfirmed = false;
+  if (poolRegisterLooksRightInput) poolRegisterLooksRightInput.checked = false;
+  if (poolRegisterOverrideInput) poolRegisterOverrideInput.checked = false;
+  if (poolRegisterPanel) poolRegisterPanel.hidden = true;
+  updateContinuationVisibility();
+}
+
+function initPoolRegisterFailSafe() {
+  if (!addressStatus || !addressStatus.parentElement) return;
+  injectPoolRegisterStyles();
+
+  poolRegisterPanel = document.createElement("div");
+  poolRegisterPanel.className = "pool-register-panel";
+  poolRegisterPanel.hidden = true;
+  poolRegisterPanel.dataset.status = "manual_required";
+  poolRegisterPanel.innerHTML = `
+    <div class="pool-register-header">
+      <span class="pool-register-icon" id="pool-register-icon">!</span>
+      <div>
+        <strong class="pool-register-title" id="pool-register-title">Pool registration check</strong>
+        <div class="pool-register-text" id="pool-register-text">Select an address to check the pool registration status.</div>
+      </div>
+    </div>
+    <div class="pool-register-details" id="pool-register-details" hidden></div>
+    <div class="option-stack">
+      <label class="option-card">
+        <input type="checkbox" id="poolRegisterLooksRight" />
+        <span>Yes, this address and pool registration information looks right.</span>
+      </label>
+      <label class="option-card">
+        <input type="checkbox" id="poolRegisterOverride" />
+        <span>There is a pool at this property. Continue even if the register check cannot confirm it.<small>Use this fail-safe if the register lookup is wrong, unavailable, or the pool is listed under slightly different address details.</small></span>
+      </label>
+    </div>
+    <div class="pool-register-actions">
+      <a class="btn btn-primary" href="${QBCC_POOL_REGISTER_URL}" target="_blank" rel="noopener">Check or register with QBCC</a>
+      <button class="btn btn-secondary" type="button" id="pool-register-edit-address">No, edit address</button>
+    </div>
+  `;
+
+  addressStatus.insertAdjacentElement("afterend", poolRegisterPanel);
+  poolRegisterIcon = poolRegisterPanel.querySelector("#pool-register-icon");
+  poolRegisterTitle = poolRegisterPanel.querySelector("#pool-register-title");
+  poolRegisterText = poolRegisterPanel.querySelector("#pool-register-text");
+  poolRegisterDetailsEl = poolRegisterPanel.querySelector("#pool-register-details");
+  poolRegisterLooksRightInput = poolRegisterPanel.querySelector("#poolRegisterLooksRight");
+  poolRegisterOverrideInput = poolRegisterPanel.querySelector("#poolRegisterOverride");
+  poolRegisterEditAddressBtn = poolRegisterPanel.querySelector("#pool-register-edit-address");
+
+  poolRegisterLooksRightInput?.addEventListener("change", () => {
+    poolRegisterLooksRight = poolRegisterLooksRightInput.checked;
+    updateContinuationVisibility();
+  });
+
+  poolRegisterOverrideInput?.addEventListener("change", () => {
+    poolRegisterOverrideConfirmed = poolRegisterOverrideInput.checked;
+    updateContinuationVisibility();
+  });
+
+  poolRegisterEditAddressBtn?.addEventListener("click", () => {
+    if (addressInput) {
+      addressInput.focus();
+      addressInput.select();
+    }
+    selectedAddress = null;
+    if (addressSelectedInput) addressSelectedInput.value = "false";
+    if (propertyPlaceIdInput) propertyPlaceIdInput.value = "";
+    resetPoolRegisterState();
+    setAddressStatus("Edit the address, then select the correct suggestion.", "");
+  });
+
+  updateContinuationVisibility();
+}
+
+async function checkPoolRegisterForSelectedAddress() {
+  if (!selectedAddress) return;
+
+  setPoolRegisterPanelStatus(
+    "checking",
+    "Checking pool registration",
+    "Checking the selected address against the pool register workflow...",
+    ""
+  );
+
+  if (!POOL_REGISTER_LOOKUP_ENDPOINT) {
+    window.setTimeout(() => {
+      setPoolRegisterPanelStatus(
+        "manual_required",
+        "Please confirm pool registration details",
+        "Automatic pool-register lookup is not connected yet. Use the fail-safe below if there is a pool at this property and you want to continue.",
+        "If no pool is registered or the details do not look right, use the QBCC link to check or register the pool before continuing."
+      );
+    }, 350);
+    return;
+  }
+
+  try {
+    const response = await fetch(POOL_REGISTER_LOOKUP_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: selectedAddress })
+    });
+    if (!response.ok) throw new Error(`Pool register lookup failed: ${response.status}`);
+    const result = await response.json();
+    poolRegisterDetails = result;
+
+    if (result?.registered === true) {
+      const detailText = [
+        result.numberOfPools ? `${result.numberOfPools} registered pool${Number(result.numberOfPools) === 1 ? "" : "s"}` : "Registered pool found",
+        result.localGovernmentArea ? `LGA: ${result.localGovernmentArea}` : "",
+        result.sharedPoolProperty ? `Shared pool: ${result.sharedPoolProperty}` : ""
+      ].filter(Boolean).join(" · ");
+      setPoolRegisterPanelStatus("registered", "Registered pool found", "Does this look right? Confirm below to continue.", detailText);
+      return;
+    }
+
+    setPoolRegisterPanelStatus(
+      "not_found",
+      "No registered pool found for this address",
+      "No registered pool was found for the selected address. If that is wrong, use the fail-safe below to continue.",
+      "Address matching can fail because of unit numbers, spelling, street abbreviations, lot/plan details, or register data differences."
+    );
+  } catch (error) {
+    console.error("Pool register lookup error:", error);
+    setPoolRegisterPanelStatus(
+      "manual_required",
+      "Pool register check unavailable",
+      "The pool register check could not be completed. Use the fail-safe below if there is a pool at this property and you want to continue.",
+      "You can also open the QBCC pool register to check or register the pool."
+    );
+  }
+}
+
 function validateBookingForm() {
   const email = getValue("#email");
   const mobile = normaliseAustralianMobile(getValue("#phone"));
@@ -419,6 +697,13 @@ function validateBookingForm() {
 
   if (!hasAddress) return "Please enter the property address.";
   if (!addressSelected) return "Please select the property address from the address suggestions.";
+
+  if (!canContinueAfterPoolRegisterCheck()) {
+    if (poolRegisterStatus === "registered") {
+      return "Please confirm the pool registration information looks right before continuing.";
+    }
+    return "Please confirm there is a pool at this property using the fail-safe option, or check/register the pool with QBCC.";
+  }
 
   if (!isOwner && !authorised) {
     return "Please confirm you are the property owner or authorised to arrange the inspection.";
@@ -480,6 +765,8 @@ function selectGeoapifyAddress(result) {
   if (propertyPlaceIdInput) propertyPlaceIdInput.value = selectedAddress.placeId;
   setAddressStatus("Address selected.", "success");
   clearAddressSuggestions();
+  resetPoolRegisterState();
+  checkPoolRegisterForSelectedAddress();
 }
 
 function renderAddressSuggestions(results) {
@@ -541,6 +828,7 @@ function initAddressAutocomplete() {
     selectedAddress = null;
     if (addressSelectedInput) addressSelectedInput.value = "false";
     if (propertyPlaceIdInput) propertyPlaceIdInput.value = "";
+    resetPoolRegisterState();
 
     window.clearTimeout(addressSearchTimer);
     const text = addressInput.value.trim();
@@ -641,6 +929,14 @@ if (form) {
         propertyPlaceId: getValue("#propertyPlaceId"),
         selectedAddress,
 
+        poolRegisterStatus,
+        poolRegisterMessage,
+        poolRegisterDetails,
+        poolRegisterCheckedAt,
+        poolRegisterLooksRight,
+        poolRegisterOverrideConfirmed,
+        poolRegisterLookupSource: POOL_REGISTER_LOOKUP_ENDPOINT ? "backend_lookup" : "manual_fail_safe",
+
         isPropertyOwner: getChecked("#isPropertyOwner"),
         authorisedToBook: getChecked("#authorisedToBook"),
         clientType: getChecked("#isPropertyOwner") ? "Property owner" : "Authorised representative",
@@ -701,6 +997,7 @@ if (form) {
       if (addressSelectedInput) addressSelectedInput.value = "false";
       if (propertyPlaceIdInput) propertyPlaceIdInput.value = "";
       setAddressStatus("Start typing and select the property address from the suggestions.", "");
+      resetPoolRegisterState();
       resetSelectedSlot();
       toggleConditionalPanels();
       if (preferredDateInput) preferredDateInput.value = "";
@@ -720,6 +1017,8 @@ if (form) {
   });
 }
 
+initPoolRegisterFailSafe();
 initAddressAutocomplete();
 toggleConditionalPanels();
+updateContinuationVisibility();
 loadAvailabilityForMonth();
