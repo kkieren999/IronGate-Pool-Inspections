@@ -3,12 +3,45 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Book an Inspection | IronGate Pool Inspections</title>
+  <title>Book a Pool Safety Inspection | IronGate Pool Inspections</title>
   <meta name="description" content="Book a pool safety inspection with IronGate Pool Inspections." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .booking-form-shell { display: grid; gap: 22px; }
+    .booking-intake-card { align-items: start; }
+    .form-section { display: grid; gap: 16px; padding: 22px; border: 1px solid rgba(7,24,52,.08); border-radius: 24px; background: #fff; }
+    .form-section h2 { margin: 0; color: var(--navy); font-size: 1.25rem; }
+    .section-helper { color: var(--muted); margin: -6px 0 0; font-weight: 700; }
+    .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .field-grid .full-width { grid-column: 1 / -1; }
+    .field-note { color: var(--muted); font-size: .88rem; font-weight: 700; margin-top: -4px; }
+    .address-field-wrap { position: relative; }
+    .address-status { margin: 8px 0 0; color: var(--muted); font-size: .88rem; font-weight: 800; }
+    .address-status[data-type="success"] { color: #0f8a43; }
+    .address-status[data-type="error"] { color: #d61f1f; }
+    .option-stack { display: grid; gap: 10px; }
+    .option-card { display: flex; align-items: flex-start; gap: 12px; padding: 14px 15px; border: 1px solid rgba(7,24,52,.1); border-radius: 16px; background: #f9fbfe; color: var(--navy); font-weight: 800; }
+    .option-card input { margin-top: 3px; width: auto; }
+    .option-card span small { display: block; color: var(--muted); font-weight: 700; margin-top: 3px; line-height: 1.4; }
+    .toggle-card { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 16px; border: 1px solid rgba(7,24,52,.1); border-radius: 18px; background: #f9fbfe; }
+    .toggle-card strong { color: var(--navy); display: block; }
+    .toggle-card span { color: var(--muted); font-weight: 700; }
+    .switch { position: relative; width: 56px; height: 32px; flex: 0 0 auto; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch-slider { position: absolute; cursor: pointer; inset: 0; background: #cbd5e1; border-radius: 999px; transition: .2s; }
+    .switch-slider:before { position: absolute; content: ""; height: 24px; width: 24px; left: 4px; top: 4px; background: #fff; border-radius: 999px; transition: .2s; box-shadow: 0 4px 12px rgba(0,0,0,.18); }
+    .switch input:checked + .switch-slider { background: var(--blue); }
+    .switch input:checked + .switch-slider:before { transform: translateX(24px); }
+    .conditional-panel { display: none; padding: 16px; border-radius: 18px; background: #eef9ff; border: 1px solid rgba(21,158,232,.22); }
+    .conditional-panel.is-visible { display: grid; gap: 12px; }
+    .file-upload-box { display: grid; gap: 8px; }
+    .file-upload-box input[type="file"] { padding: 12px; background: #fff; border: 1px dashed rgba(21,158,232,.45); }
+    .intake-alert { padding: 14px 16px; border-radius: 16px; background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; font-weight: 800; }
+    @media (max-width: 780px) { .field-grid { grid-template-columns: 1fr; } .toggle-card { align-items: flex-start; } }
+  </style>
 </head>
 <body>
   <header class="site-header legal-header" id="top">
@@ -36,10 +69,10 @@
         <div class="section-heading booking-heading">
           <p class="section-kicker">Book Online</p>
           <h1>Book a Pool Safety Inspection</h1>
-          <p class="section-intro">Complete the details below. Choose an available inspection day, then pick one available 1-hour time slot. This version saves the booking to Firestore as pending payment.</p>
+          <p class="section-intro">Choose an available inspection date and time, then complete the property and access details below.</p>
         </div>
 
-        <div class="contact-card booking-card">
+        <div class="contact-card booking-card booking-intake-card">
           <aside class="booking-summary" aria-label="Booking summary">
             <p class="section-kicker">Inspection Package</p>
             <h2>Pool Safety Inspection &amp; Certificate</h2>
@@ -51,49 +84,103 @@
               <li>Certificate issued if compliant</li>
               <li>Unlimited reinspections included</li>
             </ul>
-            <p class="booking-note">Available dates and 1-hour time slots are controlled from your Firestore availability collection. Payment will be connected with Stripe in the next step.</p>
+            <p class="booking-note">Available dates and 1-hour inspection times are controlled from your availability manager.</p>
           </aside>
 
-          <form class="contact-form booking-form" id="booking-form">
-            <label>
-              Full name
-              <input type="text" id="customerName" autocomplete="name" required />
-            </label>
+          <form class="contact-form booking-form booking-form-shell" id="booking-form">
+            <section class="form-section" aria-labelledby="contact-details-heading">
+              <h2 id="contact-details-heading">Contact details</h2>
+              <p class="section-helper">We will use these details to confirm your booking and contact you if access details are unclear.</p>
+              <div class="field-grid">
+                <label class="full-width">
+                  Full name
+                  <input type="text" id="customerName" autocomplete="name" required />
+                </label>
 
-            <label>
-              Email
-              <input type="email" id="email" autocomplete="email" required />
-            </label>
+                <label>
+                  Email address
+                  <input type="email" id="email" autocomplete="email" inputmode="email" placeholder="name@example.com" required />
+                </label>
 
-            <label>
-              Phone
-              <input type="tel" id="phone" autocomplete="tel" required />
-            </label>
-
-            <label>
-              Property address
-              <input type="text" id="propertyAddress" autocomplete="street-address" required />
-            </label>
-
-            <label>
-              Client type
-              <select id="clientType" required>
-                <option value="">Select one</option>
-                <option value="Homeowner">Homeowner</option>
-                <option value="Landlord">Landlord</option>
-                <option value="Seller">Seller</option>
-                <option value="Real estate agent">Real estate agent</option>
-                <option value="Property manager">Property manager</option>
-              </select>
-            </label>
-
-            <div class="booking-calendar-section" aria-labelledby="calendar-heading">
-              <div class="booking-calendar-topline">
-                <div>
-                  <span class="field-title" id="calendar-heading">Preferred date</span>
-                  <p class="calendar-help">Choose one of the available days below.</p>
-                </div>
+                <label>
+                  Australian mobile number
+                  <input type="tel" id="phone" autocomplete="tel" inputmode="tel" placeholder="04XX XXX XXX" maxlength="16" required />
+                </label>
               </div>
+            </section>
+
+            <section class="form-section" aria-labelledby="property-details-heading">
+              <h2 id="property-details-heading">Property details</h2>
+              <div class="field-grid">
+                <label class="full-width address-field-wrap">
+                  Property address
+                  <input type="text" id="propertyAddress" autocomplete="off" placeholder="Start typing the inspection property address" required />
+                  <input type="hidden" id="propertyAddressSelected" value="false" />
+                  <input type="hidden" id="propertyPlaceId" />
+                  <p class="address-status" id="address-status">Start typing and select the property address from the suggestions.</p>
+                </label>
+
+                <label>
+                  Reason for inspection
+                  <select id="inspectionReason" required>
+                    <option value="">Select one</option>
+                    <option value="Selling the property">Selling the property</option>
+                    <option value="Renting or leasing the property">Renting or leasing the property</option>
+                    <option value="New pool or new barrier">New pool or new barrier</option>
+                    <option value="Reinspection">Reinspection</option>
+                    <option value="General compliance check">General compliance check</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </label>
+
+                <label>
+                  Pool type
+                  <select id="poolType" required>
+                    <option value="">Select one</option>
+                    <option value="Swimming pool">Swimming pool</option>
+                    <option value="Spa">Spa</option>
+                    <option value="Shared pool">Shared pool</option>
+                    <option value="Portable or above-ground pool">Portable or above-ground pool</option>
+                    <option value="Unsure">Unsure</option>
+                  </select>
+                </label>
+
+                <label>
+                  Existing pool safety certificate?
+                  <select id="existingCertificateStatus" required>
+                    <option value="">Select one</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                    <option value="Unsure">Unsure</option>
+                  </select>
+                </label>
+
+                <label>
+                  Is the pool registered with QBCC?
+                  <select id="poolRegisteredStatus" required>
+                    <option value="">Select one</option>
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                    <option value="Unsure">Unsure</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="option-stack">
+                <label class="option-card">
+                  <input type="checkbox" id="isPropertyOwner" />
+                  <span>I am the property owner.</span>
+                </label>
+                <label class="option-card">
+                  <input type="checkbox" id="authorisedToBook" />
+                  <span>I am authorised to arrange this inspection on behalf of the property owner.<small>Use this if you are an agent, property manager, tenant, family member or other authorised person.</small></span>
+                </label>
+              </div>
+            </section>
+
+            <section class="form-section" aria-labelledby="calendar-heading">
+              <h2 id="calendar-heading">Inspection date and time</h2>
+              <p class="section-helper">Choose one available date, then select one available 1-hour time slot.</p>
 
               <div class="booking-calendar" aria-label="Available inspection dates">
                 <div class="booking-calendar-header">
@@ -117,36 +204,105 @@
 
               <input type="hidden" id="preferredDate" name="preferredDate" />
               <p class="selected-date-label" id="selected-date-label" aria-live="polite">No date selected yet.</p>
-            </div>
 
-            <div class="booking-slots-section" aria-labelledby="time-slot-heading">
-              <div class="booking-slots-topline">
-                <div>
-                  <span class="field-title" id="time-slot-heading">Available 1-hour time slots</span>
-                  <p class="calendar-help">Select one available time slot for your inspection.</p>
+              <div class="booking-slots-section" aria-labelledby="time-slot-heading">
+                <div class="booking-slots-topline">
+                  <div>
+                    <span class="field-title" id="time-slot-heading">Available 1-hour time slots</span>
+                    <p class="calendar-help">Select one available time slot for your inspection.</p>
+                  </div>
                 </div>
+                <div class="booking-slot-grid" id="booking-slot-grid" aria-label="Choose one available time slot">
+                  <p class="slot-placeholder">Choose an available date first.</p>
+                </div>
+                <input type="hidden" id="preferredTimeSlot" name="preferredTimeSlot" />
+                <p class="selected-date-label" id="selected-slot-label" aria-live="polite">No time slot selected yet.</p>
               </div>
-              <div class="booking-slot-grid" id="booking-slot-grid" aria-label="Choose one available time slot">
-                <p class="slot-placeholder">Choose an available date first.</p>
+            </section>
+
+            <section class="form-section" aria-labelledby="access-heading">
+              <h2 id="access-heading">Access and site safety</h2>
+              <div class="option-stack">
+                <label class="option-card">
+                  <input type="checkbox" id="willBeHomeForInspection" />
+                  <span>I will be home at the time of inspection.</span>
+                </label>
+                <label class="option-card">
+                  <input type="checkbox" id="accessPermissionIfNotHome" />
+                  <span>If I am not home, I give permission for the inspector to access the pool area if access is safe and available.</span>
+                </label>
+                <label class="option-card">
+                  <input type="checkbox" id="animalsOnProperty" />
+                  <span>There are dogs or other animals at the property.</span>
+                </label>
+                <label class="option-card">
+                  <input type="checkbox" id="animalsOffLeash" />
+                  <span>Dogs or other animals may be off leash in the backyard.</span>
+                </label>
               </div>
-              <input type="hidden" id="preferredTimeSlot" name="preferredTimeSlot" />
-              <p class="selected-date-label" id="selected-slot-label" aria-live="polite">No time slot selected yet.</p>
-            </div>
 
-            <label>
-              Access instructions
-              <textarea id="accessInstructions" rows="4" placeholder="Example: side gate unlocked, tenant home, key with agent, dogs on property."></textarea>
-            </label>
+              <div class="conditional-panel" id="animal-restraint-panel">
+                <div class="intake-alert">For safety, animals should be securely restrained away from the pool area before the inspection starts.</div>
+                <label class="option-card">
+                  <input type="checkbox" id="animalsWillBeSecured" />
+                  <span>I confirm dogs or other animals will be securely restrained away from the inspection area.</span>
+                </label>
+              </div>
 
-            <label>
-              Extra notes
-              <textarea id="notes" rows="4" placeholder="Anything else we should know?"></textarea>
-            </label>
+              <label>
+                Gate code, side access, lockbox or access notes
+                <textarea id="accessInstructions" rows="4" placeholder="Example: side gate unlocked, lockbox code, tenant home, key with agent."></textarea>
+              </label>
+            </section>
 
-            <label class="checkbox-label">
-              <input type="checkbox" id="termsAccepted" required />
-              <span>I accept the <a href="terms.html" target="_blank" rel="noopener">Terms &amp; Conditions</a>, <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a> and <a href="refunds.html" target="_blank" rel="noopener">Refunds &amp; Cancellations Policy</a>.</span>
-            </label>
+            <section class="form-section" aria-labelledby="exemption-heading">
+              <h2 id="exemption-heading">Pool exemption</h2>
+              <div class="toggle-card">
+                <div>
+                  <strong>Does this property have a pool exemption?</strong>
+                  <span>If yes, upload the exemption document before submitting.</span>
+                </div>
+                <label class="switch" aria-label="Pool exemption toggle">
+                  <input type="checkbox" id="hasPoolExemption" />
+                  <span class="switch-slider"></span>
+                </label>
+              </div>
+
+              <div class="conditional-panel" id="exemption-upload-panel">
+                <label class="file-upload-box">
+                  Upload exemption document
+                  <input type="file" id="exemptionFile" accept="application/pdf,image/jpeg,image/png,image/webp" />
+                  <span class="field-note">Accepted files: PDF, JPG, PNG or WEBP. Maximum 10 MB.</span>
+                </label>
+              </div>
+            </section>
+
+            <section class="form-section" aria-labelledby="final-details-heading">
+              <h2 id="final-details-heading">Final details</h2>
+              <label>
+                Anything else we should know before attending?
+                <textarea id="notes" rows="4" placeholder="Example: tenant details, body corporate access, locked gates, slippery areas, recent works or other site hazards."></textarea>
+              </label>
+
+              <div class="option-stack">
+                <label class="option-card">
+                  <input type="checkbox" id="minorRepairsContactAccepted" />
+                  <span>If minor repairs are required, I am happy for IronGate to contact me about options.</span>
+                </label>
+                <label class="option-card">
+                  <input type="checkbox" id="nonComplianceAcknowledged" required />
+                  <span>I understand that if the pool barrier is not compliant, a certificate cannot be issued until required items are fixed and rechecked.</span>
+                </label>
+                <label class="option-card">
+                  <input type="checkbox" id="informationAccuracyConfirmed" required />
+                  <span>I confirm the information provided is accurate to the best of my knowledge.</span>
+                </label>
+                <label class="option-card">
+                  <input type="checkbox" id="termsAccepted" required />
+                  <span>I accept the <a href="terms.html" target="_blank" rel="noopener">Terms &amp; Conditions</a>, <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a> and <a href="refunds.html" target="_blank" rel="noopener">Refunds &amp; Cancellations Policy</a>.</span>
+                </label>
+              </div>
+            </section>
 
             <button class="btn btn-primary" type="submit" id="booking-submit">
               Save Booking Test
