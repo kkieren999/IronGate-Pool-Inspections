@@ -178,6 +178,19 @@ document.addEventListener("DOMContentLoaded", () => {
     .pool-register-compact-line.is-green { color: #0f8a43; }
     .pool-register-compact-line.is-red { color: #d61f1f; }
     .pool-register-compact-line.is-orange { color: #9a3412; }
+    .pool-register-register-link {
+      display: inline-flex;
+      align-items: center;
+      margin: 4px 10px 0 0;
+      font-size: .84rem;
+      font-weight: 900;
+      color: var(--blue);
+      text-decoration: none;
+    }
+    .pool-register-register-link:hover,
+    .pool-register-register-link:focus {
+      text-decoration: underline;
+    }
     .pool-register-compact-btn {
       border: 0;
       border-radius: 999px;
@@ -263,6 +276,33 @@ document.addEventListener("DOMContentLoaded", () => {
     registeredLabel.insertAdjacentElement("afterend", label);
   }
 
+  function propertyContinuationElements() {
+    const form = document.querySelector("#booking-form");
+    if (!form) return [];
+
+    const sections = [...form.querySelectorAll(".form-section")];
+    const propertySection = form.querySelector('[aria-labelledby="property-details-heading"]');
+    const propertyIndex = sections.indexOf(propertySection);
+    const elements = [];
+
+    if (propertySection) {
+      elements.push(...propertySection.querySelectorAll(".field-grid > label:not(.address-field-wrap), .option-stack"));
+    }
+
+    if (propertyIndex >= 0) elements.push(...sections.slice(propertyIndex + 1));
+    else elements.push(...sections.slice(2));
+
+    const submitButton = document.querySelector("#booking-submit");
+    if (submitButton) elements.push(submitButton);
+    return elements;
+  }
+
+  function setContinuationVisible(isVisible) {
+    propertyContinuationElements().forEach((element) => {
+      element.hidden = !isVisible;
+    });
+  }
+
   function populateFields(status, detailText) {
     if (status === "registered") {
       const isShared = /Shared pool:\s*Yes/i.test(detailText);
@@ -298,6 +338,7 @@ document.addEventListener("DOMContentLoaded", () => {
     panel.dataset.compactStatus = status;
 
     if (status === "checking") {
+      setContinuationVisible(false);
       panel.innerHTML = '<p class="pool-register-compact-line is-orange">Checking pool registration...</p>';
       return;
     }
@@ -307,21 +348,28 @@ document.addEventListener("DOMContentLoaded", () => {
         input.checked = true;
         input.dispatchEvent(new Event("change", { bubbles: true }));
       }
+      setContinuationVisible(true);
       panel.innerHTML = '<p class="pool-register-compact-line is-green"><span>✓ Registered pool found</span></p>';
       if (input) panel.appendChild(hiddenControl);
       return;
     }
 
     if (status === "not_found" || status === "manual_required") {
+      setContinuationVisible(false);
       const lineClass = status === "not_found" ? "is-red" : "is-orange";
       const label = status === "not_found" ? "✕ No registered pool found for this address" : "Pool register check unavailable";
-      panel.innerHTML = `<p class="pool-register-compact-line ${lineClass}"><span>${label}</span><button class="pool-register-compact-btn" type="button" id="pool-register-compact-override">Continue anyway</button></p>`;
+      panel.innerHTML = `
+        <p class="pool-register-compact-line ${lineClass}"><span>${label}</span></p>
+        <a class="pool-register-register-link" href="https://www.qbcc.qld.gov.au/home-owner-hub/swimming-pools/register-pool" target="_blank" rel="noopener">Go to Register a pool | Queensland Building and Construction</a>
+        <button class="pool-register-compact-btn" type="button" id="pool-register-compact-override">Continue anyway</button>
+      `;
       if (input) panel.appendChild(hiddenControl);
       const button = panel.querySelector("#pool-register-compact-override");
       if (button && input) {
         button.addEventListener("click", () => {
           input.checked = true;
           input.dispatchEvent(new Event("change", { bubbles: true }));
+          setContinuationVisible(true);
           button.textContent = "Continue enabled";
           button.disabled = true;
         });
