@@ -1,0 +1,54 @@
+<svg width="1200" height="900" viewBox="0 0 1200 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7FBFF"/>
+      <stop offset="1" stop-color="#EEF6FC"/>
+    </linearGradient>
+    <linearGradient id="header" x1="0" y1="0" x2="1200" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#061B39"/>
+      <stop offset="1" stop-color="#159EE8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="900" rx="36" fill="url(#bg)"/>
+  <rect x="32" y="32" width="1136" height="836" rx="28" fill="white" stroke="#D9E7F3" stroke-width="2"/>
+  <rect x="32" y="32" width="1136" height="110" rx="28" fill="url(#header)"/>
+  <text x="76" y="86" fill="white" font-family="Inter, Arial, sans-serif" font-size="38" font-weight="800">BarrierCheck Report</text>
+  <text x="76" y="120" fill="#CDEBFF" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="600">Dummy preview for Irongate website</text>
+
+  <rect x="76" y="184" width="328" height="128" rx="20" fill="#F5FAFE" stroke="#DCEAF5"/>
+  <text x="104" y="224" fill="#159EE8" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">Property</text>
+  <text x="104" y="258" fill="#071834" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="700">12 Example Street</text>
+  <text x="104" y="288" fill="#63738A" font-family="Inter, Arial, sans-serif" font-size="18">Brisbane QLD</text>
+
+  <rect x="436" y="184" width="310" height="128" rx="20" fill="#F5FAFE" stroke="#DCEAF5"/>
+  <text x="464" y="224" fill="#159EE8" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">Inspection outcome</text>
+  <rect x="464" y="244" width="175" height="42" rx="21" fill="#FFF2E5"/>
+  <text x="490" y="271" fill="#A65300" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="800">Action required</text>
+
+  <rect x="778" y="184" width="314" height="128" rx="20" fill="#F5FAFE" stroke="#DCEAF5"/>
+  <text x="806" y="224" fill="#159EE8" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800">Next steps</text>
+  <text x="806" y="258" fill="#071834" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700">Review notes and photos</text>
+  <text x="806" y="288" fill="#63738A" font-family="Inter, Arial, sans-serif" font-size="18">Arrange repairs, then rebook</text>
+
+  <text x="76" y="376" fill="#061B39" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">Inspection photos</text>
+  <rect x="76" y="398" width="310" height="200" rx="24" fill="#F2F8FD" stroke="#DCEAF5"/>
+  <rect x="404" y="398" width="310" height="200" rx="24" fill="#F2F8FD" stroke="#DCEAF5"/>
+  <rect x="732" y="398" width="360" height="200" rx="24" fill="#F2F8FD" stroke="#DCEAF5"/>
+  <circle cx="231" cy="470" r="38" fill="#D4EAF7"/>
+  <rect x="160" y="526" width="142" height="16" rx="8" fill="#BFD7E7"/>
+  <rect x="446" y="450" width="226" height="18" rx="9" fill="#BFD7E7"/>
+  <rect x="446" y="486" width="180" height="18" rx="9" fill="#D4EAF7"/>
+  <rect x="776" y="440" width="258" height="18" rx="9" fill="#BFD7E7"/>
+  <rect x="776" y="476" width="214" height="18" rx="9" fill="#D4EAF7"/>
+  <rect x="776" y="512" width="176" height="18" rx="9" fill="#D4EAF7"/>
+
+  <text x="76" y="666" fill="#061B39" font-family="Inter, Arial, sans-serif" font-size="28" font-weight="800">Compliance notes</text>
+  <rect x="76" y="688" width="1016" height="136" rx="24" fill="#F9FCFF" stroke="#DCEAF5"/>
+  <g font-family="Inter, Arial, sans-serif" font-size="22" font-weight="700" fill="#173557">
+    <text x="118" y="736">✓  Gate self-closing checked</text>
+    <text x="118" y="776">✓  Fence line reviewed</text>
+    <text x="522" y="736">⚠  Latch height needs adjustment</text>
+    <text x="522" y="776">⚠  Clear NCZ item near boundary fence</text>
+  </g>
+  <text x="76" y="854" fill="#63738A" font-family="Inter, Arial, sans-serif" font-size="18">Replace this dummy preview with your real BarrierCheck report screenshot when ready.</text>
+</svg>
