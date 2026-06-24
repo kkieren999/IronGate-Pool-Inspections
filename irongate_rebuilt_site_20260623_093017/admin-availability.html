@@ -35,8 +35,8 @@
         <div class="admin-hero-card">
           <div>
             <p class="section-kicker">Admin Console</p>
-            <h1>Availability Manager</h1>
-            <p>Click a date, choose whether it is available, unavailable or fully booked, then save it to Firebase. Changes appear on the client booking calendar.</p>
+            <h1>Set Available 1-Hour Blocks</h1>
+            <p>Pick a date, add the exact 1-hour blocks you are available, then save. The client booking page will only show the available blocks you create here.</p>
           </div>
           <div class="admin-status-pill" id="admin-connection-status">Checking sign in…</div>
         </div>
@@ -62,7 +62,14 @@
         </section>
 
         <section class="admin-console" id="admin-console" hidden>
-          <div class="admin-grid-layout">
+          <div class="admin-quick-strip" aria-label="How to use the admin console">
+            <span><strong>1</strong> Pick a date</span>
+            <span><strong>2</strong> Add 1-hour blocks</span>
+            <span><strong>3</strong> Save to Firebase</span>
+            <span><strong>4</strong> Client books one slot</span>
+          </div>
+
+          <div class="admin-grid-layout admin-grid-layout--slots">
             <section class="admin-panel admin-calendar-panel" aria-labelledby="admin-calendar-heading">
               <div class="admin-panel-topline">
                 <div>
@@ -77,10 +84,9 @@
               </div>
 
               <div class="admin-legend" aria-label="Availability legend">
-                <span><i class="legend-dot legend-available"></i> Available</span>
-                <span><i class="legend-dot legend-unavailable"></i> Unavailable</span>
-                <span><i class="legend-dot legend-full"></i> Fully booked</span>
-                <span><i class="legend-dot legend-default"></i> Default</span>
+                <span><i class="legend-dot legend-available"></i> Has blocks</span>
+                <span><i class="legend-dot legend-unavailable"></i> No blocks</span>
+                <span><i class="legend-dot legend-selected"></i> Selected</span>
               </div>
 
               <div class="calendar-weekdays" aria-hidden="true">
@@ -89,47 +95,70 @@
               <div class="admin-calendar-grid" id="admin-calendar-grid" role="grid" aria-label="Availability admin calendar"></div>
             </section>
 
-            <aside class="admin-panel admin-editor-panel" aria-labelledby="admin-editor-heading">
+            <aside class="admin-panel admin-editor-panel admin-slot-editor" aria-labelledby="admin-editor-heading">
               <p class="section-kicker">Selected Date</p>
               <h2 id="admin-editor-heading">No date selected</h2>
-              <p class="admin-editor-help" id="admin-selected-help">Choose a date from the calendar to edit its availability.</p>
+              <p class="admin-editor-help" id="admin-selected-help">Choose a date from the calendar, then add the 1-hour blocks you are available.</p>
 
               <form class="admin-editor-form" id="availability-form">
                 <input type="hidden" id="availability-date" />
 
-                <label>
-                  Availability status
-                  <select id="availability-status" required disabled>
-                    <option value="available">Available</option>
-                    <option value="unavailable">Unavailable</option>
-                    <option value="fully_booked">Fully booked</option>
-                  </select>
-                </label>
+                <div class="slot-summary-card" id="slot-summary-card">
+                  <span class="slot-summary-number" id="slot-summary-number">0</span>
+                  <span class="slot-summary-text" id="slot-summary-text">available 1-hour blocks</span>
+                </div>
 
-                <div class="admin-two-cols">
-                  <label>
-                    Max bookings
-                    <input type="number" id="max-bookings" min="1" max="10" value="1" disabled />
-                  </label>
-                  <label>
-                    Booked count
-                    <input type="number" id="booked-count" min="0" max="10" value="0" disabled />
-                  </label>
+                <div class="admin-custom-slots-panel">
+                  <div class="admin-slots-heading">
+                    <span class="field-title">Add available block</span>
+                    <small>Pick a start time. End time is automatically 1 hour later.</small>
+                  </div>
+
+                  <div class="admin-add-slot-row">
+                    <label>
+                      Start time
+                      <input type="time" id="slot-start-time" step="3600" min="05:00" max="20:00" disabled />
+                    </label>
+                    <button class="btn btn-primary" type="button" id="add-slot-btn" disabled>Add 1-hour block</button>
+                  </div>
+
+                  <div class="admin-preset-panel" aria-label="Quick add buttons">
+                    <span class="field-title">Quick add</span>
+                    <div class="admin-preset-buttons admin-preset-buttons--custom">
+                      <button type="button" class="admin-preset-btn" data-quick-start="08:00" disabled>8 AM</button>
+                      <button type="button" class="admin-preset-btn" data-quick-start="09:00" disabled>9 AM</button>
+                      <button type="button" class="admin-preset-btn" data-quick-start="10:00" disabled>10 AM</button>
+                      <button type="button" class="admin-preset-btn" data-quick-start="11:00" disabled>11 AM</button>
+                      <button type="button" class="admin-preset-btn" data-quick-start="12:00" disabled>12 PM</button>
+                      <button type="button" class="admin-preset-btn" data-quick-start="13:00" disabled>1 PM</button>
+                      <button type="button" class="admin-preset-btn" data-quick-start="14:00" disabled>2 PM</button>
+                      <button type="button" class="admin-preset-btn" data-quick-start="15:00" disabled>3 PM</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="admin-slots-panel">
+                  <div class="admin-slots-heading">
+                    <span class="field-title">Available blocks for this date</span>
+                    <small>Remove any block you do not want clients to book.</small>
+                  </div>
+                  <div class="admin-slot-list" id="admin-slot-list" aria-label="Available 1-hour blocks"></div>
                 </div>
 
                 <label>
                   Public note
-                  <input type="text" id="availability-note" placeholder="Example: Available" disabled />
+                  <input type="text" id="availability-note" placeholder="Example: Please choose one available time below" disabled />
                 </label>
 
                 <label>
-                  Unavailable reason
-                  <input type="text" id="availability-reason" placeholder="Example: Closed / already booked / public holiday" disabled />
+                  Internal reason / note
+                  <input type="text" id="availability-reason" placeholder="Example: Normal day / extra Saturday / closed" disabled />
                 </label>
 
                 <div class="admin-actions">
-                  <button class="btn btn-primary" type="submit" id="save-availability" disabled>Save date</button>
-                  <button class="btn admin-danger-btn" type="button" id="delete-availability" disabled>Delete override</button>
+                  <button class="btn btn-primary" type="submit" id="save-availability" disabled>Save available blocks</button>
+                  <button class="btn admin-danger-btn" type="button" id="delete-availability" disabled>Delete this day</button>
+                  <button class="btn admin-soft-btn" type="button" id="clear-current-slots" disabled>Clear blocks</button>
                 </div>
 
                 <p class="form-note" id="availability-message" role="status" aria-live="polite"></p>
@@ -137,41 +166,49 @@
             </aside>
           </div>
 
-          <section class="admin-panel admin-bulk-panel" aria-labelledby="bulk-heading">
+          <section class="admin-panel admin-bulk-panel admin-bulk-panel--slots" aria-labelledby="bulk-heading">
             <div>
-              <p class="section-kicker">Quick Actions</p>
-              <h2 id="bulk-heading">Update a date range</h2>
-              <p>Use this to block holidays, open extra Saturdays, or mark a group of days unavailable.</p>
+              <p class="section-kicker">Bulk Setup</p>
+              <h2 id="bulk-heading">Create 1-hour blocks across a range</h2>
+              <p>Use this to quickly add your regular available hours for a week or month. Example: Monday to Friday, 8 AM to 2 PM creates 8–9, 9–10, 10–11, 11–12, 12–1 and 1–2.</p>
             </div>
 
-            <form class="admin-bulk-form" id="bulk-form">
+            <form class="admin-bulk-form admin-bulk-form--custom-slots" id="bulk-form">
               <label>
-                From
+                From date
                 <input type="date" id="bulk-start" required />
               </label>
               <label>
-                To
+                To date
                 <input type="date" id="bulk-end" required />
               </label>
               <label>
-                Set status
-                <select id="bulk-status" required>
-                  <option value="unavailable">Unavailable</option>
-                  <option value="available">Available</option>
-                  <option value="fully_booked">Fully booked</option>
-                </select>
+                Start time
+                <input type="time" id="bulk-start-time" step="3600" value="08:00" required />
               </label>
               <label>
-                Note / reason
-                <input type="text" id="bulk-note" placeholder="Example: Holiday closure" />
+                Finish time
+                <input type="time" id="bulk-end-time" step="3600" value="14:00" required />
               </label>
-              <label class="admin-checkbox-line">
-                <input type="checkbox" id="bulk-weekdays-only" />
-                <span>Weekdays only</span>
+              <label>
+                Note
+                <input type="text" id="bulk-note" placeholder="Example: Regular inspection hours" />
               </label>
+
+              <div class="admin-weekday-picker" aria-label="Choose days of week">
+                <span class="field-title">Apply to days</span>
+                <label><input type="checkbox" class="bulk-day" value="1" checked /> Mon</label>
+                <label><input type="checkbox" class="bulk-day" value="2" checked /> Tue</label>
+                <label><input type="checkbox" class="bulk-day" value="3" checked /> Wed</label>
+                <label><input type="checkbox" class="bulk-day" value="4" checked /> Thu</label>
+                <label><input type="checkbox" class="bulk-day" value="5" checked /> Fri</label>
+                <label><input type="checkbox" class="bulk-day" value="6" /> Sat</label>
+                <label><input type="checkbox" class="bulk-day" value="0" /> Sun</label>
+              </div>
+
               <div class="admin-actions admin-bulk-actions">
-                <button class="btn btn-primary" type="submit" id="bulk-save">Apply range</button>
-                <button class="btn admin-danger-btn" type="button" id="bulk-delete">Delete range overrides</button>
+                <button class="btn btn-primary" type="submit" id="bulk-save">Create blocks for range</button>
+                <button class="btn admin-danger-btn" type="button" id="bulk-delete">Delete range availability</button>
               </div>
               <p class="form-note" id="bulk-message" role="status" aria-live="polite"></p>
             </form>

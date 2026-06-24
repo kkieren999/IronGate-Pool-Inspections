@@ -22,6 +22,8 @@ service cloud.firestore {
         request.resource.data.phone is string &&
         request.resource.data.propertyAddress is string &&
         request.resource.data.preferredDate is string &&
+        request.resource.data.preferredTimeSlot is string &&
+        request.resource.data.preferredTimeLabel is string &&
         request.resource.data.termsAccepted == true &&
         request.resource.data.privacyAccepted == true;
 

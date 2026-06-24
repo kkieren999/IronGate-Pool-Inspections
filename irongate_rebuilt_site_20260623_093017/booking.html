@@ -36,7 +36,7 @@
         <div class="section-heading booking-heading">
           <p class="section-kicker">Book Online</p>
           <h1>Book a Pool Safety Inspection</h1>
-          <p class="section-intro">Complete the details below. Choose an available inspection day, enter your details, and submit the booking request. This version saves the booking to Firestore as pending payment.</p>
+          <p class="section-intro">Complete the details below. Choose an available inspection day, then pick one available 1-hour time slot. This version saves the booking to Firestore as pending payment.</p>
         </div>
 
         <div class="contact-card booking-card">
@@ -51,7 +51,7 @@
               <li>Certificate issued if compliant</li>
               <li>Unlimited reinspections included</li>
             </ul>
-            <p class="booking-note">Available dates are controlled from your Firestore availability collection. Payment will be connected with Stripe in the next step.</p>
+            <p class="booking-note">Available dates and 1-hour time slots are controlled from your Firestore availability collection. Payment will be connected with Stripe in the next step.</p>
           </aside>
 
           <form class="contact-form booking-form" id="booking-form">
@@ -119,16 +119,19 @@
               <p class="selected-date-label" id="selected-date-label" aria-live="polite">No date selected yet.</p>
             </div>
 
-            <label>
-              Preferred time
-              <select id="preferredTime" required>
-                <option value="">Select one</option>
-                <option value="Morning">Morning</option>
-                <option value="Middle of day">Middle of day</option>
-                <option value="Afternoon">Afternoon</option>
-                <option value="Flexible">Flexible</option>
-              </select>
-            </label>
+            <div class="booking-slots-section" aria-labelledby="time-slot-heading">
+              <div class="booking-slots-topline">
+                <div>
+                  <span class="field-title" id="time-slot-heading">Available 1-hour time slots</span>
+                  <p class="calendar-help">Select one available time slot for your inspection.</p>
+                </div>
+              </div>
+              <div class="booking-slot-grid" id="booking-slot-grid" aria-label="Choose one available time slot">
+                <p class="slot-placeholder">Choose an available date first.</p>
+              </div>
+              <input type="hidden" id="preferredTimeSlot" name="preferredTimeSlot" />
+              <p class="selected-date-label" id="selected-slot-label" aria-live="polite">No time slot selected yet.</p>
+            </div>
 
             <label>
               Access instructions

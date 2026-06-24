@@ -4,7 +4,6 @@ import {
   deleteDoc,
   doc,
   documentId,
-  getDocs,
   onSnapshot,
   query,
   serverTimestamp,
@@ -21,26 +20,10 @@ import {
 
 const ADMIN_EMAIL = "irongate.pool.bne@gmail.com";
 
-function normaliseEmail(email) {
-  return String(email || "").trim().toLowerCase();
-}
-
-function getAuthErrorMessage(error) {
-  const code = error?.code || "unknown";
-
-  const messages = {
-    "auth/invalid-email": "That email address is not valid.",
-    "auth/invalid-credential": "The email or password is incorrect. This is the most common Firebase error after adding the user.",
-    "auth/user-not-found": "No Firebase Authentication user exists with that email in this Firebase project.",
-    "auth/wrong-password": "The password is incorrect.",
-    "auth/operation-not-allowed": "Email/Password sign-in is not enabled in Firebase Authentication → Sign-in method.",
-    "auth/unauthorized-domain": "This website domain is not authorised in Firebase Authentication → Settings → Authorised domains.",
-    "auth/network-request-failed": "Network error. Check your internet connection or try again.",
-    "auth/too-many-requests": "Firebase has temporarily blocked sign-in attempts. Wait a few minutes, then try again."
-  };
-
-  return `${messages[code] || "Sign in failed."} Firebase code: ${code}`;
-}
+const monthNames = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
 
 const auth = getAuth(app);
 
@@ -61,34 +44,53 @@ const selectedHeading = document.querySelector("#admin-editor-heading");
 const selectedHelp = document.querySelector("#admin-selected-help");
 const availabilityForm = document.querySelector("#availability-form");
 const availabilityDateInput = document.querySelector("#availability-date");
-const statusInput = document.querySelector("#availability-status");
-const maxBookingsInput = document.querySelector("#max-bookings");
-const bookedCountInput = document.querySelector("#booked-count");
 const noteInput = document.querySelector("#availability-note");
 const reasonInput = document.querySelector("#availability-reason");
 const saveButton = document.querySelector("#save-availability");
 const deleteButton = document.querySelector("#delete-availability");
+const clearSlotsButton = document.querySelector("#clear-current-slots");
 const availabilityMessage = document.querySelector("#availability-message");
+const slotStartInput = document.querySelector("#slot-start-time");
+const addSlotButton = document.querySelector("#add-slot-btn");
+const slotList = document.querySelector("#admin-slot-list");
+const slotSummaryNumber = document.querySelector("#slot-summary-number");
+const slotSummaryText = document.querySelector("#slot-summary-text");
+const quickAddButtons = document.querySelectorAll("[data-quick-start]");
 
 const bulkForm = document.querySelector("#bulk-form");
 const bulkStartInput = document.querySelector("#bulk-start");
 const bulkEndInput = document.querySelector("#bulk-end");
-const bulkStatusInput = document.querySelector("#bulk-status");
+const bulkStartTimeInput = document.querySelector("#bulk-start-time");
+const bulkEndTimeInput = document.querySelector("#bulk-end-time");
 const bulkNoteInput = document.querySelector("#bulk-note");
-const bulkWeekdaysOnlyInput = document.querySelector("#bulk-weekdays-only");
 const bulkSaveButton = document.querySelector("#bulk-save");
 const bulkDeleteButton = document.querySelector("#bulk-delete");
 const bulkMessage = document.querySelector("#bulk-message");
 
-const monthNames = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December"
-];
-
 let calendarMonth = startOfMonth(new Date());
 let selectedDate = "";
+let currentSlots = [];
 let availabilityByDate = new Map();
 let unsubscribeAvailability = null;
+
+function normaliseEmail(email) {
+  return String(email || "").trim().toLowerCase();
+}
+
+function getAuthErrorMessage(error) {
+  const code = error?.code || "unknown";
+  const messages = {
+    "auth/invalid-email": "That email address is not valid.",
+    "auth/invalid-credential": "The email or password is incorrect.",
+    "auth/user-not-found": "No Firebase Authentication user exists with that email in this Firebase project.",
+    "auth/wrong-password": "The password is incorrect.",
+    "auth/operation-not-allowed": "Email/Password sign-in is not enabled in Firebase Authentication → Sign-in method.",
+    "auth/unauthorized-domain": "This website domain is not authorised in Firebase Authentication → Settings → Authorised domains.",
+    "auth/network-request-failed": "Network error. Check your internet connection or try again.",
+    "auth/too-many-requests": "Firebase has temporarily blocked sign-in attempts. Wait a few minutes, then try again."
+  };
+  return `${messages[code] || "Sign in failed."} Firebase code: ${code}`;
+}
 
 function setText(element, text, type = "") {
   if (!element) return;
@@ -132,10 +134,6 @@ function formatDisplayDate(dateKey) {
   });
 }
 
-function isWeekend(date) {
-  return date.getDay() === 0 || date.getDay() === 6;
-}
-
 function isPastDate(date) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -144,47 +142,108 @@ function isPastDate(date) {
   return compare < today;
 }
 
-function getDefaultStatus(date) {
-  if (isPastDate(date)) {
-    return { status: "past", label: "Past", className: "past" };
-  }
-
-  if (isWeekend(date)) {
-    return { status: "default_unavailable", label: "Weekend", className: "default-unavailable" };
-  }
-
-  return { status: "default_available", label: "Default", className: "default" };
+function minutesFromTime(time) {
+  const [hours, minutes] = String(time || "").split(":").map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  return hours * 60 + minutes;
 }
 
-function normaliseSavedStatus(dateKey, date) {
-  const saved = availabilityByDate.get(dateKey);
-  if (!saved) return getDefaultStatus(date);
+function timeFromMinutes(totalMinutes) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
 
-  const status = String(saved.status || "available").toLowerCase();
-  const maxBookings = Number(saved.maxBookings || 1);
-  const bookedCount = Number(saved.bookedCount || 0);
+function formatTimeLabel(time) {
+  const [hours, minutes] = time.split(":").map(Number);
+  const suffix = hours >= 12 ? "PM" : "AM";
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${String(minutes).padStart(2, "0")} ${suffix}`;
+}
 
-  if (status === "unavailable" || saved.available === false) {
-    return {
-      status: "unavailable",
-      label: saved.reason || "Unavailable",
-      className: "unavailable"
-    };
-  }
-
-  if (status === "fully_booked" || status === "fully-booked" || status === "full" || bookedCount >= maxBookings) {
-    return {
-      status: "fully_booked",
-      label: "Fully booked",
-      className: "full"
-    };
-  }
-
+function makeSlot(startTime) {
+  const startMinutes = minutesFromTime(startTime);
+  if (startMinutes === null) throw new Error("Invalid start time.");
+  const endMinutes = startMinutes + 60;
+  if (endMinutes > 24 * 60) throw new Error("A 1-hour block cannot finish after midnight.");
+  const cleanStart = timeFromMinutes(startMinutes);
+  const end = timeFromMinutes(endMinutes);
+  const id = cleanStart.replace(":", "_");
   return {
-    status: "available",
-    label: saved.note || "Available",
-    className: "available"
+    id,
+    start: cleanStart,
+    end,
+    label: `${formatTimeLabel(cleanStart)} – ${formatTimeLabel(end)}`,
+    available: true,
+    booked: false
   };
+}
+
+function sortSlots(slots) {
+  return [...slots].sort((a, b) => minutesFromTime(a.start) - minutesFromTime(b.start));
+}
+
+function normaliseSavedSlots(saved) {
+  if (!saved?.slots) return [];
+
+  let rawSlots = [];
+  if (Array.isArray(saved.slots)) {
+    rawSlots = saved.slots;
+  } else if (typeof saved.slots === "object") {
+    rawSlots = Object.values(saved.slots);
+  }
+
+  return sortSlots(
+    rawSlots
+      .filter((slot) => slot && slot.available !== false && slot.booked !== true && slot.start)
+      .map((slot) => {
+        try {
+          const cleanSlot = makeSlot(slot.start);
+          return {
+            ...cleanSlot,
+            available: slot.available !== false,
+            booked: slot.booked === true
+          };
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean)
+  );
+}
+
+function slotsToMap(slots) {
+  return sortSlots(slots).reduce((map, slot) => {
+    map[slot.id] = slot;
+    return map;
+  }, {});
+}
+
+function getAvailableSlotsForDate(dateKey) {
+  const date = parseDateKey(dateKey);
+  if (isPastDate(date)) return [];
+  const saved = availabilityByDate.get(dateKey);
+  return normaliseSavedSlots(saved);
+}
+
+function getDaySummary(dateKey, date) {
+  const saved = availabilityByDate.get(dateKey);
+  const slots = getAvailableSlotsForDate(dateKey);
+
+  if (isPastDate(date)) {
+    return { className: "past", label: "Past", availableCount: 0, saved };
+  }
+
+  if (slots.length > 0) {
+    return {
+      className: "available",
+      label: `${slots.length} block${slots.length === 1 ? "" : "s"}`,
+      availableCount: slots.length,
+      saved
+    };
+  }
+
+  return { className: "unavailable", label: saved?.reason || "No blocks", availableCount: 0, saved };
 }
 
 function renderCalendar() {
@@ -192,10 +251,12 @@ function renderCalendar() {
 
   const year = calendarMonth.getFullYear();
   const month = calendarMonth.getMonth();
+  const todayMonth = startOfMonth(new Date());
   const daysInMonth = getMonthEnd(calendarMonth).getDate();
   const firstWeekday = calendarMonth.getDay();
 
   calendarTitle.textContent = `${monthNames[month]} ${year}`;
+  if (prevMonthButton) prevMonthButton.disabled = calendarMonth <= todayMonth;
   calendarGrid.innerHTML = "";
 
   for (let index = 0; index < firstWeekday; index += 1) {
@@ -207,14 +268,13 @@ function renderCalendar() {
   for (let day = 1; day <= daysInMonth; day += 1) {
     const date = new Date(year, month, day);
     const dateKey = toDateKey(date);
-    const saved = availabilityByDate.get(dateKey);
-    const status = normaliseSavedStatus(dateKey, date);
+    const summary = getDaySummary(dateKey, date);
 
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `admin-day admin-day--${status.className}`;
+    button.className = `admin-day admin-day--${summary.className}`;
     button.dataset.date = dateKey;
-    button.setAttribute("aria-label", `${formatDisplayDate(dateKey)}: ${status.label}`);
+    button.setAttribute("aria-label", `${formatDisplayDate(dateKey)}: ${summary.label}`);
 
     if (dateKey === selectedDate) {
       button.classList.add("is-selected");
@@ -225,8 +285,8 @@ function renderCalendar() {
 
     button.innerHTML = `
       <span class="admin-day-number">${day}</span>
-      <span class="admin-day-status">${status.label}</span>
-      ${saved ? '<span class="admin-day-dot">Saved</span>' : ''}
+      <span class="admin-day-status">${summary.label}</span>
+      <span class="admin-day-dot admin-day-dot--${summary.className}">${summary.saved ? "Saved" : "Empty"}</span>
     `;
 
     button.addEventListener("click", () => selectDate(dateKey));
@@ -235,216 +295,240 @@ function renderCalendar() {
 }
 
 function setEditorEnabled(enabled) {
-  [statusInput, maxBookingsInput, bookedCountInput, noteInput, reasonInput, saveButton, deleteButton].forEach((element) => {
+  [noteInput, reasonInput, saveButton, deleteButton, clearSlotsButton, slotStartInput, addSlotButton].forEach((element) => {
     if (element) element.disabled = !enabled;
   });
+  quickAddButtons.forEach((button) => {
+    button.disabled = !enabled;
+  });
+}
+
+function renderSlotList() {
+  if (!slotList) return;
+  slotList.innerHTML = "";
+
+  if (!selectedDate) {
+    slotList.innerHTML = '<p class="slot-placeholder">Select a date to add available blocks.</p>';
+  } else if (!currentSlots.length) {
+    slotList.innerHTML = '<p class="slot-placeholder">No blocks added yet. Add a start time above, then save.</p>';
+  } else {
+    sortSlots(currentSlots).forEach((slot) => {
+      const item = document.createElement("div");
+      item.className = "admin-slot-item";
+      item.innerHTML = `
+        <div>
+          <strong>${slot.label}</strong>
+          <span>${slot.start} to ${slot.end}</span>
+        </div>
+        <button type="button" class="admin-remove-slot" data-slot-id="${slot.id}">Remove</button>
+      `;
+      item.querySelector("button").addEventListener("click", () => removeSlot(slot.id));
+      slotList.appendChild(item);
+    });
+  }
+
+  if (slotSummaryNumber) slotSummaryNumber.textContent = String(currentSlots.length);
+  if (slotSummaryText) slotSummaryText.textContent = `available 1-hour block${currentSlots.length === 1 ? "" : "s"}`;
 }
 
 function selectDate(dateKey) {
   selectedDate = dateKey;
-  const saved = availabilityByDate.get(dateKey) || {};
-  const date = parseDateKey(dateKey);
-  const defaultStatus = getDefaultStatus(date);
+  const saved = availabilityByDate.get(dateKey) || null;
+  currentSlots = normaliseSavedSlots(saved);
 
-  availabilityDateInput.value = dateKey;
-  selectedHeading.textContent = formatDisplayDate(dateKey);
-  selectedHelp.textContent = saved.status
-    ? "This date has a saved Firebase override. Edit it below or delete the override to return to the default calendar."
-    : `No Firebase override yet. Current default is ${defaultStatus.label.toLowerCase()}. Save below to create one.`;
-
-  statusInput.value = saved.status || (defaultStatus.status === "default_unavailable" || defaultStatus.status === "past" ? "unavailable" : "available");
-  maxBookingsInput.value = saved.maxBookings || 1;
-  bookedCountInput.value = saved.bookedCount || 0;
-  noteInput.value = saved.note || "";
-  reasonInput.value = saved.reason || "";
+  if (availabilityDateInput) availabilityDateInput.value = dateKey;
+  if (selectedHeading) selectedHeading.textContent = formatDisplayDate(dateKey);
+  if (selectedHelp) selectedHelp.textContent = "Add the 1-hour blocks you are available for this date. Clients can choose one of these blocks.";
+  if (noteInput) noteInput.value = saved?.note || "";
+  if (reasonInput) reasonInput.value = saved?.reason || "";
+  if (slotStartInput) slotStartInput.value = "08:00";
 
   setEditorEnabled(true);
   setText(availabilityMessage, "");
+  renderSlotList();
   renderCalendar();
 }
 
-function buildAvailabilityData(dateKey, status, note, reason, maxBookings, bookedCount) {
-  const data = {
-    date: dateKey,
-    status,
-    maxBookings: Number(maxBookings) || 1,
-    bookedCount: Number(bookedCount) || 0,
-    note: note || "",
-    reason: reason || "",
-    updatedAt: serverTimestamp(),
-    updatedBy: auth.currentUser?.email || "admin"
-  };
-
-  if (status === "available") {
-    data.available = true;
-    if (!data.note) data.note = "Available";
-  } else if (status === "unavailable") {
-    data.available = false;
-    if (!data.reason) data.reason = "Unavailable";
-  } else if (status === "fully_booked") {
-    data.available = false;
-    data.bookedCount = data.maxBookings;
-    if (!data.reason) data.reason = "Fully booked";
-  }
-
-  return data;
-}
-
-async function saveSelectedAvailability(event) {
-  event.preventDefault();
-
-  const dateKey = availabilityDateInput.value;
-  if (!dateKey) {
-    setText(availabilityMessage, "Please select a date first.", "error");
+function addSlot(startTime) {
+  if (!selectedDate) {
+    setText(availabilityMessage, "Choose a date first.", "error");
     return;
   }
 
-  setButtonLoading(saveButton, true, "Saving...", "Save date");
-  setText(availabilityMessage, "");
-
   try {
-    const data = buildAvailabilityData(
-      dateKey,
-      statusInput.value,
-      noteInput.value.trim(),
-      reasonInput.value.trim(),
-      maxBookingsInput.value,
-      bookedCountInput.value
-    );
-
-    await setDoc(doc(db, "availability", dateKey), data, { merge: true });
-    setText(availabilityMessage, "Saved. The booking calendar will use this availability.", "success");
+    const newSlot = makeSlot(startTime);
+    if (currentSlots.some((slot) => slot.id === newSlot.id)) {
+      setText(availabilityMessage, `${newSlot.label} is already added.`, "error");
+      return;
+    }
+    currentSlots = sortSlots([...currentSlots, newSlot]);
+    setText(availabilityMessage, `${newSlot.label} added. Remember to save.`, "success");
+    renderSlotList();
   } catch (error) {
-    console.error("Save availability error:", error);
-    setText(availabilityMessage, "Could not save. Check you are signed in and your Firestore rules are published.", "error");
-  } finally {
-    setButtonLoading(saveButton, false, "Saving...", "Save date");
+    setText(availabilityMessage, error.message || "Invalid time block.", "error");
   }
 }
 
-async function deleteSelectedAvailability() {
-  const dateKey = availabilityDateInput.value;
-  if (!dateKey) {
-    setText(availabilityMessage, "Please select a date first.", "error");
-    return;
-  }
-
-  const confirmDelete = window.confirm(`Delete the saved availability override for ${formatDisplayDate(dateKey)}?`);
-  if (!confirmDelete) return;
-
-  deleteButton.disabled = true;
-  setText(availabilityMessage, "Deleting...");
-
-  try {
-    await deleteDoc(doc(db, "availability", dateKey));
-    setText(availabilityMessage, "Deleted. This date now uses the default calendar rule.", "success");
-  } catch (error) {
-    console.error("Delete availability error:", error);
-    setText(availabilityMessage, "Could not delete. Check your Firestore rules and sign in.", "error");
-  } finally {
-    deleteButton.disabled = false;
-  }
+function removeSlot(slotId) {
+  currentSlots = currentSlots.filter((slot) => slot.id !== slotId);
+  setText(availabilityMessage, "Block removed. Remember to save.", "success");
+  renderSlotList();
 }
 
-function datesInRange(startKey, endKey, weekdaysOnly) {
+function buildDateRange(startKey, endKey) {
   const start = parseDateKey(startKey);
   const end = parseDateKey(endKey);
+  if (end < start) throw new Error("The end date must be after the start date.");
+
   const dates = [];
-
-  if (start > end) return dates;
-
-  for (let current = new Date(start); current <= end; current.setDate(current.getDate() + 1)) {
-    const copy = new Date(current);
-    if (weekdaysOnly && isWeekend(copy)) continue;
-    dates.push(toDateKey(copy));
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    dates.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
   }
-
   return dates;
 }
 
-async function applyBulkAvailability(event) {
+function buildSlotsBetween(startTime, endTime) {
+  const start = minutesFromTime(startTime);
+  const end = minutesFromTime(endTime);
+  if (start === null || end === null) throw new Error("Choose valid start and finish times.");
+  if (end <= start) throw new Error("Finish time must be later than start time.");
+  if ((end - start) % 60 !== 0) throw new Error("Use full 1-hour blocks only, for example 08:00 to 14:00.");
+
+  const slots = [];
+  for (let minute = start; minute < end; minute += 60) {
+    slots.push(makeSlot(timeFromMinutes(minute)));
+  }
+  return slots;
+}
+
+async function saveSelectedDate() {
+  if (!selectedDate) return;
+  setButtonLoading(saveButton, true, "Saving...", "Save available blocks");
+  setText(availabilityMessage, "");
+
+  try {
+    const slots = sortSlots(currentSlots);
+    await setDoc(doc(db, "availability", selectedDate), {
+      status: slots.length ? "available" : "unavailable",
+      slots: slotsToMap(slots),
+      availableCount: slots.length,
+      note: noteInput?.value.trim() || "",
+      reason: reasonInput?.value.trim() || (slots.length ? "" : "No available blocks"),
+      updatedAt: serverTimestamp(),
+      updatedBy: auth.currentUser?.email || ADMIN_EMAIL
+    }, { merge: true });
+
+    setText(availabilityMessage, `${formatDisplayDate(selectedDate)} saved with ${slots.length} block${slots.length === 1 ? "" : "s"}.`, "success");
+  } catch (error) {
+    console.error("Error saving availability:", error);
+    setText(availabilityMessage, "Could not save availability. Check Firebase rules and sign-in status.", "error");
+  } finally {
+    setButtonLoading(saveButton, false, "Saving...", "Save available blocks");
+  }
+}
+
+async function deleteSelectedDate() {
+  if (!selectedDate) return;
+  const confirmed = window.confirm(`Delete all availability blocks for ${formatDisplayDate(selectedDate)}?`);
+  if (!confirmed) return;
+
+  try {
+    await deleteDoc(doc(db, "availability", selectedDate));
+    currentSlots = [];
+    if (noteInput) noteInput.value = "";
+    if (reasonInput) reasonInput.value = "";
+    renderSlotList();
+    setText(availabilityMessage, "Date availability deleted. Clients will not see slots for this day.", "success");
+  } catch (error) {
+    console.error("Error deleting availability:", error);
+    setText(availabilityMessage, "Could not delete availability. Check Firebase rules and sign-in status.", "error");
+  }
+}
+
+function getSelectedBulkDays() {
+  return [...document.querySelectorAll(".bulk-day:checked")].map((input) => Number(input.value));
+}
+
+async function applyBulkSlots(event) {
   event.preventDefault();
-
-  const startKey = bulkStartInput.value;
-  const endKey = bulkEndInput.value;
-  const dateKeys = datesInRange(startKey, endKey, bulkWeekdaysOnlyInput.checked);
-
-  if (!dateKeys.length) {
-    setText(bulkMessage, "No dates found in that range.", "error");
-    return;
-  }
-
-  if (dateKeys.length > 60) {
-    setText(bulkMessage, "Please choose 60 days or fewer at a time.", "error");
-    return;
-  }
-
-  setButtonLoading(bulkSaveButton, true, "Applying...", "Apply range");
   setText(bulkMessage, "");
 
   try {
-    const batch = writeBatch(db);
-    dateKeys.forEach((dateKey) => {
-      const data = buildAvailabilityData(
-        dateKey,
-        bulkStatusInput.value,
-        bulkStatusInput.value === "available" ? bulkNoteInput.value.trim() : "",
-        bulkStatusInput.value !== "available" ? bulkNoteInput.value.trim() : "",
-        1,
-        bulkStatusInput.value === "fully_booked" ? 1 : 0
-      );
-      batch.set(doc(db, "availability", dateKey), data, { merge: true });
-    });
+    const startKey = bulkStartInput.value;
+    const endKey = bulkEndInput.value;
+    const selectedDays = getSelectedBulkDays();
+    const slots = buildSlotsBetween(bulkStartTimeInput.value, bulkEndTimeInput.value);
 
+    if (!startKey || !endKey) throw new Error("Choose a start and end date.");
+    if (!selectedDays.length) throw new Error("Choose at least one day of the week.");
+
+    const dates = buildDateRange(startKey, endKey).filter((date) => selectedDays.includes(date.getDay()) && !isPastDate(date));
+    if (!dates.length) throw new Error("No future dates matched your selected range and days.");
+
+    const confirmed = window.confirm(`Create ${slots.length} block${slots.length === 1 ? "" : "s"} on ${dates.length} date${dates.length === 1 ? "" : "s"}? This will replace availability on those dates.`);
+    if (!confirmed) return;
+
+    setButtonLoading(bulkSaveButton, true, "Creating...", "Create blocks for range");
+
+    const batch = writeBatch(db);
+    dates.forEach((date) => {
+      const dateKey = toDateKey(date);
+      batch.set(doc(db, "availability", dateKey), {
+        status: "available",
+        slots: slotsToMap(slots),
+        availableCount: slots.length,
+        note: bulkNoteInput.value.trim(),
+        reason: "",
+        updatedAt: serverTimestamp(),
+        updatedBy: auth.currentUser?.email || ADMIN_EMAIL
+      }, { merge: true });
+    });
     await batch.commit();
-    setText(bulkMessage, `Updated ${dateKeys.length} date${dateKeys.length === 1 ? "" : "s"}.`, "success");
+
+    setText(bulkMessage, `Created ${slots.length} block${slots.length === 1 ? "" : "s"} on ${dates.length} date${dates.length === 1 ? "" : "s"}.`, "success");
   } catch (error) {
     console.error("Bulk save error:", error);
-    setText(bulkMessage, "Could not update the range. Check your sign in and Firestore rules.", "error");
+    setText(bulkMessage, error.message || "Could not create bulk availability.", "error");
   } finally {
-    setButtonLoading(bulkSaveButton, false, "Applying...", "Apply range");
+    setButtonLoading(bulkSaveButton, false, "Creating...", "Create blocks for range");
   }
 }
 
-async function deleteBulkAvailability() {
-  const startKey = bulkStartInput.value;
-  const endKey = bulkEndInput.value;
-  const dateKeys = datesInRange(startKey, endKey, bulkWeekdaysOnlyInput.checked);
-
-  if (!dateKeys.length) {
-    setText(bulkMessage, "No dates found in that range.", "error");
-    return;
-  }
-
-  if (dateKeys.length > 60) {
-    setText(bulkMessage, "Please choose 60 days or fewer at a time.", "error");
-    return;
-  }
-
-  const confirmDelete = window.confirm(`Delete availability overrides for ${dateKeys.length} date${dateKeys.length === 1 ? "" : "s"}?`);
-  if (!confirmDelete) return;
-
-  bulkDeleteButton.disabled = true;
-  setText(bulkMessage, "Deleting range overrides...");
+async function deleteBulkRange() {
+  setText(bulkMessage, "");
 
   try {
+    const startKey = bulkStartInput.value;
+    const endKey = bulkEndInput.value;
+    const selectedDays = getSelectedBulkDays();
+    if (!startKey || !endKey) throw new Error("Choose a start and end date.");
+    if (!selectedDays.length) throw new Error("Choose at least one day of the week.");
+
+    const dates = buildDateRange(startKey, endKey).filter((date) => selectedDays.includes(date.getDay()));
+    if (!dates.length) throw new Error("No dates matched your selected range and days.");
+
+    const confirmed = window.confirm(`Delete availability for ${dates.length} date${dates.length === 1 ? "" : "s"}?`);
+    if (!confirmed) return;
+
+    setButtonLoading(bulkDeleteButton, true, "Deleting...", "Delete range availability");
+
     const batch = writeBatch(db);
-    dateKeys.forEach((dateKey) => {
-      batch.delete(doc(db, "availability", dateKey));
-    });
+    dates.forEach((date) => batch.delete(doc(db, "availability", toDateKey(date))));
     await batch.commit();
-    setText(bulkMessage, `Deleted ${dateKeys.length} override${dateKeys.length === 1 ? "" : "s"}.`, "success");
+
+    setText(bulkMessage, `Deleted availability for ${dates.length} date${dates.length === 1 ? "" : "s"}.`, "success");
   } catch (error) {
     console.error("Bulk delete error:", error);
-    setText(bulkMessage, "Could not delete the range. Check your sign in and Firestore rules.", "error");
+    setText(bulkMessage, error.message || "Could not delete range availability.", "error");
   } finally {
-    bulkDeleteButton.disabled = false;
+    setButtonLoading(bulkDeleteButton, false, "Deleting...", "Delete range availability");
   }
 }
 
-function listenToMonthAvailability() {
+function subscribeAvailabilityForMonth() {
   if (unsubscribeAvailability) unsubscribeAvailability();
-
   const firstDay = toDateKey(calendarMonth);
   const lastDay = toDateKey(getMonthEnd(calendarMonth));
 
@@ -456,83 +540,39 @@ function listenToMonthAvailability() {
 
   unsubscribeAvailability = onSnapshot(monthQuery, (snapshot) => {
     availabilityByDate = new Map();
-    snapshot.forEach((document) => {
-      availabilityByDate.set(document.id, document.data());
-    });
-
+    snapshot.forEach((item) => availabilityByDate.set(item.id, item.data()));
     renderCalendar();
-
     if (selectedDate) {
-      const selectedMonth = selectedDate.slice(0, 7);
-      const currentMonth = toDateKey(calendarMonth).slice(0, 7);
-      if (selectedMonth === currentMonth) {
-        const saved = availabilityByDate.get(selectedDate);
-        if (saved) {
-          selectedHelp.textContent = "This date has a saved Firebase override. Edit it below or delete the override to return to the default calendar.";
-        }
-      }
+      const saved = availabilityByDate.get(selectedDate) || null;
+      currentSlots = normaliseSavedSlots(saved);
+      renderSlotList();
     }
+    setText(connectionStatus, "Connected", "success");
   }, (error) => {
     console.error("Availability listener error:", error);
-    setText(connectionStatus, "Calendar read failed", "error");
+    setText(connectionStatus, "Firestore read error", "error");
   });
-}
-
-function goToMonth(offset) {
-  calendarMonth = startOfMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + offset, 1));
-  selectedDate = "";
-  setEditorEnabled(false);
-  selectedHeading.textContent = "No date selected";
-  selectedHelp.textContent = "Choose a date from the calendar to edit its availability.";
-  setText(availabilityMessage, "");
-  renderCalendar();
-  listenToMonthAvailability();
-}
-
-function showAdminConsole(user) {
-  const isAllowedAdmin = normaliseEmail(user?.email) === normaliseEmail(ADMIN_EMAIL);
-
-  if (!isAllowedAdmin) {
-    loginCard.hidden = false;
-    consolePanel.hidden = true;
-    signOutButton.hidden = false;
-    setText(connectionStatus, "Signed in with wrong email", "error");
-    setText(loginMessage, `You are signed in as ${user.email}, but this console is restricted to ${ADMIN_EMAIL}.`, "error");
-    return;
-  }
-
-  loginCard.hidden = true;
-  consolePanel.hidden = false;
-  signOutButton.hidden = false;
-  setText(connectionStatus, `Signed in: ${user.email}`, "success");
-  renderCalendar();
-  listenToMonthAvailability();
-}
-
-function showLogin() {
-  loginCard.hidden = false;
-  consolePanel.hidden = true;
-  signOutButton.hidden = true;
-  setEditorEnabled(false);
-  setText(connectionStatus, "Not signed in", "");
-  if (unsubscribeAvailability) unsubscribeAvailability();
 }
 
 if (loginForm) {
   loginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
-    setButtonLoading(loginSubmit, true, "Signing in...", "Sign in");
     setText(loginMessage, "");
+    setButtonLoading(loginSubmit, true, "Signing in...", "Sign in");
+
+    const email = document.querySelector("#admin-email")?.value || "";
+    const password = document.querySelector("#admin-password")?.value || "";
+
+    if (normaliseEmail(email) !== ADMIN_EMAIL) {
+      setText(loginMessage, `Use the admin email: ${ADMIN_EMAIL}`, "error");
+      setButtonLoading(loginSubmit, false, "Signing in...", "Sign in");
+      return;
+    }
 
     try {
-      await signInWithEmailAndPassword(
-        auth,
-        normaliseEmail(document.querySelector("#admin-email").value),
-        document.querySelector("#admin-password").value
-      );
-      loginForm.reset();
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
-      console.error("Admin sign in error:", error);
+      console.error("Admin login error:", error);
       setText(loginMessage, getAuthErrorMessage(error), "error");
     } finally {
       setButtonLoading(loginSubmit, false, "Signing in...", "Sign in");
@@ -541,41 +581,79 @@ if (loginForm) {
 }
 
 if (signOutButton) {
-  signOutButton.addEventListener("click", async () => {
-    await signOut(auth);
-  });
+  signOutButton.addEventListener("click", () => signOut(auth));
 }
 
 if (prevMonthButton) {
-  prevMonthButton.addEventListener("click", () => goToMonth(-1));
+  prevMonthButton.addEventListener("click", () => {
+    calendarMonth = startOfMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1));
+    subscribeAvailabilityForMonth();
+  });
 }
 
 if (nextMonthButton) {
-  nextMonthButton.addEventListener("click", () => goToMonth(1));
+  nextMonthButton.addEventListener("click", () => {
+    calendarMonth = startOfMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1));
+    subscribeAvailabilityForMonth();
+  });
+}
+
+if (addSlotButton) {
+  addSlotButton.addEventListener("click", () => addSlot(slotStartInput?.value || "08:00"));
+}
+
+quickAddButtons.forEach((button) => {
+  button.addEventListener("click", () => addSlot(button.dataset.quickStart));
+});
+
+if (clearSlotsButton) {
+  clearSlotsButton.addEventListener("click", () => {
+    currentSlots = [];
+    setText(availabilityMessage, "All blocks cleared. Remember to save.", "success");
+    renderSlotList();
+  });
 }
 
 if (availabilityForm) {
-  availabilityForm.addEventListener("submit", saveSelectedAvailability);
+  availabilityForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    saveSelectedDate();
+  });
 }
 
 if (deleteButton) {
-  deleteButton.addEventListener("click", deleteSelectedAvailability);
+  deleteButton.addEventListener("click", deleteSelectedDate);
 }
 
 if (bulkForm) {
-  bulkForm.addEventListener("submit", applyBulkAvailability);
+  bulkForm.addEventListener("submit", applyBulkSlots);
 }
 
 if (bulkDeleteButton) {
-  bulkDeleteButton.addEventListener("click", deleteBulkAvailability);
+  bulkDeleteButton.addEventListener("click", deleteBulkRange);
 }
 
 onAuthStateChanged(auth, (user) => {
-  if (user) {
-    showAdminConsole(user);
+  const isAdmin = user && normaliseEmail(user.email) === ADMIN_EMAIL;
+
+  if (loginCard) loginCard.hidden = Boolean(isAdmin);
+  if (consolePanel) consolePanel.hidden = !isAdmin;
+  if (signOutButton) signOutButton.hidden = !isAdmin;
+
+  if (isAdmin) {
+    setText(connectionStatus, "Signed in", "success");
+    setText(loginMessage, "");
+    setEditorEnabled(false);
+    renderSlotList();
+    subscribeAvailabilityForMonth();
   } else {
-    showLogin();
+    setText(connectionStatus, user ? "Wrong admin email" : "Not signed in", user ? "error" : "");
+    if (unsubscribeAvailability) unsubscribeAvailability();
+    unsubscribeAvailability = null;
+    selectedDate = "";
+    currentSlots = [];
+    availabilityByDate = new Map();
+    setEditorEnabled(false);
+    renderCalendar();
   }
 });
-
-renderCalendar();

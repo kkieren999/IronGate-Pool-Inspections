@@ -7,7 +7,10 @@ const calendarTitle = document.querySelector("#calendar-title");
 const calendarPrev = document.querySelector("#calendar-prev");
 const calendarNext = document.querySelector("#calendar-next");
 const preferredDateInput = document.querySelector("#preferredDate");
+const preferredTimeSlotInput = document.querySelector("#preferredTimeSlot");
 const selectedDateLabel = document.querySelector("#selected-date-label");
+const selectedSlotLabel = document.querySelector("#selected-slot-label");
+const bookingSlotGrid = document.querySelector("#booking-slot-grid");
 
 const inspectionPriceCents = 24900;
 const inspectionPriceDisplay = "$249 inc GST";
@@ -17,6 +20,7 @@ const monthNames = [
 ];
 
 let selectedDate = "";
+let selectedTimeSlot = null;
 let availabilityByDate = new Map();
 let calendarMonth = startOfMonth(new Date());
 let firebaseModulesPromise = null;
@@ -80,54 +84,85 @@ function isPastDate(date) {
   return compare < today;
 }
 
-function isWeekend(date) {
-  const day = date.getDay();
-  return day === 0 || day === 6;
+function minutesFromTime(time) {
+  const [hours, minutes] = String(time || "").split(":").map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 0;
+  return hours * 60 + minutes;
+}
+
+function formatTimeLabel(time) {
+  const [hours, minutes] = time.split(":").map(Number);
+  const suffix = hours >= 12 ? "PM" : "AM";
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${String(minutes).padStart(2, "0")} ${suffix}`;
+}
+
+function timeFromMinutes(totalMinutes) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function normaliseSlot(slot) {
+  if (!slot?.start) return null;
+  const startMinutes = minutesFromTime(slot.start);
+  const start = timeFromMinutes(startMinutes);
+  const end = slot.end || timeFromMinutes(startMinutes + 60);
+  const id = slot.id || start.replace(":", "_");
+  return {
+    id,
+    start,
+    end,
+    label: slot.label || `${formatTimeLabel(start)} – ${formatTimeLabel(end)}`,
+    available: slot.available !== false,
+    booked: slot.booked === true
+  };
+}
+
+function normaliseSlots(saved, date) {
+  if (isPastDate(date) || !saved?.slots) return [];
+
+  let rawSlots = [];
+  if (Array.isArray(saved.slots)) {
+    rawSlots = saved.slots;
+  } else if (typeof saved.slots === "object") {
+    rawSlots = Object.values(saved.slots);
+  }
+
+  return rawSlots
+    .map(normaliseSlot)
+    .filter((slot) => slot && slot.available && !slot.booked)
+    .sort((a, b) => minutesFromTime(a.start) - minutesFromTime(b.start));
+}
+
+function getAvailableSlots(dateKey) {
+  if (!dateKey) return [];
+  const date = parseDateKey(dateKey);
+  const saved = availabilityByDate.get(dateKey) || null;
+  return normaliseSlots(saved, date);
 }
 
 function normaliseAvailability(dateKey, date) {
-  const saved = availabilityByDate.get(dateKey) || {};
-  const status = String(saved.status || "").toLowerCase();
-  const maxBookings = Number(saved.maxBookings || 1);
-  const bookedCount = Number(saved.bookedCount || 0);
+  const saved = availabilityByDate.get(dateKey) || null;
+  const availableSlots = getAvailableSlots(dateKey);
 
   if (isPastDate(date)) {
+    return { status: "unavailable", label: "Past date", isBookable: false };
+  }
+
+  if (availableSlots.length > 0) {
     return {
-      status: "unavailable",
-      label: "Past date",
-      isBookable: false
+      status: "available",
+      label: `${availableSlots.length} time${availableSlots.length === 1 ? "" : "s"}`,
+      isBookable: true
     };
   }
 
-  if (status === "unavailable" || saved.available === false) {
-    return {
-      status: "unavailable",
-      label: saved.reason || "Unavailable",
-      isBookable: false
-    };
+  if (saved?.reason) {
+    return { status: "unavailable", label: saved.reason, isBookable: false };
   }
 
-  if (status === "fully_booked" || status === "full" || bookedCount >= maxBookings) {
-    return {
-      status: "fully-booked",
-      label: "Fully booked",
-      isBookable: false
-    };
-  }
-
-  if (!saved.status && isWeekend(date)) {
-    return {
-      status: "unavailable",
-      label: "Weekend unavailable",
-      isBookable: false
-    };
-  }
-
-  return {
-    status: "available",
-    label: saved.note || "Available",
-    isBookable: true
-  };
+  return { status: "unavailable", label: "No times", isBookable: false };
 }
 
 function renderCalendar() {
@@ -182,14 +217,72 @@ function renderCalendar() {
   }
 }
 
+function resetSelectedSlot() {
+  selectedTimeSlot = null;
+  if (preferredTimeSlotInput) preferredTimeSlotInput.value = "";
+  if (selectedSlotLabel) {
+    selectedSlotLabel.textContent = "No time slot selected yet.";
+    selectedSlotLabel.dataset.type = "";
+  }
+}
+
 function selectDate(dateKey) {
   selectedDate = dateKey;
+  resetSelectedSlot();
+
   if (preferredDateInput) preferredDateInput.value = dateKey;
   if (selectedDateLabel) {
     selectedDateLabel.textContent = `Selected date: ${formatDisplayDate(dateKey)}`;
     selectedDateLabel.dataset.type = "selected";
   }
+
   renderCalendar();
+  renderTimeSlots();
+}
+
+function renderTimeSlots() {
+  if (!bookingSlotGrid) return;
+
+  bookingSlotGrid.innerHTML = "";
+
+  if (!selectedDate) {
+    bookingSlotGrid.innerHTML = '<p class="slot-placeholder">Choose an available date first.</p>';
+    return;
+  }
+
+  const slots = getAvailableSlots(selectedDate);
+
+  if (!slots.length) {
+    bookingSlotGrid.innerHTML = '<p class="slot-placeholder">No available time slots for this date. Please choose another date.</p>';
+    return;
+  }
+
+  slots.forEach((slot) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "booking-slot-btn";
+    button.dataset.slotId = slot.id;
+    button.innerHTML = `<strong>${slot.label}</strong><span>${slot.start} to ${slot.end}</span>`;
+
+    if (selectedTimeSlot?.id === slot.id) {
+      button.classList.add("is-selected");
+      button.setAttribute("aria-pressed", "true");
+    } else {
+      button.setAttribute("aria-pressed", "false");
+    }
+
+    button.addEventListener("click", () => {
+      selectedTimeSlot = slot;
+      if (preferredTimeSlotInput) preferredTimeSlotInput.value = slot.id;
+      if (selectedSlotLabel) {
+        selectedSlotLabel.textContent = `Selected time: ${slot.label}`;
+        selectedSlotLabel.dataset.type = "selected";
+      }
+      renderTimeSlots();
+    });
+
+    bookingSlotGrid.appendChild(button);
+  });
 }
 
 async function getFirebaseModules() {
@@ -213,22 +306,15 @@ async function getFirebaseModules() {
 }
 
 async function loadAvailabilityForMonth() {
-  // Show the default calendar immediately so the page never gets stuck on Loading calendar.
   renderCalendar();
+  renderTimeSlots();
 
   const firstDay = toDateKey(calendarMonth);
   const lastDay = toDateKey(getMonthEnd(calendarMonth));
   availabilityByDate = new Map();
 
   try {
-    const {
-      db,
-      collection,
-      getDocs,
-      query,
-      where,
-      documentId
-    } = await getFirebaseModules();
+    const { db, collection, getDocs, query, where, documentId } = await getFirebaseModules();
 
     const monthQuery = query(
       collection(db, "availability"),
@@ -242,10 +328,11 @@ async function loadAvailabilityForMonth() {
     });
   } catch (error) {
     console.error("Error loading availability:", error);
-    showMessage("Calendar is showing the default weekday availability. Firestore availability overrides could not be loaded.", "error");
+    showMessage("Could not load availability from Firestore. Please refresh or try again.", "error");
   }
 
   renderCalendar();
+  renderTimeSlots();
 }
 
 if (calendarPrev) {
@@ -277,6 +364,15 @@ if (form) {
       return;
     }
 
+    if (!selectedTimeSlot) {
+      showMessage("Please choose one available 1-hour time slot.", "error");
+      if (selectedSlotLabel) {
+        selectedSlotLabel.textContent = "Please choose one available 1-hour time slot.";
+        selectedSlotLabel.dataset.type = "error";
+      }
+      return;
+    }
+
     setLoading(true);
 
     const termsAccepted = document.querySelector("#termsAccepted")?.checked === true;
@@ -289,7 +385,11 @@ if (form) {
       clientType: getValue("#clientType"),
       preferredDate: selectedDate,
       preferredDateDisplay: formatDisplayDate(selectedDate),
-      preferredTime: getValue("#preferredTime"),
+      preferredTimeSlot: selectedTimeSlot.id,
+      preferredTimeLabel: selectedTimeSlot.label,
+      preferredTimeStart: selectedTimeSlot.start,
+      preferredTimeEnd: selectedTimeSlot.end,
+      preferredTime: selectedTimeSlot.label,
       accessInstructions: getValue("#accessInstructions"),
       notes: getValue("#notes"),
 
@@ -313,25 +413,21 @@ if (form) {
     };
 
     try {
-      const {
-        db,
-        collection,
-        addDoc,
-        serverTimestamp
-      } = await getFirebaseModules();
-
+      const { db, collection, addDoc, serverTimestamp } = await getFirebaseModules();
       bookingData.createdAt = serverTimestamp();
 
       const docRef = await addDoc(collection(db, "bookings"), bookingData);
       showMessage(`Booking saved successfully. Booking ID: ${docRef.id}`, "success");
       form.reset();
       selectedDate = "";
+      resetSelectedSlot();
       if (preferredDateInput) preferredDateInput.value = "";
       if (selectedDateLabel) {
         selectedDateLabel.textContent = "No date selected yet.";
         selectedDateLabel.dataset.type = "";
       }
       renderCalendar();
+      renderTimeSlots();
       console.log("Booking saved:", docRef.id);
     } catch (error) {
       console.error("Error saving booking:", error);
