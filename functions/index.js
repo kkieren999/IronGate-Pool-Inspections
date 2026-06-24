@@ -70,6 +70,8 @@ function normaliseStreetName(value) {
 
 function normaliseStreetNumber(value) {
   const cleaned = cleanText(value);
+  const slashMatch = cleaned.match(/\/(\d+[A-Z]?)/);
+  if (slashMatch) return slashMatch[1];
   const match = cleaned.match(/\d+[A-Z]?(?:-\d+[A-Z]?)?/);
   return match ? match[0] : cleaned;
 }
@@ -122,11 +124,7 @@ function numberMatches(inputNumber, recordNumber) {
   const input = normaliseStreetNumber(inputNumber);
   const record = normaliseStreetNumber(recordNumber);
   if (!input || !record) return false;
-  if (input === record) return true;
-
-  const inputDigits = input.match(/\d+/)?.[0] || "";
-  const recordDigits = record.match(/\d+/)?.[0] || "";
-  return Boolean(inputDigits && recordDigits && inputDigits === recordDigits);
+  return input === record;
 }
 
 function scoreRecord(parts, record) {
@@ -204,7 +202,7 @@ exports.poolRegisterLookup = functions
       const address = req.body?.address || {};
       const parts = getAddressParts(address);
 
-      if (!parts.postcode || !parts.suburb || !parts.streetName) {
+      if (!parts.postcode || !parts.suburb || !parts.streetName || !parts.streetNumber) {
         res.status(400).json({
           registered: false,
           status: "insufficient_address",
@@ -220,16 +218,20 @@ exports.poolRegisterLookup = functions
         .sort((a, b) => b.score - a.score);
 
       const best = scored[0] || null;
-      const registered = Boolean(best && best.score >= 80);
+      const bestNumberMatches = Boolean(best && numberMatches(parts.streetNumber, recordValue(best.record, "Street Number")));
+      const registered = Boolean(best && best.score >= 80 && bestNumberMatches);
 
       if (!registered) {
         res.status(200).json({
           registered: false,
           status: "not_found",
-          reason: "No matching registered pool was found for the selected address.",
+          reason: best && !bestNumberMatches
+            ? "A pool was found on the same street, but the street number did not match the selected address."
+            : "No matching registered pool was found for the selected address.",
           addressParts: parts,
           checkedRecordCount: records.length,
-          bestScore: best?.score || 0
+          bestScore: best?.score || 0,
+          closestMatchedAddress: best ? formatMatch(best.record) : ""
         });
         return;
       }
