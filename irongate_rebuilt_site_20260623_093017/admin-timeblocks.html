@@ -14,7 +14,7 @@
     .timeblock-shell { display: grid; gap: 22px; }
     .timeblock-hero { display: flex; justify-content: space-between; gap: 20px; align-items: center; padding: 30px; border-radius: 28px; color: #fff; background: linear-gradient(135deg, #061b39, #08294f); box-shadow: var(--shadow); }
     .timeblock-hero h1 { color: #fff; font-size: clamp(2rem, 4vw, 3.4rem); }
-    .timeblock-hero p { margin: 10px 0 0; color: rgba(255,255,255,.82); max-width: 720px; }
+    .timeblock-hero p { margin: 10px 0 0; color: rgba(255,255,255,.82); max-width: 760px; }
     .timeblock-status { padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,.12); font-weight: 900; white-space: nowrap; }
     .timeblock-card { background: #fff; border: 1px solid rgba(7,24,52,.08); border-radius: 28px; padding: 28px; box-shadow: var(--shadow); }
     .timeblock-grid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: 22px; align-items: start; }
@@ -39,8 +39,29 @@
     .soft-btn { background: #f5f9fd !important; color: var(--navy) !important; border-color: rgba(7,24,52,.08) !important; }
     .form-note[data-type="success"] { color: #0f8a43 !important; }
     .form-note[data-type="error"] { color: #d61f1f !important; }
+    .calendar-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .calendar-head strong { color: var(--navy); font-size: 1.15rem; }
+    .calendar-nav { display: inline-flex; gap: 8px; align-items: center; }
+    .calendar-nav button { width: 42px; height: 42px; border: 1px solid #d7e1ec; border-radius: 999px; background: #fff; color: var(--navy); font-size: 1.6rem; line-height: 1; font-weight: 900; cursor: pointer; }
+    .calendar-weekdays, .admin-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+    .calendar-weekdays { margin-bottom: 8px; }
+    .calendar-weekdays span { text-align: center; color: var(--muted); font-weight: 900; font-size: .78rem; }
+    .calendar-empty { min-height: 76px; }
+    .calendar-day-admin { min-height: 76px; border: 1px solid #d7e1ec; border-radius: 16px; background: #fff; color: var(--navy); cursor: pointer; text-align: left; padding: 10px; display: grid; align-content: space-between; gap: 6px; }
+    .calendar-day-admin:hover { border-color: rgba(21,158,232,.55); box-shadow: 0 10px 24px rgba(4,26,55,.08); }
+    .calendar-day-admin.is-selected { outline: 3px solid rgba(21,158,232,.24); border-color: var(--blue); background: #eef9ff; }
+    .calendar-day-admin.is-past { opacity: .44; }
+    .day-number { font-weight: 900; font-size: 1.05rem; }
+    .day-status { font-size: .75rem; font-weight: 900; color: var(--muted); }
+    .calendar-day-admin.has-blocks .day-status { color: #0f8a43; }
+    .calendar-day-admin.no-blocks .day-status { color: #d61f1f; }
+    .calendar-legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 0; color: var(--muted); font-weight: 800; font-size: .9rem; }
+    .legend-dot { display: inline-block; width: 11px; height: 11px; border-radius: 999px; margin-right: 6px; vertical-align: middle; }
+    .legend-green { background: #0f8a43; }
+    .legend-red { background: #d61f1f; }
+    .legend-blue { background: var(--blue); }
     [hidden] { display: none !important; }
-    @media (max-width: 900px) { .timeblock-grid, .timeblock-row { grid-template-columns: 1fr; } .timeblock-quick, .bulk-days { grid-template-columns: repeat(2, minmax(0, 1fr)); } .timeblock-hero { display: grid; } }
+    @media (max-width: 900px) { .timeblock-grid, .timeblock-row { grid-template-columns: 1fr; } .timeblock-quick, .bulk-days { grid-template-columns: repeat(2, minmax(0, 1fr)); } .timeblock-hero { display: grid; } .calendar-weekdays, .admin-calendar { gap: 5px; } .calendar-day-admin { min-height: 60px; padding: 7px; } .day-status { font-size: .65rem; } }
   </style>
 </head>
 <body class="timeblock-admin">
@@ -66,7 +87,7 @@
           <div>
             <p class="section-kicker">Admin Console</p>
             <h1>Available 1-hour blocks</h1>
-            <p>Choose a date, add the exact 1-hour blocks you are available, then save. Clients will only see those saved times and can choose one slot.</p>
+            <p>Use the calendar to pick a day, add the exact 1-hour blocks you are available, then save. Clients will only see those saved times and can choose one slot.</p>
           </div>
           <div class="timeblock-status" id="status-pill">Checking sign in…</div>
         </div>
@@ -85,9 +106,32 @@
         <section id="console" hidden>
           <div class="timeblock-grid">
             <section class="timeblock-card">
-              <p class="section-kicker">Single Day</p>
-              <h2>Add blocks for one date</h2>
-              <p>Use this for custom days like extra Saturdays, short days, or one-off availability.</p>
+              <div class="calendar-head">
+                <div>
+                  <p class="section-kicker">Calendar</p>
+                  <h2>Pick a date</h2>
+                </div>
+                <div class="calendar-nav">
+                  <button type="button" id="prev-month" aria-label="Previous month">‹</button>
+                  <strong id="month-title">Loading</strong>
+                  <button type="button" id="next-month" aria-label="Next month">›</button>
+                </div>
+              </div>
+              <div class="calendar-weekdays" aria-hidden="true">
+                <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+              </div>
+              <div class="admin-calendar" id="admin-calendar" aria-label="Admin availability calendar"></div>
+              <div class="calendar-legend">
+                <span><i class="legend-dot legend-green"></i>Saved blocks</span>
+                <span><i class="legend-dot legend-red"></i>No blocks</span>
+                <span><i class="legend-dot legend-blue"></i>Selected</span>
+              </div>
+            </section>
+
+            <section class="timeblock-card">
+              <p class="section-kicker">Selected Day</p>
+              <h2 id="selected-heading">No date selected</h2>
+              <p>Click a calendar date or use the date field below. Then add the 1-hour blocks you are available.</p>
               <form class="timeblock-form" id="day-form">
                 <label>Date <input type="date" id="selected-date" required /></label>
                 <div class="timeblock-row">
@@ -121,12 +165,12 @@
                 <p class="form-note" id="day-message" role="status" aria-live="polite"></p>
               </form>
             </section>
-
-            <section class="timeblock-card">
-              <div class="summary-pill"><strong id="block-count">0</strong> available block/s</div>
-              <div class="timeblock-list" id="block-list"></div>
-            </section>
           </div>
+
+          <section class="timeblock-card" style="margin-top:22px;">
+            <div class="summary-pill"><strong id="block-count">0</strong> available block/s for selected day</div>
+            <div class="timeblock-list" id="block-list"></div>
+          </section>
 
           <section class="timeblock-card" style="margin-top:22px;">
             <p class="section-kicker">Bulk Setup</p>
@@ -168,13 +212,16 @@
 
   <script type="module">
     import { app, db } from "./js/firebase-config.js";
-    import { deleteDoc, doc, getDoc, serverTimestamp, setDoc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+    import { collection, deleteDoc, doc, documentId, getDoc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
     const ADMIN_EMAIL = "irongate.pool.bne@gmail.com";
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const auth = getAuth(app);
     let currentDate = "";
     let blocks = [];
+    let calendarMonth = startOfMonth(new Date());
+    let monthAvailability = new Map();
 
     const $ = (id) => document.querySelector(id);
     const loginCard = $("#login-card");
@@ -187,6 +234,9 @@
     const blockCount = $("#block-count");
     const dayMessage = $("#day-message");
     const bulkMessage = $("#bulk-message");
+    const calendarEl = $("#admin-calendar");
+    const monthTitle = $("#month-title");
+    const selectedHeading = $("#selected-heading");
 
     function msg(el, text, type = "") {
       if (!el) return;
@@ -196,6 +246,14 @@
 
     function normaliseEmail(email) {
       return String(email || "").trim().toLowerCase();
+    }
+
+    function startOfMonth(date) {
+      return new Date(date.getFullYear(), date.getMonth(), 1);
+    }
+
+    function getMonthEnd(date) {
+      return new Date(date.getFullYear(), date.getMonth() + 1, 0);
     }
 
     function toDateKey(date) {
@@ -208,6 +266,19 @@
     function parseDateKey(key) {
       const [y, m, d] = key.split("-").map(Number);
       return new Date(y, m - 1, d);
+    }
+
+    function isPastDate(date) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const compare = new Date(date);
+      compare.setHours(0, 0, 0, 0);
+      return compare < today;
+    }
+
+    function displayDate(key) {
+      if (!key) return "No date selected";
+      return parseDateKey(key).toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
     }
 
     function minutesFromTime(time) {
@@ -237,14 +308,7 @@
       if (endMinutes > 24 * 60) throw new Error("The 1-hour block cannot finish after midnight.");
       const start = timeFromMinutes(startMinutes);
       const end = timeFromMinutes(endMinutes);
-      return {
-        id: start.replace(":", "_"),
-        start,
-        end,
-        label: `${labelTime(start)} – ${labelTime(end)}`,
-        available: true,
-        booked: false
-      };
+      return { id: start.replace(":", "_"), start, end, label: `${labelTime(start)} – ${labelTime(end)}`, available: true, booked: false };
     }
 
     function sortBlocks(list) {
@@ -275,6 +339,7 @@
       blocks = sortBlocks(blocks);
       blockCount.textContent = String(blocks.length);
       blockList.innerHTML = "";
+      if (selectedHeading) selectedHeading.textContent = currentDate ? displayDate(currentDate) : "No date selected";
       if (!blocks.length) {
         blockList.innerHTML = '<div class="timeblock-empty">No available blocks added yet.</div>';
         return;
@@ -290,6 +355,59 @@
         });
         blockList.appendChild(row);
       });
+    }
+
+    function getSavedBlockCount(dateKey) {
+      return normaliseBlocks(monthAvailability.get(dateKey)).length;
+    }
+
+    function renderCalendar() {
+      if (!calendarEl || !monthTitle) return;
+      const year = calendarMonth.getFullYear();
+      const month = calendarMonth.getMonth();
+      const firstWeekday = calendarMonth.getDay();
+      const daysInMonth = getMonthEnd(calendarMonth).getDate();
+      monthTitle.textContent = `${monthNames[month]} ${year}`;
+      calendarEl.innerHTML = "";
+
+      for (let i = 0; i < firstWeekday; i += 1) {
+        const empty = document.createElement("span");
+        empty.className = "calendar-empty";
+        calendarEl.appendChild(empty);
+      }
+
+      for (let day = 1; day <= daysInMonth; day += 1) {
+        const date = new Date(year, month, day);
+        const key = toDateKey(date);
+        const count = getSavedBlockCount(key);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `calendar-day-admin ${count ? "has-blocks" : "no-blocks"}`;
+        if (isPastDate(date)) button.classList.add("is-past");
+        if (key === currentDate) button.classList.add("is-selected");
+        button.innerHTML = `<span class="day-number">${day}</span><span class="day-status">${count ? `${count} block${count === 1 ? "" : "s"}` : "No blocks"}</span>`;
+        button.addEventListener("click", () => {
+          dateInput.value = key;
+          loadDate(key);
+        });
+        calendarEl.appendChild(button);
+      }
+    }
+
+    async function loadMonthAvailability() {
+      monthAvailability = new Map();
+      renderCalendar();
+      try {
+        const first = toDateKey(calendarMonth);
+        const last = toDateKey(getMonthEnd(calendarMonth));
+        const q = query(collection(db, "availability"), where(documentId(), ">=", first), where(documentId(), "<=", last));
+        const snap = await getDocs(q);
+        snap.forEach((item) => monthAvailability.set(item.id, item.data()));
+      } catch (error) {
+        console.error(error);
+        msg(dayMessage, "Could not load calendar availability from Firestore.", "error");
+      }
+      renderCalendar();
     }
 
     function addBlock(time) {
@@ -316,6 +434,7 @@
       currentDate = dateKey;
       blocks = [];
       msg(dayMessage, "");
+      renderCalendar();
       if (!dateKey) {
         renderBlocks();
         return;
@@ -327,17 +446,18 @@
           blocks = normaliseBlocks(data);
           $("#day-note").value = data.note || "";
           $("#day-reason").value = data.reason || "";
-          msg(dayMessage, `Loaded ${blocks.length} saved block${blocks.length === 1 ? "" : "s"} for ${dateKey}.`, "success");
+          msg(dayMessage, `Loaded ${blocks.length} saved block${blocks.length === 1 ? "" : "s"} for ${displayDate(dateKey)}.`, "success");
         } else {
           $("#day-note").value = "";
           $("#day-reason").value = "";
-          msg(dayMessage, `No saved blocks for ${dateKey} yet. Add blocks below.`, "");
+          msg(dayMessage, `No saved blocks for ${displayDate(dateKey)} yet. Add blocks below.`, "");
         }
       } catch (error) {
         console.error(error);
         msg(dayMessage, "Could not load that date from Firestore.", "error");
       }
       renderBlocks();
+      renderCalendar();
     }
 
     async function saveDate(event) {
@@ -356,7 +476,9 @@
           updatedAt: serverTimestamp(),
           updatedBy: auth.currentUser?.email || ADMIN_EMAIL
         }, { merge: true });
-        msg(dayMessage, `${currentDate} saved with ${blocks.length} block${blocks.length === 1 ? "" : "s"}.`, "success");
+        monthAvailability.set(currentDate, { slots: blocksToMap(blocks) });
+        renderCalendar();
+        msg(dayMessage, `${displayDate(currentDate)} saved with ${blocks.length} block${blocks.length === 1 ? "" : "s"}.`, "success");
       } catch (error) {
         console.error(error);
         msg(dayMessage, "Could not save. Check Firestore rules and that you are signed in as admin.", "error");
@@ -365,14 +487,16 @@
 
     async function deleteDate() {
       if (!currentDate) return msg(dayMessage, "Choose a date first.", "error");
-      if (!window.confirm(`Delete all availability for ${currentDate}?`)) return;
+      if (!window.confirm(`Delete all availability for ${displayDate(currentDate)}?`)) return;
       try {
         await deleteDoc(doc(db, "availability", currentDate));
+        monthAvailability.delete(currentDate);
         blocks = [];
         $("#day-note").value = "";
         $("#day-reason").value = "";
         renderBlocks();
-        msg(dayMessage, `${currentDate} deleted.`, "success");
+        renderCalendar();
+        msg(dayMessage, `${displayDate(currentDate)} deleted.`, "success");
       } catch (error) {
         console.error(error);
         msg(dayMessage, "Could not delete that date.", "error");
@@ -438,6 +562,7 @@
         });
         await batch.commit();
         msg(bulkMessage, `Created ${newBlocks.length} block(s) on ${dates.length} date(s).`, "success");
+        await loadMonthAvailability();
         if (currentDate) loadDate(currentDate);
       } catch (error) {
         console.error(error);
@@ -459,6 +584,7 @@
         dates.forEach((date) => batch.delete(doc(db, "availability", toDateKey(date))));
         await batch.commit();
         msg(bulkMessage, `Deleted availability on ${dates.length} date(s).`, "success");
+        await loadMonthAvailability();
         if (currentDate) loadDate(currentDate);
       } catch (error) {
         console.error(error);
@@ -480,7 +606,11 @@
       }
     });
 
-    dateInput.addEventListener("change", () => loadDate(dateInput.value));
+    dateInput.addEventListener("change", () => {
+      if (dateInput.value) calendarMonth = startOfMonth(parseDateKey(dateInput.value));
+      loadMonthAvailability();
+      loadDate(dateInput.value);
+    });
     $("#add-block").addEventListener("click", () => addBlock(startInput.value));
     $("#clear-blocks").addEventListener("click", () => { blocks = []; renderBlocks(); msg(dayMessage, "Blocks cleared. Click Save this date when finished.", "success"); });
     $("#delete-day").addEventListener("click", deleteDate);
@@ -493,23 +623,39 @@
       startInput.value = button.dataset.time;
       addBlock(button.dataset.time);
     });
+    $("#prev-month").addEventListener("click", () => {
+      calendarMonth = startOfMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1));
+      loadMonthAvailability();
+    });
+    $("#next-month").addEventListener("click", () => {
+      calendarMonth = startOfMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1));
+      loadMonthAvailability();
+    });
     signout.addEventListener("click", () => signOut(auth));
 
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
       const isAdmin = user && normaliseEmail(user.email) === ADMIN_EMAIL;
       loginCard.hidden = Boolean(isAdmin);
       consolePanel.hidden = !isAdmin;
       signout.hidden = !isAdmin;
       statusPill.textContent = isAdmin ? "Signed in" : (user ? "Wrong admin email" : "Not signed in");
-      if (isAdmin && !dateInput.value) {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        dateInput.value = toDateKey(tomorrow);
+      if (isAdmin) {
+        await loadMonthAvailability();
+        if (!dateInput.value) {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          dateInput.value = toDateKey(tomorrow);
+        }
+        calendarMonth = startOfMonth(parseDateKey(dateInput.value));
+        await loadMonthAvailability();
         loadDate(dateInput.value);
+      } else {
+        renderCalendar();
       }
     });
 
     renderBlocks();
+    renderCalendar();
   </script>
 </body>
 </html>
