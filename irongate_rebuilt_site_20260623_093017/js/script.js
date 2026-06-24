@@ -202,14 +202,6 @@ document.addEventListener("DOMContentLoaded", () => {
       box-shadow: 0 0 0 3px rgba(15,138,67,.11) !important;
       background: #f4fff8 !important;
     }
-    .auto-filled-note {
-      display: block;
-      margin-top: 6px;
-      color: #0f8a43;
-      font-size: .78rem;
-      font-weight: 800;
-      line-height: 1.3;
-    }
   `;
   document.head.appendChild(style);
 
@@ -225,15 +217,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!field) return;
     const label = field.closest("label");
     field.classList.add("auto-filled-field");
-    if (label) {
-      label.classList.add("auto-filled-field");
-      if (!label.querySelector(".auto-filled-note")) {
-        const note = document.createElement("small");
-        note.className = "auto-filled-note";
-        note.textContent = "Auto-filled from the QBCC pool register. You can change this if needed.";
-        label.appendChild(note);
-      }
-    }
+    if (label) label.classList.add("auto-filled-field");
   }
 
   function setSelectValue(id, value, overwrite = true) {
