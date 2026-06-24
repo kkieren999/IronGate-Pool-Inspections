@@ -146,7 +146,7 @@ button, input, textarea, select { font: inherit; }
 .hero-bg {
   position: absolute;
   inset: 0;
-  background-image: url('../assets/hero_image.png');
+  background-image: url('../assets/hero_image_v2.png');
   background-size: cover;
   background-position: center right;
   z-index: -4;
