@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
       min-height: 0 !important;
       overflow: hidden !important;
     }
-    .address-status[data-type="success"] {
+    .address-status {
       display: none !important;
       margin: 0 !important;
       height: 0 !important;
@@ -213,11 +213,40 @@ document.addEventListener('DOMContentLoaded', () => {
   `;
   document.head.appendChild(compactStyle);
 
+  const removedStatus = document.querySelector('#address-status');
+  if (removedStatus) {
+    removedStatus.remove();
+  }
+
   const cleanOutcomeText = (text) => String(text || '')
     .replace(/\s+/g, ' ')
     .replace(/^A registered pool was found for this address\.\s*/i, '')
     .replace(/^Registered pool details matched the selected address\.\s*/i, '')
     .trim();
+
+  const setSelectValue = (id, value, overwrite = true) => {
+    const field = document.querySelector(`#${id}`);
+    if (!field) return;
+    if (!overwrite && field.value) return;
+    field.value = value;
+    field.dispatchEvent(new Event('change', { bubbles: true }));
+  };
+
+  const populateFieldsFromPoolRegister = (status, detailText = '') => {
+    if (status === 'registered') {
+      setSelectValue('poolRegisteredStatus', 'Yes');
+      if (/Shared pool:\s*Yes/i.test(detailText)) {
+        setSelectValue('poolType', 'Shared pool', false);
+      } else {
+        setSelectValue('poolType', 'Swimming pool', false);
+      }
+      return;
+    }
+
+    if (status === 'not_found') {
+      setSelectValue('poolRegisteredStatus', 'No', false);
+    }
+  };
 
   const compactPoolRegisterPanel = () => {
     const panel = document.querySelector('.pool-register-panel');
@@ -227,6 +256,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!status || panel.dataset.compactStatus === status) return;
 
     const detailText = cleanOutcomeText(panel.querySelector('.pool-register-details')?.textContent || '');
+    populateFieldsFromPoolRegister(status, detailText);
+
     const currentInput = panel.querySelector('#poolRegisterLooksRight, #poolRegisterOverride');
     const hiddenControl = document.createElement('span');
     hiddenControl.className = 'pool-register-hidden-control';
@@ -269,42 +300,4 @@ document.addEventListener('DOMContentLoaded', () => {
       panel.innerHTML = `
         <p class="pool-register-compact-line ${status === 'not_found' ? 'is-red' : 'is-orange'}">
           <span>${label}</span>
-          <button class="pool-register-compact-btn" type="button" id="pool-register-compact-override">Continue anyway</button>
-        </p>
-      `;
-      if (checkbox) panel.appendChild(hiddenControl);
-
-      const overrideButton = panel.querySelector('#pool-register-compact-override');
-      if (overrideButton && checkbox) {
-        overrideButton.addEventListener('click', () => {
-          checkbox.checked = true;
-          checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-          overrideButton.textContent = 'Continue enabled';
-          overrideButton.disabled = true;
-        });
-      }
-    }
-  };
-
-  const watchForPoolRegisterPanel = () => {
-    const panel = document.querySelector('.pool-register-panel');
-    if (!panel) return false;
-
-    compactPoolRegisterPanel();
-    const observer = new MutationObserver(() => compactPoolRegisterPanel());
-    observer.observe(panel, {
-      attributes: true,
-      childList: true,
-      subtree: true,
-      attributeFilter: ['data-status', 'hidden']
-    });
-    return true;
-  };
-
-  if (!watchForPoolRegisterPanel()) {
-    const bodyObserver = new MutationObserver(() => {
-      if (watchForPoolRegisterPanel()) bodyObserver.disconnect();
-    });
-    bodyObserver.observe(document.body, { childList: true, subtree: true });
-  }
-});
+          <button class="pool-register-compact-btn" type="button" id="pool-register-compact-override">Continue anyway</
