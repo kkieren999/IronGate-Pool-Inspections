@@ -14,7 +14,7 @@
     .timeblock-shell { display: grid; gap: 22px; }
     .timeblock-hero { display: flex; justify-content: space-between; gap: 20px; align-items: center; padding: 30px; border-radius: 28px; color: #fff; background: linear-gradient(135deg, #061b39, #08294f); box-shadow: var(--shadow); }
     .timeblock-hero h1 { color: #fff; font-size: clamp(2rem, 4vw, 3.4rem); }
-    .timeblock-hero p { margin: 10px 0 0; color: rgba(255,255,255,.82); max-width: 820px; }
+    .timeblock-hero p { margin: 10px 0 0; color: rgba(255,255,255,.82); max-width: 850px; }
     .timeblock-status { padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,.12); font-weight: 900; white-space: nowrap; }
     .timeblock-card { background: #fff; border: 1px solid rgba(7,24,52,.08); border-radius: 28px; padding: 28px; box-shadow: var(--shadow); }
     .timeblock-card h2 { color: var(--navy); margin-top: 0; }
@@ -72,6 +72,8 @@
     .range-panel { margin-top: 18px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; padding: 16px; border-radius: 20px; background: linear-gradient(135deg, #f4fbff, #f8f5ff); border: 1px solid rgba(21,158,232,.18); }
     .range-panel strong { color: var(--navy); }
     .range-panel span { color: var(--muted); font-weight: 800; }
+    .editor-mode-pill { display: inline-flex; margin-bottom: 10px; padding: 8px 12px; border-radius: 999px; font-weight: 900; background: #eef9ff; color: var(--blue); }
+    .editor-mode-pill[data-mode="multi"] { background: #f3efff; color: #7c3aed; }
     [hidden] { display: none !important; }
     @media (max-width: 1050px) { .timeblock-work-grid { grid-template-columns: 1fr; } }
     @media (max-width: 900px) { .timeblock-row { grid-template-columns: 1fr; } .timeblock-quick, .bulk-days { grid-template-columns: repeat(2, minmax(0, 1fr)); } .timeblock-hero, .calendar-head { display: grid; } .calendar-nav { justify-self: stretch; justify-content: space-between; } .calendar-weekdays, .admin-calendar { gap: 6px; } .calendar-empty { min-height: 64px; } .calendar-day-admin { min-height: 72px; padding: 8px; border-radius: 14px; } .day-number { width: 30px; height: 30px; font-size: .95rem; } .day-status { font-size: .64rem; padding: 0 6px; } }
@@ -100,7 +102,7 @@
           <div>
             <p class="section-kicker">Admin Console</p>
             <h1>Available 1-hour blocks</h1>
-            <p>Use the big calendar to pick a day. Shift-click another date to select a range, then apply the same available blocks to all selected days.</p>
+            <p>Click one date for single-day editing. Shift-click another date to select multiple days, then add blocks once and apply them to every selected day.</p>
           </div>
           <div class="timeblock-status" id="status-pill">Checking sign in…</div>
         </div>
@@ -122,7 +124,7 @@
               <div>
                 <p class="section-kicker">Calendar</p>
                 <h2>Pick a date</h2>
-                <p>Click one date to edit it. Shift-click another date to select every day in between.</p>
+                <p>Click one date to edit. Shift-click another date to select every day in between.</p>
               </div>
               <div class="calendar-nav">
                 <button type="button" id="prev-month" aria-label="Previous month">‹</button>
@@ -154,9 +156,10 @@
 
           <div class="timeblock-work-grid" style="margin-top:22px;">
             <section class="timeblock-card">
-              <p class="section-kicker">Selected Day</p>
+              <p class="section-kicker" id="editor-kicker">Selected Day</p>
+              <span class="editor-mode-pill" id="editor-mode-pill">Single-day edit</span>
               <h2 id="selected-heading">No date selected</h2>
-              <p>Add the 1-hour blocks you are available. Save this date, or apply the same blocks to every selected date.</p>
+              <p id="editor-help">Add the 1-hour blocks you are available for this date.</p>
               <form class="timeblock-form" id="day-form">
                 <label>Date <input type="date" id="selected-date" required /></label>
                 <div class="timeblock-row">
@@ -192,7 +195,7 @@
             </section>
 
             <section class="timeblock-card">
-              <div class="summary-pill"><strong id="block-count">0</strong> available block/s for selected day</div>
+              <div class="summary-pill"><strong id="block-count">0</strong> available block/s in the editor</div>
               <div class="timeblock-list" id="block-list"></div>
             </section>
           </div>
@@ -266,6 +269,11 @@
     const selectedHeading = $("#selected-heading");
     const selectedRangeTitle = $("#selected-range-title");
     const selectedRangeHelp = $("#selected-range-help");
+    const editorKicker = $("#editor-kicker");
+    const editorHelp = $("#editor-help");
+    const editorModePill = $("#editor-mode-pill");
+    const saveDayButton = $("#save-day");
+    const deleteDayButton = $("#delete-day");
 
     function msg(el, text, type = "") {
       if (!el) return;
@@ -308,6 +316,11 @@
     function displayDate(key) {
       if (!key) return "No date selected";
       return parseDateKey(key).toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+    }
+
+    function displayShortDate(key) {
+      if (!key) return "";
+      return parseDateKey(key).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
     }
 
     function minutesFromTime(time) {
@@ -385,22 +398,50 @@
       return buildDateRange(first, last).map(toDateKey);
     }
 
-    function updateRangeSummary() {
+    function isMultiSelect() {
+      return selectedDates.size > 1;
+    }
+
+    function selectedDateList() {
+      return [...selectedDates].sort();
+    }
+
+    function selectedRangeLabel() {
+      const dates = selectedDateList();
+      if (!dates.length) return "No date selected";
+      if (dates.length === 1) return displayDate(dates[0]);
+      return `${displayShortDate(dates[0])} – ${displayShortDate(dates[dates.length - 1])}`;
+    }
+
+    function updateEditorLabels() {
       const count = selectedDates.size || (currentDate ? 1 : 0);
+      const multi = count > 1;
       if (selectedRangeTitle) selectedRangeTitle.textContent = `${count} day${count === 1 ? "" : "s"} selected`;
       if (selectedRangeHelp) {
-        selectedRangeHelp.textContent = count > 1
-          ? "Click Apply current blocks to selected days to update the whole selected range."
+        selectedRangeHelp.textContent = multi
+          ? "The editor below now applies to every selected purple date."
           : "Shift-click another date to select multiple days.";
       }
+      if (editorKicker) editorKicker.textContent = multi ? "Selected Days" : "Selected Day";
+      if (editorModePill) {
+        editorModePill.textContent = multi ? "Multi-day edit" : "Single-day edit";
+        editorModePill.dataset.mode = multi ? "multi" : "single";
+      }
+      if (selectedHeading) selectedHeading.textContent = selectedRangeLabel();
+      if (editorHelp) {
+        editorHelp.textContent = multi
+          ? `Add the 1-hour blocks you are available on all ${count} selected days. Saving applies these blocks to every selected date.`
+          : "Add the 1-hour blocks you are available for this date.";
+      }
+      if (saveDayButton) saveDayButton.textContent = multi ? `Apply to ${count} selected days` : "Save this date";
+      if (deleteDayButton) deleteDayButton.textContent = multi ? "Delete editing day" : "Delete date";
     }
 
     function renderBlocks() {
       blocks = sortBlocks(blocks);
       blockCount.textContent = String(blocks.length);
       blockList.innerHTML = "";
-      if (selectedHeading) selectedHeading.textContent = currentDate ? displayDate(currentDate) : "No date selected";
-      updateRangeSummary();
+      updateEditorLabels();
       if (!blocks.length) {
         blockList.innerHTML = '<div class="timeblock-empty">No available blocks added yet.</div>';
         return;
@@ -412,7 +453,7 @@
         row.querySelector("button").addEventListener("click", () => {
           blocks = blocks.filter((item) => item.id !== block.id);
           renderBlocks();
-          msg(dayMessage, "Block removed. Click Save this date when finished.", "success");
+          msg(dayMessage, isMultiSelect() ? "Block removed from the multi-day editor. Click Apply when finished." : "Block removed. Click Save this date when finished.", "success");
         });
         blockList.appendChild(row);
       });
@@ -451,18 +492,24 @@
         button.addEventListener("click", (event) => handleCalendarDateClick(key, event.shiftKey));
         calendarEl.appendChild(button);
       }
-      updateRangeSummary();
+      updateEditorLabels();
     }
 
     async function handleCalendarDateClick(key, isShiftClick) {
       if (isShiftClick && anchorDate) {
         selectedDates = new Set(getDateKeysBetween(anchorDate, key));
-      } else {
-        anchorDate = key;
-        selectedDates = new Set([key]);
+        currentDate = key;
+        dateInput.value = key;
+        msg(dayMessage, `${selectedDates.size} days selected. The blocks below will apply to all selected days.`, "success");
+        renderCalendar();
+        renderBlocks();
+        return;
       }
+      anchorDate = key;
+      selectedDates = new Set([key]);
+      currentDate = key;
       dateInput.value = key;
-      await loadDate(key, { keepSelection: true });
+      await loadSingleDate(key);
     }
 
     async function loadMonthAvailability() {
@@ -495,20 +542,18 @@
         }
         blocks.push(block);
         renderBlocks();
-        msg(dayMessage, `${block.label} added. Click Save this date when finished.`, "success");
+        msg(dayMessage, isMultiSelect() ? `${block.label} added to the multi-day editor. Click Apply when finished.` : `${block.label} added. Click Save this date when finished.`, "success");
       } catch (error) {
         msg(dayMessage, error.message || "Could not add block.", "error");
       }
     }
 
-    async function loadDate(dateKey, options = {}) {
+    async function loadSingleDate(dateKey) {
       currentDate = dateKey;
       blocks = [];
       msg(dayMessage, "");
-      if (!options.keepSelection) {
-        anchorDate = dateKey;
-        selectedDates = dateKey ? new Set([dateKey]) : new Set();
-      }
+      selectedDates = dateKey ? new Set([dateKey]) : new Set();
+      anchorDate = dateKey;
       renderCalendar();
       if (!dateKey) {
         renderBlocks();
@@ -550,35 +595,25 @@
       };
     }
 
-    async function saveDate(event) {
-      event.preventDefault();
+    async function saveCurrentSelection(event) {
+      if (event) event.preventDefault();
       if (!currentDate) return msg(dayMessage, "Choose a date first.", "error");
-      try {
-        await setDoc(doc(db, "availability", currentDate), buildAvailabilityPayload(currentDate, blocks), { merge: true });
-        monthAvailability.set(currentDate, { slots: blocksToMap(blocks) });
-        renderCalendar();
-        msg(dayMessage, `${displayDate(currentDate)} saved with ${blocks.length} block${blocks.length === 1 ? "" : "s"}.`, "success");
-      } catch (error) {
-        console.error(error);
-        msg(dayMessage, "Could not save. Check Firestore rules and that you are signed in as admin.", "error");
+      const targets = selectedDateList().length ? selectedDateList() : [currentDate];
+      const multi = targets.length > 1;
+      if (multi) {
+        const confirmed = window.confirm(`Apply the current ${blocks.length} block(s) to ${targets.length} selected day(s)? This replaces availability on those days.`);
+        if (!confirmed) return;
       }
-    }
-
-    async function applyBlocksToSelectedDays() {
-      const targets = [...selectedDates];
-      if (!targets.length || !currentDate) return msg(dayMessage, "Select at least one date first.", "error");
-      const confirmed = window.confirm(`Apply the current ${blocks.length} block(s) to ${targets.length} selected day(s)? This replaces availability on those days.`);
-      if (!confirmed) return;
       try {
         const batch = writeBatch(db);
         targets.forEach((key) => batch.set(doc(db, "availability", key), buildAvailabilityPayload(key, blocks), { merge: true }));
         await batch.commit();
         targets.forEach((key) => monthAvailability.set(key, { slots: blocksToMap(blocks) }));
         renderCalendar();
-        msg(dayMessage, `Applied ${blocks.length} block(s) to ${targets.length} selected day(s).`, "success");
+        msg(dayMessage, multi ? `Applied ${blocks.length} block(s) to ${targets.length} selected day(s).` : `${displayDate(currentDate)} saved with ${blocks.length} block${blocks.length === 1 ? "" : "s"}.`, "success");
       } catch (error) {
         console.error(error);
-        msg(dayMessage, "Could not apply to selected days. Check Firestore rules and sign-in status.", "error");
+        msg(dayMessage, "Could not save. Check Firestore rules and that you are signed in as admin.", "error");
       }
     }
 
@@ -647,7 +682,7 @@
         await batch.commit();
         msg(bulkMessage, `Created ${newBlocks.length} block(s) on ${dates.length} date(s).`, "success");
         await loadMonthAvailability();
-        if (currentDate) loadDate(currentDate, { keepSelection: true });
+        if (currentDate && selectedDates.size === 1) loadSingleDate(currentDate);
       } catch (error) {
         console.error(error);
         msg(bulkMessage, error.message || "Could not create range.", "error");
@@ -669,7 +704,7 @@
         await batch.commit();
         msg(bulkMessage, `Deleted availability on ${dates.length} date(s).`, "success");
         await loadMonthAvailability();
-        if (currentDate) loadDate(currentDate, { keepSelection: true });
+        if (currentDate && selectedDates.size === 1) loadSingleDate(currentDate);
       } catch (error) {
         console.error(error);
         msg(bulkMessage, error.message || "Could not delete range.", "error");
@@ -692,22 +727,20 @@
 
     dateInput.addEventListener("change", () => {
       if (dateInput.value) calendarMonth = startOfMonth(parseDateKey(dateInput.value));
-      anchorDate = dateInput.value;
-      selectedDates = dateInput.value ? new Set([dateInput.value]) : new Set();
       loadMonthAvailability();
-      loadDate(dateInput.value, { keepSelection: true });
+      loadSingleDate(dateInput.value);
     });
     $("#add-block").addEventListener("click", () => addBlock(startInput.value));
-    $("#clear-blocks").addEventListener("click", () => { blocks = []; renderBlocks(); msg(dayMessage, "Blocks cleared. Click Save this date when finished.", "success"); });
+    $("#clear-blocks").addEventListener("click", () => { blocks = []; renderBlocks(); msg(dayMessage, isMultiSelect() ? "Blocks cleared from the multi-day editor. Click Apply when finished." : "Blocks cleared. Click Save this date when finished.", "success"); });
     $("#delete-day").addEventListener("click", deleteDate);
-    $("#day-form").addEventListener("submit", saveDate);
-    $("#apply-selected-days").addEventListener("click", applyBlocksToSelectedDays);
+    $("#day-form").addEventListener("submit", saveCurrentSelection);
+    $("#apply-selected-days").addEventListener("click", saveCurrentSelection);
     $("#clear-selected-days").addEventListener("click", () => {
       selectedDates = currentDate ? new Set([currentDate]) : new Set();
       anchorDate = currentDate;
       renderCalendar();
-      updateRangeSummary();
-      msg(dayMessage, "Multi-day selection cleared.", "success");
+      renderBlocks();
+      msg(dayMessage, "Back to single-day editing.", "success");
     });
     $("#bulk-form").addEventListener("submit", saveBulk);
     $("#bulk-delete").addEventListener("click", deleteBulk);
@@ -739,11 +772,9 @@
           tomorrow.setDate(tomorrow.getDate() + 1);
           dateInput.value = toDateKey(tomorrow);
         }
-        anchorDate = dateInput.value;
-        selectedDates = new Set([dateInput.value]);
         calendarMonth = startOfMonth(parseDateKey(dateInput.value));
         await loadMonthAvailability();
-        loadDate(dateInput.value, { keepSelection: true });
+        loadSingleDate(dateInput.value);
       } else {
         renderCalendar();
       }
