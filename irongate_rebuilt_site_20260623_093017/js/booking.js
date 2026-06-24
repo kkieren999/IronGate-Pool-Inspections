@@ -15,6 +15,7 @@ const addressInput = document.querySelector("#propertyAddress");
 const addressSelectedInput = document.querySelector("#propertyAddressSelected");
 const propertyPlaceIdInput = document.querySelector("#propertyPlaceId");
 const addressStatus = document.querySelector("#address-status");
+const addressSuggestions = document.querySelector("#address-suggestions");
 const exemptionToggle = document.querySelector("#hasPoolExemption");
 const exemptionPanel = document.querySelector("#exemption-upload-panel");
 const exemptionFileInput = document.querySelector("#exemptionFile");
@@ -25,10 +26,7 @@ const animalPanel = document.querySelector("#animal-restraint-panel");
 const inspectionPriceCents = 24900;
 const inspectionPriceDisplay = "$249 inc GST";
 const maxUploadBytes = 10 * 1024 * 1024;
-
-// Add your Google Places API key here to activate address suggestions.
-// The form is already wired for Google Places Autocomplete.
-const GOOGLE_PLACES_API_KEY = "";
+const GEOAPIFY_API_KEY = "8d1bacfb41584094b808c255bc8ef70c";
 
 const monthNames = [
   "January", "February", "March", "April", "May", "June",
@@ -41,7 +39,7 @@ let selectedAddress = null;
 let availabilityByDate = new Map();
 let calendarMonth = startOfMonth(new Date());
 let firebaseModulesPromise = null;
-let googlePlacesReady = false;
+let addressSearchTimer = null;
 
 if (priceNotice) {
   priceNotice.textContent = `Pool Safety Inspection & Certificate — ${inspectionPriceDisplay}`;
@@ -420,7 +418,7 @@ function validateBookingForm() {
   if (!mobile) return "Please enter a valid Australian mobile number, for example 04XX XXX XXX.";
 
   if (!hasAddress) return "Please enter the property address.";
-  if (googlePlacesReady && !addressSelected) return "Please select the property address from the address suggestions.";
+  if (!addressSelected) return "Please select the property address from the address suggestions.";
 
   if (!isOwner && !authorised) {
     return "Please confirm you are the property owner or authorised to arrange the inspection.";
@@ -457,68 +455,103 @@ function validateBookingForm() {
   return "";
 }
 
+function clearAddressSuggestions() {
+  if (!addressSuggestions) return;
+  addressSuggestions.innerHTML = "";
+  addressSuggestions.hidden = true;
+}
+
+function selectGeoapifyAddress(result) {
+  selectedAddress = {
+    formattedAddress: result.formatted,
+    placeId: result.place_id || "",
+    latitude: result.lat || null,
+    longitude: result.lon || null,
+    addressLine1: result.address_line1 || "",
+    addressLine2: result.address_line2 || "",
+    suburb: result.suburb || result.city || result.town || result.village || "",
+    postcode: result.postcode || "",
+    state: result.state || "",
+    country: result.country || "Australia"
+  };
+
+  if (addressInput) addressInput.value = result.formatted;
+  if (addressSelectedInput) addressSelectedInput.value = "true";
+  if (propertyPlaceIdInput) propertyPlaceIdInput.value = selectedAddress.placeId;
+  setAddressStatus("Address selected.", "success");
+  clearAddressSuggestions();
+}
+
+function renderAddressSuggestions(results) {
+  if (!addressSuggestions) return;
+  addressSuggestions.innerHTML = "";
+
+  if (!results.length) {
+    addressSuggestions.hidden = true;
+    setAddressStatus("No matching Australian addresses found. Try adding the suburb or postcode.", "error");
+    return;
+  }
+
+  results.forEach((result) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "address-suggestion";
+    button.textContent = result.formatted;
+    button.addEventListener("click", () => selectGeoapifyAddress(result));
+    addressSuggestions.appendChild(button);
+  });
+
+  addressSuggestions.hidden = false;
+  setAddressStatus("Select the correct address from the suggestions.", "");
+}
+
+async function searchGeoapifyAddresses(text) {
+  if (!text || text.length < 3) {
+    clearAddressSuggestions();
+    setAddressStatus("Start typing and select the property address from the suggestions.", "");
+    return;
+  }
+
+  try {
+    const params = new URLSearchParams({
+      text,
+      filter: "countrycode:au",
+      format: "json",
+      limit: "6",
+      apiKey: GEOAPIFY_API_KEY
+    });
+
+    const response = await fetch(`https://api.geoapify.com/v1/geocode/autocomplete?${params.toString()}`);
+    if (!response.ok) throw new Error(`Geoapify request failed: ${response.status}`);
+    const data = await response.json();
+    renderAddressSuggestions(data.results || []);
+  } catch (error) {
+    console.error("Geoapify address search error:", error);
+    clearAddressSuggestions();
+    setAddressStatus("Address suggestions could not load. Please try again.", "error");
+  }
+}
+
 function initAddressAutocomplete() {
   if (!addressInput) return;
+
+  setAddressStatus("Start typing and select the property address from the suggestions.", "");
 
   addressInput.addEventListener("input", () => {
     selectedAddress = null;
     if (addressSelectedInput) addressSelectedInput.value = "false";
     if (propertyPlaceIdInput) propertyPlaceIdInput.value = "";
-    if (googlePlacesReady) {
-      setAddressStatus("Please select the property address from the suggestions.", "");
-    }
+
+    window.clearTimeout(addressSearchTimer);
+    const text = addressInput.value.trim();
+    addressSearchTimer = window.setTimeout(() => searchGeoapifyAddresses(text), 300);
   });
 
-  if (!GOOGLE_PLACES_API_KEY) {
-    googlePlacesReady = false;
-    setAddressStatus("Address autocomplete is ready, but a Google Places API key still needs to be added. Manual address entry is temporarily accepted.", "");
-    return;
-  }
-
-  window.initIrongateAddressAutocomplete = () => {
-    if (!window.google?.maps?.places || !addressInput) return;
-
-    googlePlacesReady = true;
-    const autocomplete = new window.google.maps.places.Autocomplete(addressInput, {
-      componentRestrictions: { country: "au" },
-      fields: ["formatted_address", "place_id", "address_components", "geometry", "name"],
-      types: ["address"]
-    });
-
-    autocomplete.addListener("place_changed", () => {
-      const place = autocomplete.getPlace();
-      if (!place?.formatted_address || !place?.place_id) {
-        selectedAddress = null;
-        if (addressSelectedInput) addressSelectedInput.value = "false";
-        setAddressStatus("Please select a full address from the suggestions.", "error");
-        return;
-      }
-
-      selectedAddress = {
-        formattedAddress: place.formatted_address,
-        placeId: place.place_id,
-        latitude: place.geometry?.location?.lat?.() || null,
-        longitude: place.geometry?.location?.lng?.() || null
-      };
-
-      addressInput.value = place.formatted_address;
-      if (addressSelectedInput) addressSelectedInput.value = "true";
-      if (propertyPlaceIdInput) propertyPlaceIdInput.value = place.place_id;
-      setAddressStatus("Address selected.", "success");
-    });
-
-    setAddressStatus("Start typing and select the property address from the suggestions.", "");
-  };
-
-  const script = document.createElement("script");
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_PLACES_API_KEY)}&libraries=places&callback=initIrongateAddressAutocomplete`;
-  script.async = true;
-  script.defer = true;
-  script.onerror = () => {
-    googlePlacesReady = false;
-    setAddressStatus("Address suggestions could not load. Check the Google Places API key.", "error");
-  };
-  document.head.appendChild(script);
+  document.addEventListener("click", (event) => {
+    if (!addressInput.contains(event.target) && !addressSuggestions?.contains(event.target)) {
+      clearAddressSuggestions();
+    }
+  });
 }
 
 if (calendarPrev) {
@@ -667,7 +700,7 @@ if (form) {
       selectedAddress = null;
       if (addressSelectedInput) addressSelectedInput.value = "false";
       if (propertyPlaceIdInput) propertyPlaceIdInput.value = "";
-      setAddressStatus(GOOGLE_PLACES_API_KEY ? "Start typing and select the property address from the suggestions." : "Manual address entry is temporarily accepted until Google Places is connected.", "");
+      setAddressStatus("Start typing and select the property address from the suggestions.", "");
       resetSelectedSlot();
       toggleConditionalPanels();
       if (preferredDateInput) preferredDateInput.value = "";
