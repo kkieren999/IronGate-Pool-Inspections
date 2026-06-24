@@ -178,7 +178,6 @@ document.addEventListener("DOMContentLoaded", () => {
     .pool-register-compact-line.is-green { color: #0f8a43; }
     .pool-register-compact-line.is-red { color: #d61f1f; }
     .pool-register-compact-line.is-orange { color: #9a3412; }
-    .pool-register-compact-note { color: var(--muted); font-weight: 700; }
     .pool-register-compact-btn {
       border: 0;
       border-radius: 999px;
@@ -197,6 +196,20 @@ document.addEventListener("DOMContentLoaded", () => {
       clip: rect(0 0 0 0) !important;
       white-space: nowrap !important;
     }
+    .auto-filled-field select,
+    select.auto-filled-field {
+      border-color: rgba(15,138,67,.65) !important;
+      box-shadow: 0 0 0 3px rgba(15,138,67,.11) !important;
+      background: #f4fff8 !important;
+    }
+    .auto-filled-note {
+      display: block;
+      margin-top: 6px;
+      color: #0f8a43;
+      font-size: .78rem;
+      font-weight: 800;
+      line-height: 1.3;
+    }
   `;
   document.head.appendChild(style);
 
@@ -208,21 +221,75 @@ document.addEventListener("DOMContentLoaded", () => {
       .trim();
   }
 
+  function markAutoFilled(field) {
+    if (!field) return;
+    const label = field.closest("label");
+    field.classList.add("auto-filled-field");
+    if (label) {
+      label.classList.add("auto-filled-field");
+      if (!label.querySelector(".auto-filled-note")) {
+        const note = document.createElement("small");
+        note.className = "auto-filled-note";
+        note.textContent = "Auto-filled from the QBCC pool register. You can change this if needed.";
+        label.appendChild(note);
+      }
+    }
+  }
+
   function setSelectValue(id, value, overwrite = true) {
     const field = document.querySelector(`#${id}`);
     if (!field) return;
     if (!overwrite && field.value) return;
     field.value = value;
     field.dispatchEvent(new Event("change", { bubbles: true }));
+    markAutoFilled(field);
+  }
+
+  function rebuildPoolTypeDropdown() {
+    const poolType = document.querySelector("#poolType");
+    if (!poolType || poolType.dataset.rebuilt === "true") return;
+    const currentValue = poolType.value && poolType.value !== "Shared pool" ? poolType.value : "";
+    poolType.innerHTML = `
+      <option value="">Select one</option>
+      <option value="Swimming pool">Swimming pool</option>
+      <option value="Spa">Spa</option>
+      <option value="Portable or above-ground pool">Portable or above-ground pool</option>
+      <option value="Other">Other</option>
+      <option value="Unsure">Unsure</option>
+    `;
+    poolType.value = currentValue;
+    poolType.dataset.rebuilt = "true";
+  }
+
+  function ensurePoolAccessTypeDropdown() {
+    if (document.querySelector("#poolAccessType")) return;
+    const registeredLabel = document.querySelector("#poolRegisteredStatus")?.closest("label");
+    if (!registeredLabel) return;
+
+    const label = document.createElement("label");
+    label.innerHTML = `
+      Pool access type
+      <select id="poolAccessType" required>
+        <option value="">Select one</option>
+        <option value="Non-shared pool">Non-shared pool</option>
+        <option value="Shared pool">Shared pool</option>
+        <option value="Unsure">Unsure</option>
+      </select>
+    `;
+    registeredLabel.insertAdjacentElement("afterend", label);
   }
 
   function populateFields(status, detailText) {
     if (status === "registered") {
+      const isShared = /Shared pool:\s*Yes/i.test(detailText);
       setSelectValue("poolRegisteredStatus", "Yes");
-      setSelectValue("poolType", /Shared pool:\s*Yes/i.test(detailText) ? "Shared pool" : "Swimming pool", false);
+      setSelectValue("poolAccessType", isShared ? "Shared pool" : "Non-shared pool");
+      return;
     }
+
     if (status === "not_found") {
       setSelectValue("poolRegisteredStatus", "No", false);
+      setSelectValue("poolAccessType", "Unsure", false);
     }
   }
 
@@ -256,7 +323,7 @@ document.addEventListener("DOMContentLoaded", () => {
         input.checked = true;
         input.dispatchEvent(new Event("change", { bubbles: true }));
       }
-      panel.innerHTML = `<p class="pool-register-compact-line is-green"><span>✓ Registered pool found</span>${detailText ? `<span class="pool-register-compact-note">${detailText}</span>` : ""}</p>`;
+      panel.innerHTML = '<p class="pool-register-compact-line is-green"><span>✓ Registered pool found</span></p>';
       if (input) panel.appendChild(hiddenControl);
       return;
     }
@@ -278,10 +345,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function appendPoolAccessTypeToNotes() {
+    const form = document.querySelector("#booking-form");
+    const notes = document.querySelector("#notes");
+    const accessType = document.querySelector("#poolAccessType");
+    if (!form || !notes || !accessType || form.dataset.poolAccessNotesHook === "true") return;
+
+    form.dataset.poolAccessNotesHook = "true";
+    form.addEventListener("submit", () => {
+      const accessValue = accessType.value || "Not supplied";
+      const marker = "Pool access type:";
+      const existingNotes = notes.value.replace(/^Pool access type:.*\n?/m, "").trim();
+      notes.value = `${marker} ${accessValue}${existingNotes ? `\n${existingNotes}` : ""}`;
+    }, true);
+  }
+
   const statusText = document.querySelector("#address-status");
   if (statusText) statusText.textContent = "";
 
-  const pageObserver = new MutationObserver(() => compactPoolRegisterPanel());
+  rebuildPoolTypeDropdown();
+  ensurePoolAccessTypeDropdown();
+  appendPoolAccessTypeToNotes();
+
+  const pageObserver = new MutationObserver(() => {
+    rebuildPoolTypeDropdown();
+    ensurePoolAccessTypeDropdown();
+    appendPoolAccessTypeToNotes();
+    compactPoolRegisterPanel();
+  });
+
   pageObserver.observe(document.body, {
     childList: true,
     subtree: true,
