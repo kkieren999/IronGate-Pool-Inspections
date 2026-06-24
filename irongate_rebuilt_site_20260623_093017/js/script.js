@@ -5,7 +5,11 @@
   const originalFetch = window.fetch.bind(window);
 
   function normaliseStreetNumber(value) {
-    const cleaned = String(value || "").toUpperCase().replace(/[^A-Z0-9\s/.-]/g, " ").replace(/\s+/g, " ").trim();
+    const cleaned = String(value || "")
+      .toUpperCase()
+      .replace(/[^A-Z0-9\s/.-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
     const slashMatch = cleaned.match(/\/(\d+[A-Z]?)/);
     if (slashMatch) return slashMatch[1];
     const match = cleaned.match(/\d+[A-Z]?(?:-\d+[A-Z]?)?/);
@@ -17,17 +21,14 @@
   }
 
   function selectedStreetNumber() {
-    const addressText = document.querySelector("#propertyAddress")?.value || "";
-    return normaliseStreetNumber(addressText);
+    return normaliseStreetNumber(document.querySelector("#propertyAddress")?.value || "");
   }
 
   window.fetch = async (...args) => {
     const response = await originalFetch(...args);
     const rawUrl = typeof args[0] === "string" ? args[0] : args[0]?.url || "";
 
-    if (!rawUrl.includes("data.qld.gov.au/api/3/action/datastore_search")) {
-      return response;
-    }
+    if (!rawUrl.includes("data.qld.gov.au/api/3/action/datastore_search")) return response;
 
     const selectedNumber = selectedStreetNumber();
     if (!selectedNumber) return response;
@@ -54,97 +55,91 @@
   };
 })();
 
-document.addEventListener('DOMContentLoaded', () => {
-  const navToggle = document.querySelector('.nav-toggle');
-  const nav = document.querySelector('.main-nav');
-  const navLinks = document.querySelectorAll('.main-nav a');
-  const year = document.querySelector('#year');
+document.addEventListener("DOMContentLoaded", () => {
+  const navToggle = document.querySelector(".nav-toggle");
+  const nav = document.querySelector(".main-nav");
+  const navLinks = document.querySelectorAll(".main-nav a");
+  const year = document.querySelector("#year");
 
-  if (year) {
-    year.textContent = new Date().getFullYear();
-  }
+  if (year) year.textContent = new Date().getFullYear();
 
   if (navToggle && nav) {
-    navToggle.addEventListener('click', () => {
-      const isOpen = nav.classList.toggle('open');
-      navToggle.setAttribute('aria-expanded', String(isOpen));
-      navToggle.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
+    navToggle.addEventListener("click", () => {
+      const isOpen = nav.classList.toggle("open");
+      navToggle.setAttribute("aria-expanded", String(isOpen));
+      navToggle.setAttribute("aria-label", isOpen ? "Close navigation" : "Open navigation");
     });
   }
 
   navLinks.forEach((link) => {
-    link.addEventListener('click', () => {
-      if (nav) nav.classList.remove('open');
+    link.addEventListener("click", () => {
+      if (nav) nav.classList.remove("open");
       if (navToggle) {
-        navToggle.setAttribute('aria-expanded', 'false');
-        navToggle.setAttribute('aria-label', 'Open navigation');
+        navToggle.setAttribute("aria-expanded", "false");
+        navToggle.setAttribute("aria-label", "Open navigation");
       }
-      navLinks.forEach((item) => item.classList.remove('active'));
-      link.classList.add('active');
+      navLinks.forEach((item) => item.classList.remove("active"));
+      link.classList.add("active");
     });
   });
 
-  const sections = [...document.querySelectorAll('main section[id]')];
-  if ('IntersectionObserver' in window && sections.length && navLinks.length) {
+  const sections = [...document.querySelectorAll("main section[id]")];
+  if ("IntersectionObserver" in window && sections.length && navLinks.length) {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
         navLinks.forEach((link) => {
-          link.classList.toggle('active', link.getAttribute('href') === `#${entry.target.id}`);
+          link.classList.toggle("active", link.getAttribute("href") === `#${entry.target.id}`);
         });
       });
-    }, { rootMargin: '-35% 0px -55% 0px', threshold: 0 });
-
+    }, { rootMargin: "-35% 0px -55% 0px", threshold: 0 });
     sections.forEach((section) => observer.observe(section));
   }
 
   const closeModal = (modal) => {
     if (!modal) return;
-    modal.classList.remove('is-open');
-    modal.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('modal-open');
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-open");
   };
 
   const openModal = (modal) => {
     if (!modal) return;
-    modal.classList.add('is-open');
-    modal.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('modal-open');
-
-    const closeButton = modal.querySelector('[data-modal-close]');
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-open");
+    const closeButton = modal.querySelector("[data-modal-close]");
     if (closeButton) closeButton.focus();
   };
 
-  document.addEventListener('click', (event) => {
-    const openTrigger = event.target.closest('[data-modal-open]');
+  document.addEventListener("click", (event) => {
+    const openTrigger = event.target.closest("[data-modal-open]");
     if (openTrigger) {
       event.preventDefault();
-      const modal = document.getElementById(openTrigger.dataset.modalOpen);
-      openModal(modal);
+      openModal(document.getElementById(openTrigger.dataset.modalOpen));
       return;
     }
 
-    const closeTrigger = event.target.closest('[data-modal-close]');
+    const closeTrigger = event.target.closest("[data-modal-close]");
     if (closeTrigger) {
       event.preventDefault();
-      closeModal(closeTrigger.closest('.modal-overlay'));
+      closeModal(closeTrigger.closest(".modal-overlay"));
       return;
     }
 
-    if (event.target.classList && event.target.classList.contains('modal-overlay')) {
+    if (event.target.classList && event.target.classList.contains("modal-overlay")) {
       closeModal(event.target);
     }
   });
 
-  document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape') return;
-    document.querySelectorAll('.modal-overlay.is-open').forEach(closeModal);
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    document.querySelectorAll(".modal-overlay.is-open").forEach(closeModal);
   });
 
-  const compactStyle = document.createElement('style');
-  compactStyle.textContent = `
-    .address-suggestions[hidden],
-    .address-suggestions:empty {
+  const style = document.createElement("style");
+  style.textContent = `
+    .address-suggestions[hidden], .address-suggestions:empty {
       display: none !important;
       padding: 0 !important;
       border: 0 !important;
@@ -158,16 +153,17 @@ document.addEventListener('DOMContentLoaded', () => {
       display: none !important;
       margin: 0 !important;
       height: 0 !important;
+      min-height: 0 !important;
       overflow: hidden !important;
     }
     .pool-register-panel.is-compact {
+      display: block !important;
       margin-top: 6px !important;
       padding: 0 !important;
       border: 0 !important;
       border-radius: 0 !important;
       background: transparent !important;
       box-shadow: none !important;
-      display: block !important;
     }
     .pool-register-compact-line {
       display: flex;
@@ -182,10 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
     .pool-register-compact-line.is-green { color: #0f8a43; }
     .pool-register-compact-line.is-red { color: #d61f1f; }
     .pool-register-compact-line.is-orange { color: #9a3412; }
-    .pool-register-compact-note {
-      color: var(--muted);
-      font-weight: 700;
-    }
+    .pool-register-compact-note { color: var(--muted); font-weight: 700; }
     .pool-register-compact-btn {
       border: 0;
       border-radius: 999px;
@@ -196,12 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
       font-weight: 900;
       cursor: pointer;
     }
-    .pool-register-compact-btn:hover,
-    .pool-register-compact-btn:focus {
-      filter: brightness(1.05);
-      outline: 2px solid rgba(21,158,232,.28);
-      outline-offset: 2px;
-    }
     .pool-register-hidden-control {
       position: absolute !important;
       width: 1px !important;
@@ -211,93 +198,96 @@ document.addEventListener('DOMContentLoaded', () => {
       white-space: nowrap !important;
     }
   `;
-  document.head.appendChild(compactStyle);
+  document.head.appendChild(style);
 
-  const removedStatus = document.querySelector('#address-status');
-  if (removedStatus) {
-    removedStatus.remove();
+  function cleanOutcomeText(text) {
+    return String(text || "")
+      .replace(/\s+/g, " ")
+      .replace(/^A registered pool was found for this address\.\s*/i, "")
+      .replace(/^Registered pool details matched the selected address\.\s*/i, "")
+      .trim();
   }
 
-  const cleanOutcomeText = (text) => String(text || '')
-    .replace(/\s+/g, ' ')
-    .replace(/^A registered pool was found for this address\.\s*/i, '')
-    .replace(/^Registered pool details matched the selected address\.\s*/i, '')
-    .trim();
-
-  const setSelectValue = (id, value, overwrite = true) => {
+  function setSelectValue(id, value, overwrite = true) {
     const field = document.querySelector(`#${id}`);
     if (!field) return;
     if (!overwrite && field.value) return;
     field.value = value;
-    field.dispatchEvent(new Event('change', { bubbles: true }));
-  };
+    field.dispatchEvent(new Event("change", { bubbles: true }));
+  }
 
-  const populateFieldsFromPoolRegister = (status, detailText = '') => {
-    if (status === 'registered') {
-      setSelectValue('poolRegisteredStatus', 'Yes');
-      if (/Shared pool:\s*Yes/i.test(detailText)) {
-        setSelectValue('poolType', 'Shared pool', false);
-      } else {
-        setSelectValue('poolType', 'Swimming pool', false);
-      }
-      return;
+  function populateFields(status, detailText) {
+    if (status === "registered") {
+      setSelectValue("poolRegisteredStatus", "Yes");
+      setSelectValue("poolType", /Shared pool:\s*Yes/i.test(detailText) ? "Shared pool" : "Swimming pool", false);
     }
-
-    if (status === 'not_found') {
-      setSelectValue('poolRegisteredStatus', 'No', false);
+    if (status === "not_found") {
+      setSelectValue("poolRegisteredStatus", "No", false);
     }
-  };
+  }
 
-  const compactPoolRegisterPanel = () => {
-    const panel = document.querySelector('.pool-register-panel');
+  function compactPoolRegisterPanel() {
+    const panel = document.querySelector(".pool-register-panel");
     if (!panel || panel.hidden) return;
 
-    const status = panel.dataset.status || '';
-    if (!status || panel.dataset.compactStatus === status) return;
+    const status = panel.dataset.status || "";
+    if (!status) return;
 
-    const detailText = cleanOutcomeText(panel.querySelector('.pool-register-details')?.textContent || '');
-    populateFieldsFromPoolRegister(status, detailText);
+    const alreadyCompact = panel.querySelector(".pool-register-compact-line");
+    if (alreadyCompact && panel.dataset.compactStatus === status) return;
 
-    const currentInput = panel.querySelector('#poolRegisterLooksRight, #poolRegisterOverride');
-    const hiddenControl = document.createElement('span');
-    hiddenControl.className = 'pool-register-hidden-control';
+    const detailText = cleanOutcomeText(panel.querySelector(".pool-register-details")?.textContent || "");
+    const input = panel.querySelector("#poolRegisterLooksRight, #poolRegisterOverride");
+    const hiddenControl = document.createElement("span");
+    hiddenControl.className = "pool-register-hidden-control";
+    if (input) hiddenControl.appendChild(input);
 
-    if (currentInput) {
-      hiddenControl.appendChild(currentInput);
-    }
-
-    panel.classList.add('is-compact');
+    populateFields(status, detailText);
+    panel.classList.add("is-compact");
     panel.dataset.compactStatus = status;
 
-    if (status === 'checking') {
+    if (status === "checking") {
       panel.innerHTML = '<p class="pool-register-compact-line is-orange">Checking pool registration...</p>';
       return;
     }
 
-    if (status === 'registered') {
-      const checkbox = currentInput;
-      if (checkbox && !checkbox.checked) {
-        checkbox.checked = true;
-        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    if (status === "registered") {
+      if (input && !input.checked) {
+        input.checked = true;
+        input.dispatchEvent(new Event("change", { bubbles: true }));
       }
-
-      panel.innerHTML = `
-        <p class="pool-register-compact-line is-green">
-          <span>✓ Registered pool found</span>
-          ${detailText ? `<span class="pool-register-compact-note">${detailText}</span>` : ''}
-        </p>
-      `;
-      if (checkbox) panel.appendChild(hiddenControl);
+      panel.innerHTML = `<p class="pool-register-compact-line is-green"><span>✓ Registered pool found</span>${detailText ? `<span class="pool-register-compact-note">${detailText}</span>` : ""}</p>`;
+      if (input) panel.appendChild(hiddenControl);
       return;
     }
 
-    if (status === 'not_found' || status === 'manual_required') {
-      const checkbox = currentInput;
-      const label = status === 'not_found'
-        ? '✕ No registered pool found for this address'
-        : 'Pool register check unavailable';
+    if (status === "not_found" || status === "manual_required") {
+      const lineClass = status === "not_found" ? "is-red" : "is-orange";
+      const label = status === "not_found" ? "✕ No registered pool found for this address" : "Pool register check unavailable";
+      panel.innerHTML = `<p class="pool-register-compact-line ${lineClass}"><span>${label}</span><button class="pool-register-compact-btn" type="button" id="pool-register-compact-override">Continue anyway</button></p>`;
+      if (input) panel.appendChild(hiddenControl);
+      const button = panel.querySelector("#pool-register-compact-override");
+      if (button && input) {
+        button.addEventListener("click", () => {
+          input.checked = true;
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+          button.textContent = "Continue enabled";
+          button.disabled = true;
+        });
+      }
+    }
+  }
 
-      panel.innerHTML = `
-        <p class="pool-register-compact-line ${status === 'not_found' ? 'is-red' : 'is-orange'}">
-          <span>${label}</span>
-          <button class="pool-register-compact-btn" type="button" id="pool-register-compact-override">Continue anyway</
+  const statusText = document.querySelector("#address-status");
+  if (statusText) statusText.textContent = "";
+
+  const pageObserver = new MutationObserver(() => compactPoolRegisterPanel());
+  pageObserver.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["data-status", "hidden"]
+  });
+
+  compactPoolRegisterPanel();
+});
