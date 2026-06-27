@@ -3,8 +3,21 @@
   bottom: 0;
 }
 
+.services-qld-stamp {
+  display: block;
+  width: clamp(58px, 6vw, 84px);
+  height: auto;
+  margin: 18px auto 0;
+  opacity: 0.94;
+}
+
 @media (max-width: 780px) {
   .hero .wave-layer {
     bottom: 0;
+  }
+
+  .services-qld-stamp {
+    width: 64px;
+    margin-top: 16px;
   }
 }
