@@ -89,7 +89,7 @@ function createGmailTransporter() {
 
 exports.bookingNotificationEmail = onDocumentCreated({
   document: "bookings/{bookingId}",
-  region: "nam5",
+  region: "us-central1",
   timeoutSeconds: 30,
   memory: "256MiB",
   secrets: [GMAIL_APP_PASSWORD]
