@@ -31,20 +31,45 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Move hero wave slightly lower
+      - name: Adjust hero wave spacing
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
           css_path = Path("irongate_rebuilt_site_20260623_093017/css/styles.css")
           css = css_path.read_text()
-          old = ".wave-layer {\n  position: absolute;\n  left: 0;\n  right: 0;\n  bottom: -1px;"
-          new = ".wave-layer {\n  position: absolute;\n  left: 0;\n  right: 0;\n  bottom: -28px;"
+          css += """
 
-          if old not in css:
-              raise SystemExit("Could not find the hero wave CSS block to update.")
+          /* GitHub Pages deployment override: add breathing room below hero trust row and lower the wave. */
+          .hero {
+            min-height: calc(100vh - var(--header-height) + 150px);
+          }
 
-          css_path.write_text(css.replace(old, new, 1))
+          .hero-inner {
+            padding-bottom: 235px;
+          }
+
+          .wave-layer {
+            bottom: -72px;
+            height: 220px;
+          }
+
+          @media (max-width: 780px) {
+            .hero {
+              min-height: calc(100vh - var(--header-height) + 125px);
+            }
+
+            .hero-inner {
+              padding-bottom: 205px;
+            }
+
+            .wave-layer {
+              bottom: -64px;
+              height: 205px;
+            }
+          }
+          """
+          css_path.write_text(css)
           PY
       - name: Setup Pages
         uses: actions/configure-pages@v5
