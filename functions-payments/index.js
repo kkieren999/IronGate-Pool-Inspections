@@ -101,7 +101,7 @@ exports.createBookingCheckoutSession = onCall(
       customer_email: booking.email || undefined,
       success_url: addCheckoutParams(successUrl, bookingId),
       cancel_url: cancelUrl.toString(),
-      allow_promotion_codes: false,
+      allow_promotion_codes: true,
       billing_address_collection: "auto",
       line_items: [
         {
