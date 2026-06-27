@@ -7,6 +7,10 @@
     {
       "source": "functions-email",
       "codebase": "bookingemail"
+    },
+    {
+      "source": "functions-payments",
+      "codebase": "payments"
     }
   ]
 }
