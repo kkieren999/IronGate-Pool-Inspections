@@ -11,7 +11,7 @@ const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 const db = admin.firestore();
 
 const INSPECTION_PRICE_CENTS = 24900;
-const INSPECTION_PRICE_DISPLAY = "$249 inc GST";
+const INSPECTION_PRICE_DISPLAY = "$249";
 const CURRENCY = "aud";
 const SERVICE_NAME = "Pool Safety Inspection & Certificate";
 
