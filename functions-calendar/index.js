@@ -8,6 +8,7 @@ admin.initializeApp();
 
 const GOOGLE_CALENDAR_ID = defineSecret("GOOGLE_CALENDAR_ID");
 const TIME_ZONE = "Australia/Brisbane";
+const CONFIRMED_PAYMENT_STATUSES = new Set(["paid", "agency_invoice"]);
 
 function field(data, key, fallback = "") {
   const value = data?.[key];
@@ -15,8 +16,8 @@ function field(data, key, fallback = "") {
   return String(value);
 }
 
-function hasJustBecomePaid(before = {}, after = {}) {
-  return before.paymentStatus !== "paid" && after.paymentStatus === "paid";
+function hasJustBecomeConfirmed(before = {}, after = {}) {
+  return !CONFIRMED_PAYMENT_STATUSES.has(before.paymentStatus) && CONFIRMED_PAYMENT_STATUSES.has(after.paymentStatus);
 }
 
 function toIsoDateTime(dateKey, timeValue) {
@@ -56,10 +57,15 @@ function getEventTimes(booking = {}) {
 function buildDescription(bookingId, booking = {}) {
   const lines = [
     `Booking reference: ${bookingId}`,
+    `Booking status: ${field(booking, "status", "confirmed")}`,
     `Payment status: ${field(booking, "paymentStatus", "paid")}`,
+    `Payment method: ${field(booking, "paymentMethod", "Not provided")}`,
+    `Agency: ${field(booking, "agencyName", "Not an agency booking")}`,
+    `Agency job reference: ${field(booking, "agencyJobReference", "Not provided")}`,
     `Customer: ${field(booking, "customerName", "Not provided")}`,
     `Phone: ${field(booking, "phone", "Not provided")}`,
     `Email: ${field(booking, "email", "Not provided")}`,
+    `Owner: ${field(booking, "ownerName", "Not provided")}`,
     `Property: ${field(booking, "propertyAddress", "Not provided")}`,
     `Inspection reason: ${field(booking, "inspectionReason", "Not provided")}`,
     `Pool type: ${field(booking, "poolType", "Not provided")}`,
@@ -89,8 +95,8 @@ exports.createCalendarEventAfterPayment = onDocumentUpdated({
   const before = event.data?.before?.data() || {};
   const booking = event.data?.after?.data() || {};
 
-  if (!hasJustBecomePaid(before, booking)) {
-    logger.info("Calendar event skipped because booking did not just become paid", {
+  if (!hasJustBecomeConfirmed(before, booking)) {
+    logger.info("Calendar event skipped because booking did not just become confirmed", {
       bookingId,
       beforePaymentStatus: before.paymentStatus || null,
       afterPaymentStatus: booking.paymentStatus || null
@@ -121,11 +127,12 @@ exports.createCalendarEventAfterPayment = onDocumentUpdated({
   const calendar = await getCalendarClient();
   const customerName = field(booking, "customerName", "Client");
   const propertyAddress = field(booking, "propertyAddress", "Inspection property");
+  const prefix = booking.paymentStatus === "agency_invoice" ? "Agency Pool Inspection" : "Pool Safety Inspection";
 
   const created = await calendar.events.insert({
     calendarId,
     requestBody: {
-      summary: `Pool Safety Inspection - ${customerName}`,
+      summary: `${prefix} - ${customerName}`,
       location: propertyAddress,
       description: buildDescription(bookingId, booking),
       start: eventTimes.start,
@@ -147,8 +154,9 @@ exports.createCalendarEventAfterPayment = onDocumentUpdated({
     updatedAt: admin.firestore.FieldValue.serverTimestamp()
   }, { merge: true });
 
-  logger.info("Google Calendar event created for paid booking", {
+  logger.info("Google Calendar event created for confirmed booking", {
     bookingId,
+    paymentStatus: booking.paymentStatus || null,
     calendarEventId: created.data.id || null
   });
 });
