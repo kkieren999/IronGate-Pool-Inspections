@@ -113,6 +113,7 @@ exports.createBookingCheckoutSession = onCall({
   await bookingRef.set({
     status: "pending_payment",
     paymentStatus: "checkout_created",
+    priceDisplay: INSPECTION_PRICE_DISPLAY,
     stripeCheckoutSessionId: session.id,
     stripeCheckoutUrl: session.url,
     stripeAmountTotal: INSPECTION_PRICE_CENTS,
