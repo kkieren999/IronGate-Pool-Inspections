@@ -6,8 +6,13 @@ const message = document.querySelector("#booking-message");
 const priceNotice = document.querySelector("#booking-price-notice");
 const functions = getFunctions(app, "us-central1");
 const createBookingCheckoutSession = httpsCallable(functions, "createBookingCheckoutSession");
+const createAgencyInvoiceBooking = httpsCallable(functions, "createAgencyInvoiceBooking");
 
 let redirectStarted = false;
+
+function getBookingContext() {
+  return window.ironGateBookingContext || { customerType: "homeowner", requestedPaymentMethod: "pay_now" };
+}
 
 function setCustomerFacingCopy() {
   if (priceNotice) priceNotice.textContent = "Pool Safety Inspection & Certificate — $249";
@@ -31,22 +36,56 @@ function buildPageUrl(path, bookingId = "") {
   return url.toString();
 }
 
+function shouldUseAgencyInvoice(context = {}) {
+  return context.customerType === "agent" && context.requestedPaymentMethod === "agency_invoice";
+}
+
+async function finaliseAgencyInvoiceBooking(bookingId, context) {
+  if (!context.agencyPartnerCode) {
+    throw new Error("Agency partner code is required for invoice bookings.");
+  }
+
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "Submitting agency invoice booking...";
+  }
+  if (message) {
+    message.textContent = "Booking request saved. Checking approved agency invoice account...";
+    message.dataset.type = "success";
+  }
+
+  await createAgencyInvoiceBooking({
+    bookingId,
+    bookingContext: context
+  });
+
+  window.location.assign(buildPageUrl("agency-booking-received.html", bookingId));
+}
+
 async function redirectToStripeCheckout(bookingId) {
   if (!bookingId || redirectStarted) return;
   redirectStarted = true;
 
-  if (submitButton) {
-    submitButton.disabled = true;
-    submitButton.textContent = "Opening secure payment...";
-  }
-  if (message) {
-    message.textContent = "Booking request saved. Opening secure Stripe payment...";
-    message.dataset.type = "success";
-  }
+  const bookingContext = getBookingContext();
 
   try {
+    if (shouldUseAgencyInvoice(bookingContext)) {
+      await finaliseAgencyInvoiceBooking(bookingId, bookingContext);
+      return;
+    }
+
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = "Opening secure payment...";
+    }
+    if (message) {
+      message.textContent = "Booking request saved. Opening secure Stripe payment...";
+      message.dataset.type = "success";
+    }
+
     const result = await createBookingCheckoutSession({
       bookingId,
+      bookingContext,
       successUrl: buildPageUrl("success.html", bookingId),
       cancelUrl: buildPageUrl("cancelled.html", bookingId)
     });
@@ -55,10 +94,12 @@ async function redirectToStripeCheckout(bookingId) {
     if (!checkoutUrl) throw new Error("Stripe Checkout URL was not returned.");
     window.location.assign(checkoutUrl);
   } catch (error) {
-    console.error("Stripe checkout error:", error);
+    console.error("Booking payment finalisation error:", error);
     redirectStarted = false;
     if (message) {
-      message.textContent = "The booking was saved, but secure payment could not open. Please call IronGate on 0481 442 260 or try again.";
+      message.textContent = shouldUseAgencyInvoice(getBookingContext())
+        ? "The booking was saved, but the agency invoice account could not be approved. Please pay now or call IronGate on 0481 442 260."
+        : "The booking was saved, but secure payment could not open. Please call IronGate on 0481 442 260 or try again.";
       message.dataset.type = "error";
     }
     if (submitButton) {
