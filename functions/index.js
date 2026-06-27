@@ -5,6 +5,7 @@ admin.initializeApp();
 
 const RESOURCE_ID = "bb059c35-d826-4ccd-af31-24de4716864a";
 const DATASTORE_SEARCH_URL = "https://www.data.qld.gov.au/api/3/action/datastore_search";
+const ADMIN_EMAIL = "irongate.pool.bne@gmail.com";
 const ALLOWED_ORIGINS = new Set([
   "https://kkieren999.github.io",
   "http://localhost:5000",
@@ -182,6 +183,86 @@ async function queryPoolRegister(parts) {
   return data.result?.records || [];
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function bookingValue(data, key, fallback = "Not provided") {
+  const value = data?.[key];
+  if (value === undefined || value === null || value === "") return fallback;
+  return String(value);
+}
+
+function buildBookingNotificationMessage(bookingId, data = {}) {
+  const customerName = bookingValue(data, "customerName");
+  const email = bookingValue(data, "email");
+  const phone = bookingValue(data, "phone");
+  const address = bookingValue(data, "propertyAddress");
+  const preferredDate = bookingValue(data, "preferredDateDisplay", bookingValue(data, "preferredDate"));
+  const preferredTime = bookingValue(data, "preferredTimeLabel", bookingValue(data, "preferredTime"));
+  const inspectionReason = bookingValue(data, "inspectionReason");
+  const poolType = bookingValue(data, "poolType");
+  const existingCertificateStatus = bookingValue(data, "existingCertificateStatus");
+  const poolRegisterStatus = bookingValue(data, "poolRegisterStatus");
+  const poolRegisterMessage = bookingValue(data, "poolRegisterMessage");
+  const notes = bookingValue(data, "notes", "No notes provided");
+  const accessInstructions = bookingValue(data, "accessInstructions", "No access instructions provided");
+  const priceDisplay = bookingValue(data, "priceDisplay", "$249 inc GST");
+
+  const rows = [
+    ["Booking ID", bookingId],
+    ["Name", customerName],
+    ["Email", email],
+    ["Phone", phone],
+    ["Property", address],
+    ["Preferred date", preferredDate],
+    ["Preferred time", preferredTime],
+    ["Inspection reason", inspectionReason],
+    ["Pool type", poolType],
+    ["Existing certificate", existingCertificateStatus],
+    ["Pool register status", poolRegisterStatus],
+    ["Pool register message", poolRegisterMessage],
+    ["Price", priceDisplay],
+    ["Access instructions", accessInstructions],
+    ["Notes", notes]
+  ];
+
+  const text = [
+    "New IronGate booking request",
+    "",
+    ...rows.map(([label, value]) => `${label}: ${value}`),
+    "",
+    "Open Firebase Console > Firestore Database > bookings to view the full booking record."
+  ].join("\n");
+
+  const htmlRows = rows.map(([label, value]) => `
+    <tr>
+      <th style="text-align:left;padding:10px 12px;border-bottom:1px solid #e6eef7;color:#0a2540;width:190px;vertical-align:top;">${escapeHtml(label)}</th>
+      <td style="padding:10px 12px;border-bottom:1px solid #e6eef7;color:#173557;vertical-align:top;">${escapeHtml(value)}</td>
+    </tr>
+  `).join("");
+
+  return {
+    subject: `New IronGate booking request - ${customerName}`,
+    text,
+    html: `
+      <div style="font-family:Arial,Helvetica,sans-serif;max-width:720px;margin:0 auto;color:#173557;">
+        <h1 style="color:#0a2540;margin:0 0 8px;">New IronGate booking request</h1>
+        <p style="margin:0 0 22px;color:#4a5f78;">A client has submitted a booking request through the IronGate website.</p>
+        <table style="width:100%;border-collapse:collapse;background:#ffffff;border:1px solid #e6eef7;border-radius:12px;overflow:hidden;">
+          ${htmlRows}
+        </table>
+        <p style="margin:22px 0 0;color:#4a5f78;">Open Firebase Console &gt; Firestore Database &gt; bookings to view the full booking record.</p>
+      </div>
+    `
+  };
+}
+
 exports.poolRegisterLookup = functions
   .region("australia-southeast1")
   .runWith({ timeoutSeconds: 20, memory: "256MB" })
@@ -263,4 +344,25 @@ exports.poolRegisterLookup = functions
         error: error.message
       });
     }
+  });
+
+exports.queueBookingNotificationEmail = functions
+  .region("australia-southeast1")
+  .runWith({ timeoutSeconds: 20, memory: "256MB" })
+  .firestore.document("bookings/{bookingId}")
+  .onCreate(async (snapshot, context) => {
+    const bookingId = context.params.bookingId;
+    const booking = snapshot.data() || {};
+    const message = buildBookingNotificationMessage(bookingId, booking);
+
+    await admin.firestore().collection("mail").add({
+      to: [ADMIN_EMAIL],
+      replyTo: booking.email || undefined,
+      message
+    });
+
+    functions.logger.info("Queued booking notification email", {
+      bookingId,
+      to: ADMIN_EMAIL
+    });
   });
