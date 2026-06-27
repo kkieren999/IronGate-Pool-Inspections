@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Install dependencies
         run: npm install
@@ -35,6 +35,6 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       - name: Deploy booking email function
-        run: npx firebase-tools deploy --only functions:bookingEmail --project irongate-pool-inspection-256b4 --non-interactive
+        run: npx firebase-tools deploy --only functions:bookingemail --project irongate-pool-inspection-256b4 --non-interactive
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /home/runner/firebase-service-account.json
