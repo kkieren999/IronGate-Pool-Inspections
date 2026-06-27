@@ -32,7 +32,7 @@ function extractBookingId(text) {
 }
 
 function buildPageUrl(path, bookingId = "") {
-  const url = new URL(path, window.location.href);
+  const url = new URL(path, window.location.origin);
   if (bookingId) url.searchParams.set("bookingId", bookingId);
   return url.toString();
 }
@@ -60,7 +60,7 @@ async function finaliseAgencyInvoiceBooking(bookingId, context) {
     bookingContext: context
   });
 
-  window.location.assign(buildPageUrl("agency-booking-received.html", bookingId));
+  window.location.assign(buildPageUrl("/agency-booking-received/", bookingId));
 }
 
 async function redirectToStripeCheckout(bookingId) {
@@ -87,8 +87,8 @@ async function redirectToStripeCheckout(bookingId) {
     const result = await createBookingCheckoutSession({
       bookingId,
       bookingContext,
-      successUrl: buildPageUrl("success.html", bookingId),
-      cancelUrl: buildPageUrl("cancelled.html", bookingId)
+      successUrl: buildPageUrl("/success/", bookingId),
+      cancelUrl: buildPageUrl("/cancelled/", bookingId)
     });
 
     const checkoutUrl = result?.data?.checkoutUrl;
