@@ -16,7 +16,7 @@ function setMessage(text, type = "") {
 }
 
 function buildPageUrl(path) {
-  const url = new URL(path, window.location.href);
+  const url = new URL(path, window.location.origin);
   if (bookingId) url.searchParams.set("bookingId", bookingId);
   return url.toString();
 }
@@ -27,7 +27,7 @@ if (bookingReference && bookingId) {
 
 if (retryButton) {
   if (!bookingId) {
-    retryButton.href = "booking.html";
+    retryButton.href = "/booking/";
     retryButton.textContent = "Start a New Booking";
   } else {
     retryButton.addEventListener("click", async (event) => {
@@ -39,8 +39,8 @@ if (retryButton) {
       try {
         const result = await createBookingCheckoutSession({
           bookingId,
-          successUrl: buildPageUrl("success.html"),
-          cancelUrl: buildPageUrl("cancelled.html")
+          successUrl: buildPageUrl("/success/"),
+          cancelUrl: buildPageUrl("/cancelled/")
         });
 
         const checkoutUrl = result?.data?.checkoutUrl;
