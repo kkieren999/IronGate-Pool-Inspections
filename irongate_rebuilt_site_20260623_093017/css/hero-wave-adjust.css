@@ -1,10 +1,14 @@
 /* Final hero adjustments. Loaded after the main stylesheet so it wins over deployment overrides. */
+.hero .hero-content {
+  transform: translateY(-70px);
+}
+
 .hero .hero-content::before {
   content: "";
   display: block;
-  width: clamp(78px, 7.5vw, 112px);
+  width: clamp(234px, 22.5vw, 336px);
   aspect-ratio: 1;
-  margin: 0 0 16px;
+  margin: 0 0 18px;
   background: url("../assets/qld-stamp.png") left center / contain no-repeat;
   opacity: 0.96;
   filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.22));
@@ -15,8 +19,12 @@
 }
 
 @media (max-width: 780px) {
+  .hero .hero-content {
+    transform: translateY(-48px);
+  }
+
   .hero .hero-content::before {
-    width: 282px;
+    width: 246px;
     margin-bottom: 14px;
   }
 
