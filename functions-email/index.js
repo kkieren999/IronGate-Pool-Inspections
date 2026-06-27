@@ -1,4 +1,4 @@
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
 const nodemailer = require("nodemailer");
@@ -43,13 +43,13 @@ function buildEmail(bookingId, booking = {}) {
     ["Pool register status", field(booking, "poolRegisterStatus")],
     ["Pool register message", field(booking, "poolRegisterMessage")],
     ["Price", priceField(booking)],
-    ["Payment status", field(booking, "paymentStatus", "pending_payment")],
+    ["Payment status", field(booking, "paymentStatus", "paid")],
     ["Access instructions", field(booking, "accessInstructions", "No access instructions provided")],
     ["Notes", field(booking, "notes", "No notes provided")]
   ];
 
   const text = [
-    "New IronGate booking request",
+    "Paid IronGate booking confirmed",
     "",
     ...rows.map(([label, value]) => `${label}: ${value}`),
     "",
@@ -65,8 +65,8 @@ function buildEmail(bookingId, booking = {}) {
 
   const html = `
     <div style="font-family:Arial,Helvetica,sans-serif;max-width:720px;margin:0 auto;color:#173557;">
-      <h1 style="color:#0a2540;margin:0 0 8px;">New IronGate booking request</h1>
-      <p style="margin:0 0 22px;color:#4a5f78;">A client has submitted a booking request through the IronGate website.</p>
+      <h1 style="color:#0a2540;margin:0 0 8px;">Paid booking confirmed</h1>
+      <p style="margin:0 0 22px;color:#4a5f78;">A client has completed payment through the IronGate website.</p>
       <table style="width:100%;border-collapse:collapse;background:#ffffff;border:1px solid #e6eef7;border-radius:12px;overflow:hidden;">
         ${htmlRows}
       </table>
@@ -75,7 +75,7 @@ function buildEmail(bookingId, booking = {}) {
   `;
 
   return {
-    subject: `New IronGate booking request - ${customerName}`,
+    subject: `Paid IronGate booking - ${customerName}`,
     text,
     html
   };
@@ -94,7 +94,7 @@ function createGmailTransporter() {
   });
 }
 
-exports.bookingNotificationEmail = onDocumentCreated({
+exports.bookingNotificationEmail = onDocumentUpdated({
   document: "bookings/{bookingId}",
   region: "us-central1",
   timeoutSeconds: 30,
@@ -102,7 +102,18 @@ exports.bookingNotificationEmail = onDocumentCreated({
   secrets: [GMAIL_APP_PASSWORD]
 }, async (event) => {
   const bookingId = event.params.bookingId;
-  const booking = event.data?.data() || {};
+  const before = event.data?.before?.data() || {};
+  const booking = event.data?.after?.data() || {};
+
+  if (before.paymentStatus === "paid" || booking.paymentStatus !== "paid") {
+    logger.info("Booking email skipped because payment did not just become paid", {
+      bookingId,
+      beforePaymentStatus: before.paymentStatus || null,
+      afterPaymentStatus: booking.paymentStatus || null
+    });
+    return;
+  }
+
   const email = buildEmail(bookingId, booking);
   const transporter = createGmailTransporter();
 
@@ -115,7 +126,7 @@ exports.bookingNotificationEmail = onDocumentCreated({
     html: email.html
   });
 
-  logger.info("Booking notification email sent", {
+  logger.info("Paid booking notification email sent", {
     bookingId,
     to: ADMIN_EMAIL
   });
