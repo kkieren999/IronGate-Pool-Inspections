@@ -1,10 +1,10 @@
 /* Final hero wave position adjustment. Loaded after the main stylesheet so it wins over deployment overrides. */
 .hero .wave-layer {
-  bottom: 18px;
+  bottom: 0;
 }
 
 @media (max-width: 780px) {
   .hero .wave-layer {
-    bottom: 14px;
+    bottom: 0;
   }
 }
