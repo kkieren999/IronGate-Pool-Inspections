@@ -6,6 +6,7 @@ const nodemailer = require("nodemailer");
 const GMAIL_APP_PASSWORD = defineSecret("GMAIL_APP_PASSWORD");
 const ADMIN_EMAIL = "irongate.pool.bne@gmail.com";
 const DEFAULT_PRICE_DISPLAY = "$249";
+const CONFIRMED_PAYMENT_STATUSES = new Set(["paid", "agency_invoice"]);
 
 function escapeHtml(value) {
   return String(value || "")
@@ -27,13 +28,30 @@ function priceField(booking = {}) {
   return rawPrice.replace(/\s*inc\s+GST\s*/i, "").trim() || DEFAULT_PRICE_DISPLAY;
 }
 
+function hasJustBecomeConfirmed(before = {}, after = {}) {
+  return !CONFIRMED_PAYMENT_STATUSES.has(before.paymentStatus) && CONFIRMED_PAYMENT_STATUSES.has(after.paymentStatus);
+}
+
 function buildEmail(bookingId, booking = {}) {
   const customerName = field(booking, "customerName");
+  const isAgencyInvoice = booking.paymentStatus === "agency_invoice";
+  const heading = isAgencyInvoice ? "Approved agency invoice booking" : "Paid IronGate booking confirmed";
+  const intro = isAgencyInvoice
+    ? "An approved agency partner has submitted an invoice-account booking through the IronGate website."
+    : "A client has completed payment through the IronGate website.";
+
   const rows = [
     ["Booking ID", bookingId],
+    ["Booking status", field(booking, "status")],
+    ["Payment status", field(booking, "paymentStatus", isAgencyInvoice ? "agency_invoice" : "paid")],
+    ["Payment method", field(booking, "paymentMethod")],
+    ["Agency", field(booking, "agencyName")],
+    ["Agency code", field(booking, "agencyPartnerCode")],
+    ["Agency job reference", field(booking, "agencyJobReference")],
     ["Name", customerName],
     ["Email", field(booking, "email")],
     ["Phone", field(booking, "phone")],
+    ["Owner", field(booking, "ownerName")],
     ["Property", field(booking, "propertyAddress")],
     ["Preferred date", field(booking, "preferredDateDisplay", field(booking, "preferredDate"))],
     ["Preferred time", field(booking, "preferredTimeLabel", field(booking, "preferredTime"))],
@@ -43,13 +61,12 @@ function buildEmail(bookingId, booking = {}) {
     ["Pool register status", field(booking, "poolRegisterStatus")],
     ["Pool register message", field(booking, "poolRegisterMessage")],
     ["Price", priceField(booking)],
-    ["Payment status", field(booking, "paymentStatus", "paid")],
     ["Access instructions", field(booking, "accessInstructions", "No access instructions provided")],
     ["Notes", field(booking, "notes", "No notes provided")]
   ];
 
   const text = [
-    "Paid IronGate booking confirmed",
+    heading,
     "",
     ...rows.map(([label, value]) => `${label}: ${value}`),
     "",
@@ -65,8 +82,8 @@ function buildEmail(bookingId, booking = {}) {
 
   const html = `
     <div style="font-family:Arial,Helvetica,sans-serif;max-width:720px;margin:0 auto;color:#173557;">
-      <h1 style="color:#0a2540;margin:0 0 8px;">Paid booking confirmed</h1>
-      <p style="margin:0 0 22px;color:#4a5f78;">A client has completed payment through the IronGate website.</p>
+      <h1 style="color:#0a2540;margin:0 0 8px;">${escapeHtml(heading)}</h1>
+      <p style="margin:0 0 22px;color:#4a5f78;">${escapeHtml(intro)}</p>
       <table style="width:100%;border-collapse:collapse;background:#ffffff;border:1px solid #e6eef7;border-radius:12px;overflow:hidden;">
         ${htmlRows}
       </table>
@@ -75,7 +92,7 @@ function buildEmail(bookingId, booking = {}) {
   `;
 
   return {
-    subject: `Paid IronGate booking - ${customerName}`,
+    subject: isAgencyInvoice ? `Agency invoice booking - ${customerName}` : `Paid IronGate booking - ${customerName}`,
     text,
     html
   };
@@ -105,8 +122,8 @@ exports.bookingNotificationEmail = onDocumentUpdated({
   const before = event.data?.before?.data() || {};
   const booking = event.data?.after?.data() || {};
 
-  if (before.paymentStatus === "paid" || booking.paymentStatus !== "paid") {
-    logger.info("Booking email skipped because payment did not just become paid", {
+  if (!hasJustBecomeConfirmed(before, booking)) {
+    logger.info("Booking email skipped because booking did not just become confirmed", {
       bookingId,
       beforePaymentStatus: before.paymentStatus || null,
       afterPaymentStatus: booking.paymentStatus || null
@@ -126,8 +143,9 @@ exports.bookingNotificationEmail = onDocumentUpdated({
     html: email.html
   });
 
-  logger.info("Paid booking notification email sent", {
+  logger.info("Confirmed booking notification email sent", {
     bookingId,
+    paymentStatus: booking.paymentStatus || null,
     to: ADMIN_EMAIL
   });
 });
