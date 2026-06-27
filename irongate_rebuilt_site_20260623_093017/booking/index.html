@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Book a Pool Inspection | IronGate Pool Inspections</title>
+  <meta name="robots" content="noindex, follow" />
+  <script>
+    (async () => {
+      const replacements = {
+        'booking.html': '/booking/',
+        'admin-timeblocks.html': '/admin/',
+        'admin-availability.html': '/admin/',
+        'success.html': '/success/',
+        'cancelled.html': '/cancelled/',
+        'agency-booking-received.html': '/agency-booking-received/',
+        'index.html#': '/#',
+        'index.html': '/'
+      };
+      try {
+        const response = await fetch('/booking.html', { cache: 'no-store' });
+        let html = await response.text();
+        html = html.replace('<head>', '<head><base href="/">');
+        Object.entries(replacements).forEach(([from, to]) => { html = html.replaceAll(from, to); });
+        document.open();
+        document.write(html);
+        document.close();
+      } catch (error) {
+        document.body.innerHTML = '<main style="font-family:Arial,sans-serif;padding:40px"><h1>Booking page could not load</h1><p>Please open <a href="/booking.html">the booking page</a>.</p></main>';
+      }
+    })();
+  </script>
+</head>
+<body></body>
+</html>
