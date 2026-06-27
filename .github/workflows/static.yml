@@ -40,32 +40,32 @@ jobs:
           css = css_path.read_text()
           css += """
 
-          /* GitHub Pages deployment override: add breathing room below hero trust row and lower the wave. */
+          /* GitHub Pages deployment override: keep the hero wave inside the hero so it is not clipped. */
           .hero {
-            min-height: calc(100vh - var(--header-height) + 150px);
+            min-height: calc(100vh - var(--header-height) + 70px);
           }
 
           .hero-inner {
-            padding-bottom: 235px;
+            padding-bottom: 185px;
           }
 
           .wave-layer {
-            bottom: -72px;
-            height: 220px;
+            bottom: 0;
+            height: 190px;
           }
 
           @media (max-width: 780px) {
             .hero {
-              min-height: calc(100vh - var(--header-height) + 125px);
+              min-height: calc(100vh - var(--header-height) + 45px);
             }
 
             .hero-inner {
-              padding-bottom: 205px;
+              padding-bottom: 170px;
             }
 
             .wave-layer {
-              bottom: -64px;
-              height: 205px;
+              bottom: 0;
+              height: 180px;
             }
           }
           """
