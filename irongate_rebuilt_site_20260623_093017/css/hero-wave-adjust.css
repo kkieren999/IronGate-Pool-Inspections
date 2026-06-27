@@ -5,7 +5,7 @@
 
 .services-qld-stamp {
   display: block;
-  width: clamp(58px, 6vw, 84px);
+  width: clamp(116px, 12vw, 168px);
   height: auto;
   margin: 18px auto 0;
   opacity: 0.94;
@@ -17,7 +17,7 @@
   }
 
   .services-qld-stamp {
-    width: 64px;
+    width: 128px;
     margin-top: 16px;
   }
 }
