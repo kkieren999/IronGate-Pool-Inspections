@@ -8,7 +8,7 @@
   display: block;
   width: clamp(234px, 22.5vw, 336px);
   aspect-ratio: 1;
-  margin: 0 0 18px;
+  margin: 0 0 18px -54px;
   background: url("../assets/qld-stamp.png") left center / contain no-repeat;
   opacity: 0.96;
   filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.22));
@@ -25,7 +25,7 @@
 
   .hero .hero-content::before {
     width: 246px;
-    margin-bottom: 14px;
+    margin: 0 0 14px -38px;
   }
 
   .hero .wave-layer {
