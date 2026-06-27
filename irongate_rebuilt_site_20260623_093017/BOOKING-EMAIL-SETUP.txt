@@ -1,36 +1,47 @@
 IRONGATE BOOKING EMAIL NOTIFICATION SETUP
 
-What the code now does
-- When a new document is created in Firestore at bookings/{bookingId}, the Firebase Function queueBookingNotificationEmail runs.
-- It creates a new document in the Firestore collection named mail.
-- That mail document is addressed to irongate.pool.bne@gmail.com.
-- The email includes the client name, email, phone, property address, preferred date/time, pool details, access notes and booking ID.
+Current approach
+- We are NOT using the Firebase Trigger Email extension anymore.
+- The extension failed because the Firestore database is in the nam5 multi-region.
+- The repo now has a separate Firebase Functions codebase named bookingEmail.
+- The function listens directly to Firestore bookings/{bookingId} in region nam5.
+- When a booking is created, it calls SendGrid directly and sends an email to:
+  irongate.pool.bne@gmail.com
 
-Important
-This function queues the email. To actually send the email, install and configure the Firebase Extension called Trigger Email from Firestore.
+GitHub files added
+- functions-email/package.json
+- functions-email/index.js
+- .github/workflows/deploy-booking-email.yml
+- firebase.json updated with the bookingEmail codebase
 
-Firebase setup steps
-1. Open Firebase Console.
-2. Open the IronGate Firebase project.
-3. Go to Extensions.
-4. Install Trigger Email from Firestore.
-5. Configure it to watch the collection:
-   mail
-6. Configure your sending provider / SMTP details inside the extension settings.
-7. Deploy the functions from this repo:
-   cd functions
-   npm install
-   npm run deploy
+Required one-time setup
+1. Create or open a SendGrid account.
+2. Verify the sender email in SendGrid:
+   irongate.pool.bne@gmail.com
+3. Create a SendGrid API key with permission to send email.
+4. In Firebase, set the SendGrid API key as a Firebase Functions secret:
+   firebase functions:secrets:set SENDGRID_API_KEY --project irongate-pool-inspection-256b4
+5. In GitHub, add the repository secret FIREBASE_SERVICE_ACCOUNT.
+   This must contain the Firebase service account JSON for the IronGate project.
+
+Deploy from GitHub
+1. Open GitHub repository:
+   kkieren999/IronGate-Pool-Inspections
+2. Go to Actions.
+3. Open Deploy Booking Email Function.
+4. Click Run workflow.
+5. Choose main.
+6. Click Run workflow.
 
 Testing
 1. Submit a new test booking on booking.html.
-2. Check Firestore Database > bookings for the booking record.
-3. Check Firestore Database > mail for the queued email record.
-4. If the Trigger Email extension is configured correctly, an email should arrive at:
-   irongate.pool.bne@gmail.com
+2. Confirm the booking appears in Firestore Database > bookings.
+3. Wait 10-30 seconds.
+4. Check irongate.pool.bne@gmail.com.
+5. If no email arrives, open Firebase Functions logs for bookingNotificationEmail.
 
-If the email does not arrive
-- Check that the mail document was created.
-- Check Firebase Extensions logs.
-- Check Firebase Functions logs for queueBookingNotificationEmail.
-- Check the sending provider / SMTP settings in the Trigger Email extension.
+Notes
+- The email is sent directly through SendGrid.
+- It does not use the Firestore mail collection.
+- It does not require the Firebase Trigger Email extension.
+- The function trigger is deployed in region nam5 to match the existing Firestore database location.
