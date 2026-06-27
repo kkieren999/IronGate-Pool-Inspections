@@ -5,24 +5,38 @@ Current approach
 - The extension failed because the Firestore database is in the nam5 multi-region.
 - The repo now has a separate Firebase Functions codebase named bookingEmail.
 - The function listens directly to Firestore bookings/{bookingId} in region nam5.
-- When a booking is created, it calls SendGrid directly and sends an email to:
+- When a booking is created, it sends an email through Gmail SMTP to:
   irongate.pool.bne@gmail.com
 
-GitHub files added
+GitHub files added/updated
 - functions-email/package.json
 - functions-email/index.js
 - .github/workflows/deploy-booking-email.yml
 - firebase.json updated with the bookingEmail codebase
 
-Required one-time setup
-1. Create or open a SendGrid account.
-2. Verify the sender email in SendGrid:
+Required one-time Google setup
+1. Sign in to the Google account:
    irongate.pool.bne@gmail.com
-3. Create a SendGrid API key with permission to send email.
-4. In Firebase, set the SendGrid API key as a Firebase Functions secret:
-   firebase functions:secrets:set SENDGRID_API_KEY --project irongate-pool-inspection-256b4
-5. In GitHub, add the repository secret FIREBASE_SERVICE_ACCOUNT.
-   This must contain the Firebase service account JSON for the IronGate project.
+2. Turn on 2-Step Verification if it is not already on.
+3. Create a Google App Password for Mail.
+4. Copy the 16-character app password. It may show spaces; the spaces are OK to remove when saving the secret.
+
+Required one-time Firebase setup
+1. Open Firebase Console.
+2. Open the IronGate project:
+   irongate-pool-inspection-256b4
+3. Open Cloud Shell, or use a local terminal with Firebase CLI signed in.
+4. Run:
+   firebase functions:secrets:set GMAIL_APP_PASSWORD --project irongate-pool-inspection-256b4
+5. Paste the Google App Password when prompted.
+
+Required one-time GitHub setup
+1. In GitHub, open:
+   kkieren999/IronGate-Pool-Inspections
+2. Go to Settings > Secrets and variables > Actions.
+3. Add repository secret:
+   FIREBASE_SERVICE_ACCOUNT
+4. Its value must be the full Firebase service account JSON for the IronGate project.
 
 Deploy from GitHub
 1. Open GitHub repository:
@@ -41,7 +55,9 @@ Testing
 5. If no email arrives, open Firebase Functions logs for bookingNotificationEmail.
 
 Notes
-- The email is sent directly through SendGrid.
+- The email is sent directly through Gmail SMTP using a Google App Password.
+- The Gmail App Password is stored as a Firebase Functions secret named GMAIL_APP_PASSWORD.
+- The Gmail App Password is not stored in GitHub.
 - It does not use the Firestore mail collection.
 - It does not require the Firebase Trigger Email extension.
 - The function trigger is deployed in region nam5 to match the existing Firestore database location.
