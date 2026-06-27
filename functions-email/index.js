@@ -1,8 +1,9 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const logger = require("firebase-functions/logger");
+const nodemailer = require("nodemailer");
 
-const SENDGRID_API_KEY = defineSecret("SENDGRID_API_KEY");
+const GMAIL_APP_PASSWORD = defineSecret("GMAIL_APP_PASSWORD");
 const ADMIN_EMAIL = "irongate.pool.bne@gmail.com";
 
 function escapeHtml(value) {
@@ -73,40 +74,17 @@ function buildEmail(bookingId, booking = {}) {
   };
 }
 
-async function sendWithSendGrid({ to, fromEmail, fromName, replyTo, subject, text, html }) {
-  const apiKey = SENDGRID_API_KEY.value();
-  if (!apiKey) throw new Error("SENDGRID_API_KEY secret has not been set in Firebase.");
+function createGmailTransporter() {
+  const appPassword = GMAIL_APP_PASSWORD.value();
+  if (!appPassword) throw new Error("GMAIL_APP_PASSWORD secret has not been set in Firebase.");
 
-  const payload = {
-    personalizations: [{
-      to: [{ email: to }],
-      subject
-    }],
-    from: {
-      email: fromEmail,
-      name: fromName
-    },
-    content: [
-      { type: "text/plain", value: text },
-      { type: "text/html", value: html }
-    ]
-  };
-
-  if (replyTo) payload.reply_to = { email: replyTo };
-
-  const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(payload)
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: ADMIN_EMAIL,
+      pass: appPassword
+    }
   });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`SendGrid email failed with HTTP ${response.status}: ${errorText}`);
-  }
 }
 
 exports.bookingNotificationEmail = onDocumentCreated({
@@ -114,16 +92,16 @@ exports.bookingNotificationEmail = onDocumentCreated({
   region: "nam5",
   timeoutSeconds: 30,
   memory: "256MiB",
-  secrets: [SENDGRID_API_KEY]
+  secrets: [GMAIL_APP_PASSWORD]
 }, async (event) => {
   const bookingId = event.params.bookingId;
   const booking = event.data?.data() || {};
   const email = buildEmail(bookingId, booking);
+  const transporter = createGmailTransporter();
 
-  await sendWithSendGrid({
+  await transporter.sendMail({
+    from: `IronGate Pool Inspections <${ADMIN_EMAIL}>`,
     to: ADMIN_EMAIL,
-    fromEmail: ADMIN_EMAIL,
-    fromName: "IronGate Pool Inspections",
     replyTo: booking.email || undefined,
     subject: email.subject,
     text: email.text,
