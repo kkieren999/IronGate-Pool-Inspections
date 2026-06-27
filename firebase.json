@@ -1,5 +1,12 @@
 {
-  "functions": {
-    "source": "functions"
-  }
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default"
+    },
+    {
+      "source": "functions-email",
+      "codebase": "bookingEmail"
+    }
+  ]
 }
