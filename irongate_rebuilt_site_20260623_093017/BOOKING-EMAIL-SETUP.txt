@@ -1,0 +1,36 @@
+IRONGATE BOOKING EMAIL NOTIFICATION SETUP
+
+What the code now does
+- When a new document is created in Firestore at bookings/{bookingId}, the Firebase Function queueBookingNotificationEmail runs.
+- It creates a new document in the Firestore collection named mail.
+- That mail document is addressed to irongate.pool.bne@gmail.com.
+- The email includes the client name, email, phone, property address, preferred date/time, pool details, access notes and booking ID.
+
+Important
+This function queues the email. To actually send the email, install and configure the Firebase Extension called Trigger Email from Firestore.
+
+Firebase setup steps
+1. Open Firebase Console.
+2. Open the IronGate Firebase project.
+3. Go to Extensions.
+4. Install Trigger Email from Firestore.
+5. Configure it to watch the collection:
+   mail
+6. Configure your sending provider / SMTP details inside the extension settings.
+7. Deploy the functions from this repo:
+   cd functions
+   npm install
+   npm run deploy
+
+Testing
+1. Submit a new test booking on booking.html.
+2. Check Firestore Database > bookings for the booking record.
+3. Check Firestore Database > mail for the queued email record.
+4. If the Trigger Email extension is configured correctly, an email should arrive at:
+   irongate.pool.bne@gmail.com
+
+If the email does not arrive
+- Check that the mail document was created.
+- Check Firebase Extensions logs.
+- Check Firebase Functions logs for queueBookingNotificationEmail.
+- Check the sending provider / SMTP settings in the Trigger Email extension.
