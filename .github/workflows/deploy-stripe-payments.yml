@@ -1,0 +1,41 @@
+name: Deploy Stripe Payments Functions
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "functions-payments/**"
+      - "firebase.json"
+      - ".github/workflows/deploy-stripe-payments.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          package-manager-cache: false
+
+      - name: Install dependencies
+        run: npm install --omit=dev --no-audit --no-fund
+        working-directory: functions-payments
+
+      - name: Prepare Firebase credentials
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /home/runner/firebase-service-account.json
+          test -s /home/runner/firebase-service-account.json
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Deploy Stripe payments functions
+        run: npx --yes firebase-tools@15.22.3 deploy --only functions:payments --project irongate-pool-inspection-256b4 --non-interactive
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /home/runner/firebase-service-account.json
