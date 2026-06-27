@@ -1,9 +1,25 @@
-/* Final hero wave position adjustment. Loaded after the main stylesheet so it wins over deployment overrides. */
+/* Final hero adjustments. Loaded after the main stylesheet so it wins over deployment overrides. */
+.hero .hero-content::before {
+  content: "";
+  display: block;
+  width: clamp(78px, 7.5vw, 112px);
+  aspect-ratio: 1;
+  margin: 0 0 16px;
+  background: url("../assets/qld-stamp.svg") left center / contain no-repeat;
+  opacity: 0.96;
+  filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.22));
+}
+
 .hero .wave-layer {
   bottom: 0;
 }
 
 @media (max-width: 780px) {
+  .hero .hero-content::before {
+    width: 82px;
+    margin-bottom: 14px;
+  }
+
   .hero .wave-layer {
     bottom: 0;
   }
