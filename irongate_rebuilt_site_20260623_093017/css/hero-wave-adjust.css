@@ -16,7 +16,7 @@
 
 @media (max-width: 780px) {
   .hero .hero-content::before {
-    width: 82px;
+    width: 282px;
     margin-bottom: 14px;
   }
 
