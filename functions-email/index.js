@@ -5,6 +5,7 @@ const nodemailer = require("nodemailer");
 
 const GMAIL_APP_PASSWORD = defineSecret("GMAIL_APP_PASSWORD");
 const ADMIN_EMAIL = "irongate.pool.bne@gmail.com";
+const DEFAULT_PRICE_DISPLAY = "$249";
 
 function escapeHtml(value) {
   return String(value || "")
@@ -19,6 +20,11 @@ function field(data, key, fallback = "Not provided") {
   const value = data?.[key];
   if (value === undefined || value === null || value === "") return fallback;
   return String(value);
+}
+
+function priceField(booking = {}) {
+  const rawPrice = field(booking, "priceDisplay", DEFAULT_PRICE_DISPLAY);
+  return rawPrice.replace(/\s*inc\s+GST\s*/i, "").trim() || DEFAULT_PRICE_DISPLAY;
 }
 
 function buildEmail(bookingId, booking = {}) {
@@ -36,7 +42,8 @@ function buildEmail(bookingId, booking = {}) {
     ["Existing certificate", field(booking, "existingCertificateStatus")],
     ["Pool register status", field(booking, "poolRegisterStatus")],
     ["Pool register message", field(booking, "poolRegisterMessage")],
-    ["Price", field(booking, "priceDisplay", "$249 inc GST")],
+    ["Price", priceField(booking)],
+    ["Payment status", field(booking, "paymentStatus", "pending_payment")],
     ["Access instructions", field(booking, "accessInstructions", "No access instructions provided")],
     ["Notes", field(booking, "notes", "No notes provided")]
   ];
