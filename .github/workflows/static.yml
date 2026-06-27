@@ -31,6 +31,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Move hero wave slightly lower
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          css_path = Path("irongate_rebuilt_site_20260623_093017/css/styles.css")
+          css = css_path.read_text()
+          old = ".wave-layer {\n  position: absolute;\n  left: 0;\n  right: 0;\n  bottom: -1px;"
+          new = ".wave-layer {\n  position: absolute;\n  left: 0;\n  right: 0;\n  bottom: -28px;"
+
+          if old not in css:
+              raise SystemExit("Could not find the hero wave CSS block to update.")
+
+          css_path.write_text(css.replace(old, new, 1))
+          PY
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
