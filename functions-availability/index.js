@@ -5,6 +5,7 @@ const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
 admin.initializeApp();
 
 const db = admin.firestore();
+const CONFIRMED_PAYMENT_STATUSES = new Set(["paid", "agency_invoice"]);
 
 function getComparableId(item = {}) {
   if (item.id) return String(item.id);
@@ -12,16 +13,16 @@ function getComparableId(item = {}) {
   return "";
 }
 
-function hasJustBecomePaid(before = {}, after = {}) {
-  return before.paymentStatus !== "paid" && after.paymentStatus === "paid";
+function hasJustBecomeConfirmed(before = {}, after = {}) {
+  return !CONFIRMED_PAYMENT_STATUSES.has(before.paymentStatus) && CONFIRMED_PAYMENT_STATUSES.has(after.paymentStatus);
 }
 
-async function lockAvailabilityForPaidBooking(bookingId, booking = {}) {
+async function lockAvailabilityForConfirmedBooking(bookingId, booking = {}) {
   const dateKey = booking.preferredDate;
   const selectedId = booking.preferredTimeSlot;
 
   if (!dateKey || !selectedId) {
-    logger.warn("Paid booking missing availability date or time", { bookingId, dateKey, selectedId });
+    logger.warn("Confirmed booking missing availability date or time", { bookingId, dateKey, selectedId });
     return;
   }
 
@@ -38,6 +39,7 @@ async function lockAvailabilityForPaidBooking(bookingId, booking = {}) {
           [bookingId]: {
             bookingId,
             selectedId,
+            paymentStatus: booking.paymentStatus || null,
             lockedAt
           }
         },
@@ -57,6 +59,7 @@ async function lockAvailabilityForPaidBooking(bookingId, booking = {}) {
           available: false,
           booked: true,
           bookingId,
+          paymentStatus: booking.paymentStatus || null,
           lockedAt
         };
       });
@@ -68,6 +71,7 @@ async function lockAvailabilityForPaidBooking(bookingId, booking = {}) {
           [bookingId]: {
             bookingId,
             selectedId,
+            paymentStatus: booking.paymentStatus || null,
             lockedAt
           }
         },
@@ -86,6 +90,7 @@ async function lockAvailabilityForPaidBooking(bookingId, booking = {}) {
             available: false,
             booked: true,
             bookingId,
+            paymentStatus: booking.paymentStatus || null,
             lockedAt
           }
         },
@@ -94,6 +99,7 @@ async function lockAvailabilityForPaidBooking(bookingId, booking = {}) {
           [bookingId]: {
             bookingId,
             selectedId,
+            paymentStatus: booking.paymentStatus || null,
             lockedAt
           }
         },
@@ -113,8 +119,8 @@ exports.lockAvailabilityAfterPayment = onDocumentUpdated({
   const before = event.data?.before?.data() || {};
   const after = event.data?.after?.data() || {};
 
-  if (!hasJustBecomePaid(before, after)) {
-    logger.info("Availability lock skipped because booking did not just become paid", {
+  if (!hasJustBecomeConfirmed(before, after)) {
+    logger.info("Availability lock skipped because booking did not just become confirmed", {
       bookingId,
       beforePaymentStatus: before.paymentStatus || null,
       afterPaymentStatus: after.paymentStatus || null
@@ -122,11 +128,12 @@ exports.lockAvailabilityAfterPayment = onDocumentUpdated({
     return;
   }
 
-  await lockAvailabilityForPaidBooking(bookingId, after);
+  await lockAvailabilityForConfirmedBooking(bookingId, after);
 
-  logger.info("Availability locked for paid booking", {
+  logger.info("Availability locked for confirmed booking", {
     bookingId,
     preferredDate: after.preferredDate || null,
-    preferredTimeSlot: after.preferredTimeSlot || null
+    preferredTimeSlot: after.preferredTimeSlot || null,
+    paymentStatus: after.paymentStatus || null
   });
 });
