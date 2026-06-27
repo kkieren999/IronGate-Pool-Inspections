@@ -30,8 +30,7 @@ function normaliseUrl(value) {
     return null;
   }
   return null;
-}
-
+}\n
 function addCheckoutParams(url, bookingId) {
   url.searchParams.set("bookingId", bookingId);
   url.searchParams.set("session_id", "{CHECKOUT_SESSION_ID}");
@@ -49,6 +48,7 @@ exports.createBookingCheckoutSession = onCall({
   region: "us-central1",
   timeoutSeconds: 30,
   memory: "256MiB",
+  invoker: "public",
   secrets: [STRIPE_SECRET_KEY]
 }, async (request) => {
   const bookingId = String(request.data?.bookingId || "").trim();
@@ -171,6 +171,7 @@ exports.stripeWebhook = onRequest({
   region: "us-central1",
   timeoutSeconds: 30,
   memory: "256MiB",
+  invoker: "public",
   secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET]
 }, async (req, res) => {
   if (req.method !== "POST") {
