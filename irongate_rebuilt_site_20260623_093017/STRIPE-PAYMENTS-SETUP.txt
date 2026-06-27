@@ -1,0 +1,104 @@
+IRONGATE STRIPE PAYMENTS SETUP
+
+Payment model
+- Full upfront payment: $249 inc GST.
+- The customer completes the booking form.
+- The booking is saved to Firestore with status pending_payment.
+- The frontend will call createBookingCheckoutSession.
+- Firebase creates a Stripe Checkout Session.
+- The customer pays on Stripe Checkout.
+- Stripe sends a webhook to stripeWebhook.
+- The webhook marks the Firestore booking as confirmed/paid.
+
+GitHub files added
+- functions-payments/package.json
+- functions-payments/index.js
+- .github/workflows/deploy-stripe-payments.yml
+- firebase.json updated with the payments codebase
+
+Firebase functions added
+- createBookingCheckoutSession
+  Type: callable function
+  Region: us-central1
+  Purpose: creates the Stripe Checkout Session for a Firestore booking
+
+- stripeWebhook
+  Type: HTTP function
+  Region: us-central1
+  Purpose: receives Stripe webhook events and marks bookings as paid/expired
+
+Required one-time Stripe setup
+1. Create/open a Stripe account.
+2. Use Test mode first.
+3. Copy the Stripe test secret key from Developers > API keys.
+   It starts with sk_test_...
+4. Do not paste the key into GitHub or website JavaScript.
+
+Required one-time Firebase secrets
+Run these in Firebase/Google Cloud Shell:
+
+firebase functions:secrets:set STRIPE_SECRET_KEY --project irongate-pool-inspection-256b4
+
+Paste the Stripe secret key when prompted.
+
+Deploy from GitHub
+1. Open GitHub repository:
+   kkieren999/IronGate-Pool-Inspections
+2. Go to Actions.
+3. Open Deploy Stripe Payments Functions.
+4. Click Run workflow.
+5. Choose main.
+6. Click Run workflow.
+
+Stripe webhook setup
+After the deploy succeeds, create a Stripe webhook endpoint.
+
+Endpoint URL:
+https://us-central1-irongate-pool-inspection-256b4.cloudfunctions.net/stripeWebhook
+
+Events to send:
+- checkout.session.completed
+- checkout.session.async_payment_succeeded
+- checkout.session.async_payment_failed
+- checkout.session.expired
+
+After creating the webhook endpoint, copy its signing secret.
+It starts with whsec_...
+
+Then run:
+
+firebase functions:secrets:set STRIPE_WEBHOOK_SECRET --project irongate-pool-inspection-256b4
+
+Paste the whsec_... value when prompted.
+
+Then redeploy from GitHub:
+Actions > Deploy Stripe Payments Functions > Run workflow
+
+Frontend wiring status
+- The backend Stripe functions are ready.
+- The booking form still needs to call createBookingCheckoutSession after saving the Firestore booking.
+- Once wired, the booking button should say:
+  Continue to Secure Payment
+
+Testing with Stripe test card
+Use Stripe test mode card:
+4242 4242 4242 4242
+Any future expiry date
+Any 3-digit CVC
+Any postcode
+
+Expected Firestore statuses
+Before payment:
+status: pending_payment
+paymentStatus: checkout_created
+
+After successful payment:
+status: confirmed
+paymentStatus: paid
+stripeCheckoutSessionId: cs_test_...
+stripePaymentIntentId: pi_...
+paidAt: timestamp
+
+Important
+Never put STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET in browser JavaScript or GitHub files.
+Only store them in Firebase Functions secrets.
