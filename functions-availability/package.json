@@ -1,0 +1,17 @@
+{
+  "name": "irongate-availability-functions",
+  "description": "Availability locking functions for IronGate paid bookings",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "deploy": "firebase deploy --only functions:availability",
+    "logs": "firebase functions:log"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.6.0",
+    "firebase-functions": "^7.2.5"
+  }
+}
