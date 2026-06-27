@@ -25,7 +25,7 @@ jobs:
           package-manager-cache: false
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --omit=dev --no-audit --no-fund
         working-directory: functions-email
 
       - name: Prepare Firebase credentials
@@ -36,6 +36,6 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       - name: Deploy booking email function
-        run: npx firebase-tools deploy --only functions:bookingemail --project irongate-pool-inspection-256b4 --non-interactive
+        run: npx --yes firebase-tools@15.22.3 deploy --only functions:bookingemail --project irongate-pool-inspection-256b4 --non-interactive
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /home/runner/firebase-service-account.json
