@@ -24,7 +24,7 @@ const animalsOffLeashInput = document.querySelector("#animalsOffLeash");
 const animalPanel = document.querySelector("#animal-restraint-panel");
 
 const inspectionPriceCents = 24900;
-const inspectionPriceDisplay = "$249 inc GST";
+const inspectionPriceDisplay = "$249";
 const maxUploadBytes = 10 * 1024 * 1024;
 const GEOAPIFY_API_KEY = "8d1bacfb41584094b808c255bc8ef70c";
 const QBCC_POOL_REGISTER_URL = "https://my.qbcc.qld.gov.au/myQBCC/s/pool-register";
@@ -1118,16 +1118,15 @@ async function handleBookingSubmit(event) {
     console.log("Booking saved:", bookingDocRef.id);
   } catch (error) {
     console.error("Error saving booking:", error);
-    showMessage("Something went wrong. Please check Firebase rules, Storage rules, internet connection and browser console.", "error");
+    showMessage("We could not save the booking. Please refresh and try again, or call IronGate on 0481 442 260.", "error");
   } finally {
     setLoading(false);
   }
 }
 
+if (form) form.addEventListener("submit", handleBookingSubmit);
 wireBasicEvents();
-createPoolRegisterPanel();
 initAddressAutocomplete();
 toggleConditionalPanels();
-updateContinuationVisibility();
-if (form) form.addEventListener("submit", handleBookingSubmit);
 loadAvailabilityForMonth();
+renderPoolRegisterPanel();
