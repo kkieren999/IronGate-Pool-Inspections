@@ -1,0 +1,150 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == "irongate.pool.bne@gmail.com";
+    }
+
+    function hasOnlyAllowedBookingCreateFields() {
+      return request.resource.data.keys().hasOnly([
+        "customerName",
+        "email",
+        "phone",
+        "propertyAddress",
+        "propertyAddressSelected",
+        "propertyPlaceId",
+        "selectedAddress",
+        "poolRegisterStatus",
+        "poolRegisterMessage",
+        "poolRegisterDetails",
+        "poolRegisterCheckedAt",
+        "poolRegisterLooksRight",
+        "poolRegisterOverrideConfirmed",
+        "poolRegisterLookupSource",
+        "isPropertyOwner",
+        "authorisedToBook",
+        "clientType",
+        "inspectionReason",
+        "poolType",
+        "existingCertificateStatus",
+        "poolRegisteredStatus",
+        "preferredDate",
+        "preferredDateDisplay",
+        "preferredTimeSlot",
+        "preferredTimeLabel",
+        "preferredTimeStart",
+        "preferredTimeEnd",
+        "preferredTime",
+        "willBeHomeForInspection",
+        "accessPermissionIfNotHome",
+        "animalsOnProperty",
+        "animalsOffLeash",
+        "animalsWillBeSecured",
+        "accessInstructions",
+        "hasPoolExemption",
+        "exemptionFileUploaded",
+        "exemptionFile",
+        "minorRepairsContactAccepted",
+        "nonComplianceAcknowledged",
+        "informationAccuracyConfirmed",
+        "notes",
+        "serviceName",
+        "priceCents",
+        "priceDisplay",
+        "currency",
+        "status",
+        "paymentStatus",
+        "stripeSessionId",
+        "stripePaymentIntentId",
+        "termsAccepted",
+        "privacyAccepted",
+        "source",
+        "createdAt",
+        "paidAt"
+      ]);
+    }
+
+    function hasRequiredBookingCreateFields() {
+      return request.resource.data.keys().hasAll([
+        "customerName",
+        "email",
+        "phone",
+        "propertyAddress",
+        "propertyAddressSelected",
+        "preferredDate",
+        "preferredTimeSlot",
+        "preferredTimeStart",
+        "preferredTimeEnd",
+        "serviceName",
+        "priceCents",
+        "priceDisplay",
+        "currency",
+        "status",
+        "paymentStatus",
+        "termsAccepted",
+        "privacyAccepted",
+        "source",
+        "createdAt",
+        "paidAt"
+      ]);
+    }
+
+    function validPublicBookingCreate() {
+      return hasOnlyAllowedBookingCreateFields()
+        && hasRequiredBookingCreateFields()
+        && request.resource.data.customerName is string
+        && request.resource.data.customerName.size() >= 2
+        && request.resource.data.customerName.size() <= 140
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 180
+        && request.resource.data.phone is string
+        && request.resource.data.phone.matches('^(04[0-9]{8}|\\+614[0-9]{8})$')
+        && request.resource.data.propertyAddress is string
+        && request.resource.data.propertyAddress.size() >= 8
+        && request.resource.data.propertyAddress.size() <= 400
+        && request.resource.data.propertyAddressSelected == true
+        && request.resource.data.preferredDate is string
+        && request.resource.data.preferredDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.preferredTimeSlot is string
+        && request.resource.data.preferredTimeSlot.size() >= 4
+        && request.resource.data.preferredTimeSlot.size() <= 20
+        && request.resource.data.preferredTimeStart is string
+        && request.resource.data.preferredTimeStart.matches('^[0-2][0-9]:[0-5][0-9]$')
+        && request.resource.data.preferredTimeEnd is string
+        && request.resource.data.preferredTimeEnd.matches('^[0-2][0-9]:[0-5][0-9]$')
+        && request.resource.data.serviceName == "Pool Safety Inspection & Certificate"
+        && request.resource.data.priceCents == 24900
+        && request.resource.data.priceDisplay == "$249"
+        && request.resource.data.currency == "aud"
+        && request.resource.data.status == "pending_payment"
+        && request.resource.data.paymentStatus == "unpaid"
+        && request.resource.data.stripeSessionId == null
+        && request.resource.data.stripePaymentIntentId == null
+        && request.resource.data.paidAt == null
+        && request.resource.data.termsAccepted == true
+        && request.resource.data.privacyAccepted == true
+        && request.resource.data.source == "website_booking_form"
+        && request.resource.data.createdAt == request.time;
+    }
+
+    match /availability/{dateId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /bookings/{bookingId} {
+      allow create: if validPublicBookingCreate();
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /agencyPartners/{partnerId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
