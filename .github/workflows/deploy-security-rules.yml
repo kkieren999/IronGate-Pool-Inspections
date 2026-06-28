@@ -32,6 +32,10 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
+      - name: Show deploy service account
+        run: |
+          node -e "const fs=require('fs'); const json=JSON.parse(fs.readFileSync('/home/runner/firebase-service-account.json','utf8')); console.log('Deploy service account:', json.client_email);"
+
       - name: Deploy Firestore rules
         run: npx --yes firebase-tools@15.22.3 deploy --config firebase-security.json --only firestore:rules --project irongate-pool-inspection-256b4 --non-interactive
         env:
