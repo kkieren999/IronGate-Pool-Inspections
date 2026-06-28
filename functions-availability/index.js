@@ -17,6 +17,18 @@ function hasJustBecomeConfirmed(before = {}, after = {}) {
   return !CONFIRMED_PAYMENT_STATUSES.has(before.paymentStatus) && CONFIRMED_PAYMENT_STATUSES.has(after.paymentStatus);
 }
 
+function publicSafeLockedSlot(existingSlot = {}, selectedId, booking = {}, lockedAt) {
+  return {
+    ...existingSlot,
+    id: existingSlot.id || selectedId,
+    available: false,
+    booked: true,
+    locked: true,
+    paymentStatus: booking.paymentStatus || null,
+    lockedAt
+  };
+}
+
 async function lockAvailabilityForConfirmedBooking(bookingId, booking = {}) {
   const dateKey = booking.preferredDate;
   const selectedId = booking.preferredTimeSlot;
@@ -35,13 +47,8 @@ async function lockAvailabilityForConfirmedBooking(bookingId, booking = {}) {
     if (!snapshot.exists) {
       transaction.set(availabilityRef, {
         date: dateKey,
-        lockedBookings: {
-          [bookingId]: {
-            bookingId,
-            selectedId,
-            paymentStatus: booking.paymentStatus || null,
-            lockedAt
-          }
+        slots: {
+          [selectedId]: publicSafeLockedSlot({}, selectedId, booking, lockedAt)
         },
         updatedAt: lockedAt
       }, { merge: true });
@@ -54,27 +61,11 @@ async function lockAvailabilityForConfirmedBooking(bookingId, booking = {}) {
     if (Array.isArray(current)) {
       const updated = current.map((item) => {
         if (getComparableId(item) !== selectedId) return item;
-        return {
-          ...item,
-          available: false,
-          booked: true,
-          bookingId,
-          paymentStatus: booking.paymentStatus || null,
-          lockedAt
-        };
+        return publicSafeLockedSlot(item, selectedId, booking, lockedAt);
       });
 
       transaction.set(availabilityRef, {
         slots: updated,
-        lockedBookings: {
-          ...(data.lockedBookings || {}),
-          [bookingId]: {
-            bookingId,
-            selectedId,
-            paymentStatus: booking.paymentStatus || null,
-            lockedAt
-          }
-        },
         updatedAt: lockedAt
       }, { merge: true });
       return;
@@ -85,23 +76,7 @@ async function lockAvailabilityForConfirmedBooking(bookingId, booking = {}) {
       transaction.set(availabilityRef, {
         slots: {
           ...current,
-          [selectedId]: {
-            ...existing,
-            available: false,
-            booked: true,
-            bookingId,
-            paymentStatus: booking.paymentStatus || null,
-            lockedAt
-          }
-        },
-        lockedBookings: {
-          ...(data.lockedBookings || {}),
-          [bookingId]: {
-            bookingId,
-            selectedId,
-            paymentStatus: booking.paymentStatus || null,
-            lockedAt
-          }
+          [selectedId]: publicSafeLockedSlot(existing, selectedId, booking, lockedAt)
         },
         updatedAt: lockedAt
       }, { merge: true });
