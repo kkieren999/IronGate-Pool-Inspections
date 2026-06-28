@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == "irongate.pool.bne@gmail.com";
+    }
+
+    function isAllowedExemptionFile() {
+      return request.resource != null
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType in [
+          "application/pdf",
+          "image/jpeg",
+          "image/png",
+          "image/webp"
+        ];
+    }
+
+    match /booking-exemptions/{bookingId}/{fileName} {
+      allow create: if isAllowedExemptionFile();
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
