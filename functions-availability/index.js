@@ -31,29 +31,6 @@ function addOneHour(time = "") {
   return `${String(start.getUTCHours()).padStart(2, "0")}:${String(start.getUTCMinutes()).padStart(2, "0")}`;
 }
 
-function publicSafeLockedSlot(existingSlot = {}, selectedId, booking = {}, lockedAt) {
-  const start = existingSlot.start || booking.preferredTimeStart || timeFromSlotId(selectedId);
-  const end = existingSlot.end || booking.preferredTimeEnd || addOneHour(start);
-  const label = existingSlot.label || booking.preferredTimeLabel || booking.preferredTime || (start && end ? `${start} – ${end}` : selectedId);
-
-  return {
-    ...existingSlot,
-    id: existingSlot.id || selectedId,
-    start: start || existingSlot.start || "",
-    end: end || existingSlot.end || "",
-    label,
-    available: false,
-    booked: true,
-    locked: true,
-    bookingId,
-    bookedByBookingId: booking.bookingId || undefined,
-    customerName: booking.customerName || "",
-    propertyAddress: booking.propertyAddress || "",
-    paymentStatus: booking.paymentStatus || null,
-    lockedAt
-  };
-}
-
 function buildLockedSlot(existingSlot = {}, selectedId, bookingId, booking = {}, lockedAt) {
   const start = existingSlot.start || booking.preferredTimeStart || timeFromSlotId(selectedId);
   const end = existingSlot.end || booking.preferredTimeEnd || addOneHour(start);
