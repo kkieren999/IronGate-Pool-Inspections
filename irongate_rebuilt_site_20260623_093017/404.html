@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Redirecting | IronGate Pool Inspections</title>
+  <meta name="robots" content="noindex" />
+  <script>
+    (function () {
+      var path = window.location.pathname.replace(/\/+$/, "");
+      var routes = {
+        "": "/",
+        "/home": "/",
+        "/booking": "/booking.html",
+        "/admin": "/admin-timeblocks.html",
+        "/success": "/success.html" + window.location.search,
+        "/cancelled": "/cancelled.html" + window.location.search,
+        "/agency-booking-received": "/agency-booking-received.html" + window.location.search,
+        "/privacy": "/privacy.html",
+        "/terms": "/terms.html",
+        "/refunds": "/refunds.html"
+      };
+
+      if (Object.prototype.hasOwnProperty.call(routes, path)) {
+        window.location.replace(routes[path]);
+      }
+    })();
+  </script>
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; background: #f6fbff; color: #071834; }
+    main { min-height: 100vh; display: grid; place-items: center; padding: 32px; text-align: center; }
+    a { color: #159ee8; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <main>
+    <div>
+      <h1>Page not found</h1>
+      <p>The page you requested could not be found.</p>
+      <p><a href="/">Return to IronGate Pool Inspections</a></p>
+    </div>
+  </main>
+</body>
+</html>
