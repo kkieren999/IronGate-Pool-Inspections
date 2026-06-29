@@ -162,6 +162,18 @@ exports.createBookingCheckoutSession = onCall(
   }
 );
 
+exports.createAgencyInvoiceBooking = onCall(
+  {
+    region: "us-central1",
+    timeoutSeconds: 30,
+    memory: "256MiB",
+    invoker: "public"
+  },
+  async () => {
+    throw new HttpsError("failed-precondition", "Agency invoice bookings are not currently available through the website.");
+  }
+);
+
 async function markCheckoutSessionPaid(session) {
   const bookingId = session.metadata?.bookingId || session.client_reference_id;
 
