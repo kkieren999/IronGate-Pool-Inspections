@@ -9,6 +9,30 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .success-actions {
+      margin-top: 26px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .success-actions .btn {
+      text-decoration: none;
+      color: #ffffff !important;
+    }
+
+    .success-gst-note {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: #f5f9fd;
+      border: 1px solid rgba(7, 24, 52, 0.08);
+      color: #173557;
+      font-size: 0.96rem;
+      line-height: 1.55;
+    }
+  </style>
 </head>
 <body>
   <header class="site-header legal-header" id="top">
@@ -31,8 +55,10 @@
         <div class="legal-card">
           <p>Your booking request has been received and your $249 payment has been processed securely through Stripe.</p>
           <p>IronGate will review the booking details and contact you if anything else is needed before the inspection.</p>
-          <p><strong>No GST has been charged.</strong> IronGate Pool Inspections is not currently registered for GST.</p>
-          <a class="btn btn-primary" href="index.html#home">Return Home</a>
+          <p class="success-gst-note"><strong>No GST has been charged.</strong> IronGate Pool Inspections is not currently registered for GST.</p>
+          <div class="success-actions">
+            <a class="btn btn-primary" href="index.html#home">Return Home</a>
+          </div>
         </div>
       </div>
     </section>
