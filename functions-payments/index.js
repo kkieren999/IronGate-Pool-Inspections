@@ -42,14 +42,6 @@ function normaliseUrl(value) {
   return null;
 }
 
-function cleanText(value, maxLength = 140) {
-  return String(value || "").trim().slice(0, maxLength);
-}
-
-function normaliseAgencyCode(value) {
-  return cleanText(value, 40).toUpperCase().replace(/[^A-Z0-9_-]/g, "");
-}
-
 function addCheckoutParams(url, bookingId) {
   url.searchParams.set("bookingId", bookingId);
   url.searchParams.set("session_id", "{CHECKOUT_SESSION_ID}");
@@ -67,81 +59,6 @@ function bookingSummary(booking) {
   return `${date}, ${time} — ${address}`;
 }
 
-function getBookingContext(data = {}) {
-  const context = data.bookingContext || data || {};
-  const customerType = cleanText(context.customerType || "homeowner", 40);
-  const agencyPartnerCode = normaliseAgencyCode(context.agencyPartnerCode || "");
-
-  return {
-    customerType: customerType === "agent" ? "agent" : "homeowner",
-    bookingRole: cleanText(context.bookingRole || "", 80),
-    agencyName: cleanText(context.agencyName || "", 160),
-    agentName: cleanText(context.agentName || "", 120),
-    agentEmail: cleanText(context.agentEmail || "", 160),
-    agentPhone: cleanText(context.agentPhone || "", 40),
-    ownerName: cleanText(context.ownerName || "", 120),
-    ownerEmail: cleanText(context.ownerEmail || "", 160),
-    ownerPhone: cleanText(context.ownerPhone || "", 40),
-    agencyJobReference: cleanText(context.agencyJobReference || "", 120),
-    agencyPartnerCode,
-    requestedPaymentMethod: cleanText(context.requestedPaymentMethod || "pay_now", 40)
-  };
-}
-
-function removeEmptyValues(value = {}) {
-  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== "" && item !== null && item !== undefined));
-}
-
-async function applyBookingContext(bookingRef, context = {}) {
-  const cleanContext = removeEmptyValues({
-    customerType: context.customerType,
-    bookingRole: context.bookingRole,
-    agencyName: context.agencyName,
-    agentName: context.agentName,
-    agentEmail: context.agentEmail,
-    agentPhone: context.agentPhone,
-    ownerName: context.ownerName,
-    ownerEmail: context.ownerEmail,
-    ownerPhone: context.ownerPhone,
-    agencyJobReference: context.agencyJobReference,
-    agencyPartnerCode: context.agencyPartnerCode,
-    requestedPaymentMethod: context.requestedPaymentMethod
-  });
-
-  if (Object.keys(cleanContext).length) {
-    await bookingRef.set({
-      ...cleanContext,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-  }
-}
-
-async function findAgencyPartner(code) {
-  const agencyPartnerCode = normaliseAgencyCode(code);
-  if (!agencyPartnerCode) return null;
-
-  const candidates = [agencyPartnerCode, agencyPartnerCode.toLowerCase()];
-  for (const id of candidates) {
-    const snapshot = await db.collection("agencyPartners").doc(id).get();
-    if (snapshot.exists) {
-      return { id: snapshot.id, code: agencyPartnerCode, data: snapshot.data() || {} };
-    }
-  }
-
-  return null;
-}
-
-function assertApprovedAgencyPartner(partner) {
-  if (!partner) {
-    throw new HttpsError("permission-denied", "Agency invoice account was not found. Please pay now or contact IronGate.");
-  }
-
-  const data = partner.data || {};
-  if (data.status !== "active" || data.invoiceAccountEnabled !== true) {
-    throw new HttpsError("permission-denied", "This agency code is not approved for invoice bookings. Please pay now or contact IronGate.");
-  }
-}
-
 exports.createBookingCheckoutSession = onCall(
   {
     region: "us-central1",
@@ -154,7 +71,6 @@ exports.createBookingCheckoutSession = onCall(
     const bookingId = String(request.data?.bookingId || "").trim();
     const successUrl = normaliseUrl(request.data?.successUrl);
     const cancelUrl = normaliseUrl(request.data?.cancelUrl);
-    const context = getBookingContext(request.data || {});
 
     if (!bookingId) {
       throw new HttpsError("invalid-argument", "Missing bookingId.");
@@ -177,14 +93,12 @@ exports.createBookingCheckoutSession = onCall(
       throw new HttpsError("failed-precondition", "This booking has already been paid.");
     }
 
-    await applyBookingContext(bookingRef, context);
-
     const stripe = getStripe();
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       client_reference_id: bookingId,
-      customer_email: booking.email || context.agentEmail || undefined,
+      customer_email: booking.email || undefined,
       success_url: addCheckoutParams(successUrl, bookingId),
       cancel_url: cancelUrl.toString(),
       allow_promotion_codes: true,
@@ -197,7 +111,7 @@ exports.createBookingCheckoutSession = onCall(
             unit_amount: INSPECTION_PRICE_CENTS,
             product_data: {
               name: SERVICE_NAME,
-              description: bookingSummary({ ...booking, ...context })
+              description: bookingSummary(booking)
             }
           }
         }
@@ -206,24 +120,22 @@ exports.createBookingCheckoutSession = onCall(
         bookingId,
         serviceName: SERVICE_NAME,
         source: "irongate_booking_form",
-        customerType: context.customerType || "homeowner",
-        agencyPartnerCode: context.agencyPartnerCode || "",
-        agencyName: context.agencyName || ""
+        customerType: "homeowner"
       },
       payment_intent_data: {
         metadata: {
           bookingId,
           serviceName: SERVICE_NAME,
           source: "irongate_booking_form",
-          customerType: context.customerType || "homeowner",
-          agencyPartnerCode: context.agencyPartnerCode || "",
-          agencyName: context.agencyName || ""
+          customerType: "homeowner"
         }
       }
     });
 
     await bookingRef.set(
       {
+        customerType: "homeowner",
+        bookingRole: "Homeowner",
         status: "pending_payment",
         paymentStatus: "checkout_created",
         paymentMethod: "stripe_checkout",
@@ -240,85 +152,12 @@ exports.createBookingCheckoutSession = onCall(
     logger.info("Created Stripe Checkout Session", {
       bookingId,
       sessionId: session.id,
-      customerType: context.customerType,
-      agencyPartnerCode: context.agencyPartnerCode || null
+      customerType: "homeowner"
     });
 
     return {
       checkoutUrl: session.url,
       sessionId: session.id
-    };
-  }
-);
-
-exports.createAgencyInvoiceBooking = onCall(
-  {
-    region: "us-central1",
-    timeoutSeconds: 30,
-    memory: "256MiB",
-    invoker: "public"
-  },
-  async (request) => {
-    const bookingId = String(request.data?.bookingId || "").trim();
-    const context = getBookingContext(request.data || {});
-
-    if (!bookingId) {
-      throw new HttpsError("invalid-argument", "Missing bookingId.");
-    }
-
-    if (context.customerType !== "agent") {
-      throw new HttpsError("failed-precondition", "Agency invoice bookings are only available for agency bookings.");
-    }
-
-    if (!context.agencyPartnerCode) {
-      throw new HttpsError("invalid-argument", "Missing agency partner code.");
-    }
-
-    const partner = await findAgencyPartner(context.agencyPartnerCode);
-    assertApprovedAgencyPartner(partner);
-
-    const bookingRef = db.collection("bookings").doc(bookingId);
-    const bookingSnapshot = await bookingRef.get();
-
-    if (!bookingSnapshot.exists) {
-      throw new HttpsError("not-found", "Booking was not found.");
-    }
-
-    const booking = bookingSnapshot.data() || {};
-    if (booking.paymentStatus === "paid") {
-      throw new HttpsError("failed-precondition", "This booking has already been paid.");
-    }
-
-    const partnerData = partner.data || {};
-    const agencyName = partnerData.agencyName || context.agencyName || "Approved agency partner";
-
-    await bookingRef.set({
-      ...removeEmptyValues(context),
-      customerType: "agent",
-      agencyName,
-      agencyPartnerId: partner.id,
-      agencyPartnerCode: partner.code,
-      agencyInvoiceApproved: true,
-      agencyInvoiceTerms: partnerData.invoiceTerms || "7 days",
-      paymentMethod: "agency_invoice",
-      paymentStatus: "agency_invoice",
-      invoiceStatus: "pending",
-      status: "agency_invoice_pending",
-      priceDisplay: INSPECTION_PRICE_DISPLAY,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-
-    logger.info("Created agency invoice booking", {
-      bookingId,
-      agencyPartnerCode: partner.code,
-      agencyName
-    });
-
-    return {
-      ok: true,
-      bookingId,
-      agencyName,
-      invoiceTerms: partnerData.invoiceTerms || "7 days"
     };
   }
 );
