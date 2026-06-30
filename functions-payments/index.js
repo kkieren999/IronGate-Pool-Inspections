@@ -59,6 +59,10 @@ function bookingSummary(booking) {
   return `${date}, ${time} — ${address}`;
 }
 
+function isCompletedCheckoutSession(session = {}) {
+  return session.payment_status === "paid" || session.payment_status === "no_payment_required";
+}
+
 exports.createBookingCheckoutSession = onCall(
   {
     region: "us-central1",
@@ -186,11 +190,13 @@ async function markCheckoutSessionPaid(session) {
 
   const discount = session.total_details?.amount_discount || 0;
   const hasDiscount = discount > 0;
+  const checkoutComplete = isCompletedCheckoutSession(session);
 
   await db.collection("bookings").doc(bookingId).set(
     {
-      status: session.payment_status === "paid" ? "confirmed" : "payment_processing",
-      paymentStatus: session.payment_status || "unknown",
+      status: checkoutComplete ? "confirmed" : "payment_processing",
+      paymentStatus: checkoutComplete ? "paid" : session.payment_status || "unknown",
+      stripePaymentStatus: session.payment_status || "unknown",
       paymentMethod: "stripe_checkout",
       stripeCheckoutSessionId: session.id,
       stripePaymentIntentId:
@@ -206,10 +212,8 @@ async function markCheckoutSessionPaid(session) {
       stripeAmountTotal: session.amount_total || null,
       stripeCurrency: session.currency || CURRENCY,
       discountApplied: hasDiscount,
-      paidAt:
-        session.payment_status === "paid"
-          ? admin.firestore.FieldValue.serverTimestamp()
-          : null,
+      noCostCheckout: session.payment_status === "no_payment_required" || session.amount_total === 0,
+      paidAt: checkoutComplete ? admin.firestore.FieldValue.serverTimestamp() : null,
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
     },
     { merge: true }
@@ -218,7 +222,8 @@ async function markCheckoutSessionPaid(session) {
   logger.info("Marked booking payment from Stripe webhook", {
     bookingId,
     sessionId: session.id,
-    paymentStatus: session.payment_status,
+    paymentStatus: checkoutComplete ? "paid" : session.payment_status,
+    stripePaymentStatus: session.payment_status,
     amountDiscount: discount,
     amountTotal: session.amount_total || null
   });
