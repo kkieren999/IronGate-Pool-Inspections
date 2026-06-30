@@ -12,6 +12,7 @@ const BUSINESS_PHONE = "0481 442 260";
 const DEFAULT_PRICE_DISPLAY = "$249";
 const CONFIRMED_PAYMENT_STATUSES = new Set(["paid"]);
 const EMAIL_TEMPLATE_VERSION = "payment-confirmation-v1";
+const ADMIN_UPDATE_TEMPLATE_VERSION = "booking-admin-update-v1";
 
 function escapeHtml(value) {
   return String(value || "")
@@ -32,10 +33,6 @@ function optionalField(data, key) {
   const value = data?.[key];
   if (value === undefined || value === null || value === "") return "";
   return String(value);
-}
-
-function hasValue(value) {
-  return value !== undefined && value !== null && String(value).trim() !== "";
 }
 
 function isValidEmail(value) {
@@ -66,6 +63,12 @@ function yesNo(value) {
 
 function hasJustBecomeConfirmed(before = {}, after = {}) {
   return !CONFIRMED_PAYMENT_STATUSES.has(before.paymentStatus) && CONFIRMED_PAYMENT_STATUSES.has(after.paymentStatus);
+}
+
+function hasNewCustomerNotification(before = {}, after = {}) {
+  const beforeId = before.customerNotificationId || "";
+  const afterId = after.customerNotificationId || "";
+  return Boolean(afterId && afterId !== beforeId && after.customerNotificationType);
 }
 
 function detailRowsToText(rows = []) {
@@ -100,7 +103,7 @@ function baseEmailHtml({ preheader = "", title = "", badge = "", intro = "", bod
             </tr>
             <tr>
               <td style="padding:30px;">
-                ${intro ? `<p style="margin:0 0 22px;color:#4a5f78;font-size:16px;line-height:1.6;">${intro}</p>` : ""}
+                ${intro ? `<p style="margin:0 0 22px;color:#4a5f78;font-size:16px;line-height:1.6;">${escapeHtml(intro)}</p>` : ""}
                 ${body}
                 <div style="margin-top:28px;padding-top:20px;border-top:1px solid #e6eef7;color:#6a7b90;font-size:13px;line-height:1.55;">
                   <strong style="color:#071834;">IronGate Pool Inspections</strong><br>
@@ -136,7 +139,7 @@ function buildCustomerEmail(bookingId, booking = {}) {
   const text = [
     `Hi ${customerName},`,
     "",
-    "Thanks — your IronGate pool safety inspection booking is confirmed and your payment has been received securely through Stripe.",
+    "Thanks - your IronGate pool safety inspection booking is confirmed and your payment has been received securely through Stripe.",
     "",
     detailRowsToText(rows),
     "",
@@ -153,12 +156,10 @@ function buildCustomerEmail(bookingId, booking = {}) {
 
   const body = `
     <p style="margin:0 0 18px;color:#173557;font-size:17px;line-height:1.55;"><strong>Hi ${escapeHtml(customerName)},</strong></p>
-    <p style="margin:0 0 22px;color:#4a5f78;font-size:16px;line-height:1.6;">Thanks — your IronGate pool safety inspection booking is confirmed and your payment has been received securely through Stripe.</p>
-
+    <p style="margin:0 0 22px;color:#4a5f78;font-size:16px;line-height:1.6;">Thanks - your IronGate pool safety inspection booking is confirmed and your payment has been received securely through Stripe.</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#ffffff;border:1px solid #e6eef7;border-radius:16px;overflow:hidden;margin:0 0 24px;">
       ${detailRowsToHtml(rows)}
     </table>
-
     <div style="padding:18px 18px;border-radius:16px;background:#f5f9fd;border:1px solid #e6eef7;">
       <div style="font-size:15px;font-weight:900;color:#071834;margin-bottom:8px;">What happens next</div>
       <p style="margin:0;color:#4a5f78;font-size:15px;line-height:1.6;">IronGate will review the booking details and contact you if anything else is needed before the inspection. Please make sure the pool area can be safely accessed at the booked time.</p>
@@ -244,6 +245,126 @@ function buildOwnerEmail(bookingId, booking = {}) {
   };
 }
 
+function adminUpdateCopy(type, booking = {}) {
+  const date = field(booking, "preferredDateDisplay", field(booking, "preferredDate"));
+  const time = field(booking, "preferredTimeLabel", field(booking, "preferredTime"));
+  const previousDate = field(booking, "previousPreferredDate", "");
+  const previousTime = field(booking, "previousPreferredTimeLabel", "");
+
+  if (type === "booking_moved") {
+    return {
+      subject: "Your IronGate pool inspection has been updated",
+      title: "Booking updated",
+      badge: "New inspection time",
+      intro: `Your IronGate pool safety inspection has been moved to ${date} at ${time}.`,
+      rows: [
+        ["New inspection date", date],
+        ["New inspection time", time],
+        ["Previous date", previousDate || "Not provided"],
+        ["Previous time", previousTime || "Not provided"],
+        ["Property", field(booking, "propertyAddress")]
+      ]
+    };
+  }
+
+  if (type === "booking_cancelled") {
+    return {
+      subject: "Your IronGate pool inspection has been cancelled",
+      title: "Booking cancelled",
+      badge: "Cancelled",
+      intro: "Your IronGate pool safety inspection booking has been cancelled.",
+      rows: [
+        ["Cancelled inspection date", date],
+        ["Cancelled inspection time", time],
+        ["Property", field(booking, "propertyAddress")]
+      ]
+    };
+  }
+
+  if (type === "completed") {
+    return {
+      subject: "Your IronGate pool inspection is complete",
+      title: "Inspection completed",
+      badge: "Completed",
+      intro: "Your IronGate pool safety inspection has been marked complete.",
+      rows: [
+        ["Inspection date", date],
+        ["Inspection time", time],
+        ["Property", field(booking, "propertyAddress")]
+      ]
+    };
+  }
+
+  if (type === "certificate_issued") {
+    return {
+      subject: "Your IronGate pool safety certificate has been issued",
+      title: "Certificate issued",
+      badge: "Certificate issued",
+      intro: "Your IronGate pool safety certificate has been issued.",
+      rows: [
+        ["Inspection date", date],
+        ["Inspection time", time],
+        ["Property", field(booking, "propertyAddress")]
+      ]
+    };
+  }
+
+  return {
+    subject: "Your IronGate booking has been updated",
+    title: "Booking updated",
+    badge: "Update",
+    intro: "Your IronGate booking has been updated.",
+    rows: [
+      ["Inspection date", date],
+      ["Inspection time", time],
+      ["Property", field(booking, "propertyAddress")]
+    ]
+  };
+}
+
+function buildAdminUpdateEmail(bookingId, booking = {}) {
+  const type = booking.customerNotificationType || "booking_updated";
+  const copy = adminUpdateCopy(type, booking);
+  const customerName = optionalField(booking, "customerName") || "there";
+  const adminNote = optionalField(booking, "adminNote");
+  const rows = [
+    ["Booking reference", bookingId],
+    ...copy.rows
+  ];
+  if (adminNote) rows.push(["Note", adminNote]);
+
+  const text = [
+    `Hi ${customerName},`,
+    "",
+    copy.intro,
+    "",
+    detailRowsToText(rows),
+    "",
+    `Questions? Call ${BUSINESS_PHONE} or reply to this email.`,
+    "",
+    "IronGate Pool Inspections"
+  ].join("\n");
+
+  const body = `
+    <p style="margin:0 0 18px;color:#173557;font-size:17px;line-height:1.55;"><strong>Hi ${escapeHtml(customerName)},</strong></p>
+    <p style="margin:0 0 22px;color:#4a5f78;font-size:16px;line-height:1.6;">${escapeHtml(copy.intro)}</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#ffffff;border:1px solid #e6eef7;border-radius:16px;overflow:hidden;margin:0 0 24px;">
+      ${detailRowsToHtml(rows)}
+    </table>
+  `;
+
+  return {
+    subject: copy.subject,
+    text,
+    html: baseEmailHtml({
+      preheader: copy.intro,
+      title: copy.title,
+      badge: copy.badge,
+      body
+    })
+  };
+}
+
 function createGmailTransporter() {
   const appPassword = GMAIL_APP_PASSWORD.value();
   if (!appPassword) throw new Error("GMAIL_APP_PASSWORD secret has not been set in Firebase.");
@@ -257,27 +378,7 @@ function createGmailTransporter() {
   });
 }
 
-exports.bookingNotificationEmail = onDocumentUpdated({
-  document: "bookings/{bookingId}",
-  region: "us-central1",
-  timeoutSeconds: 30,
-  memory: "256MiB",
-  secrets: [GMAIL_APP_PASSWORD]
-}, async (event) => {
-  const bookingId = event.params.bookingId;
-  const before = event.data?.before?.data() || {};
-  const booking = event.data?.after?.data() || {};
-
-  if (!hasJustBecomeConfirmed(before, booking)) {
-    logger.info("Booking email skipped because booking did not just become paid", {
-      bookingId,
-      beforePaymentStatus: before.paymentStatus || null,
-      afterPaymentStatus: booking.paymentStatus || null
-    });
-    return;
-  }
-
-  const transporter = createGmailTransporter();
+async function sendPaidBookingEmails(event, bookingId, booking = {}, transporter) {
   const ownerEmail = buildOwnerEmail(bookingId, booking);
   const customerAddress = String(booking.email || "").trim();
   const hasCustomerEmail = isValidEmail(customerAddress);
@@ -324,4 +425,75 @@ exports.bookingNotificationEmail = onDocumentUpdated({
     ownerEmail: ADMIN_EMAIL,
     customerEmail: hasCustomerEmail ? customerAddress : null
   });
+}
+
+async function sendCustomerUpdateEmail(event, bookingId, booking = {}, transporter) {
+  const customerAddress = String(booking.email || "").trim();
+  if (!isValidEmail(customerAddress)) {
+    await event.data.after.ref.set({
+      customerNotificationSkippedAt: admin.firestore.FieldValue.serverTimestamp(),
+      customerNotificationError: "Missing or invalid customer email.",
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    logger.warn("Admin booking update email skipped because customer email was invalid", { bookingId, email: booking.email || null });
+    return;
+  }
+
+  const updateEmail = buildAdminUpdateEmail(bookingId, booking);
+  await transporter.sendMail({
+    from: `IronGate Pool Inspections <${ADMIN_EMAIL}>`,
+    to: customerAddress,
+    replyTo: ADMIN_EMAIL,
+    subject: updateEmail.subject,
+    text: updateEmail.text,
+    html: updateEmail.html
+  });
+
+  await event.data.after.ref.set({
+    customerNotificationSentAt: admin.firestore.FieldValue.serverTimestamp(),
+    customerNotificationSentType: booking.customerNotificationType || null,
+    customerNotificationTemplateVersion: ADMIN_UPDATE_TEMPLATE_VERSION,
+    customerNotificationError: null,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+
+  logger.info("Admin booking update email sent", {
+    bookingId,
+    notificationType: booking.customerNotificationType || null,
+    customerEmail: customerAddress
+  });
+}
+
+exports.bookingNotificationEmail = onDocumentUpdated({
+  document: "bookings/{bookingId}",
+  region: "us-central1",
+  timeoutSeconds: 30,
+  memory: "256MiB",
+  secrets: [GMAIL_APP_PASSWORD]
+}, async (event) => {
+  const bookingId = event.params.bookingId;
+  const before = event.data?.before?.data() || {};
+  const booking = event.data?.after?.data() || {};
+  const becameConfirmed = hasJustBecomeConfirmed(before, booking);
+  const hasAdminNotification = hasNewCustomerNotification(before, booking);
+
+  if (!becameConfirmed && !hasAdminNotification) {
+    logger.info("Booking email skipped because no email-triggering change occurred", {
+      bookingId,
+      beforePaymentStatus: before.paymentStatus || null,
+      afterPaymentStatus: booking.paymentStatus || null,
+      customerNotificationType: booking.customerNotificationType || null
+    });
+    return;
+  }
+
+  const transporter = createGmailTransporter();
+
+  if (becameConfirmed) {
+    await sendPaidBookingEmails(event, bookingId, booking, transporter);
+  }
+
+  if (hasAdminNotification) {
+    await sendCustomerUpdateEmail(event, bookingId, booking, transporter);
+  }
 });
