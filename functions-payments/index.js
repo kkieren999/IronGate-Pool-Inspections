@@ -3,6 +3,7 @@ const logger = require("firebase-functions/logger");
 const { HttpsError, onCall, onRequest } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const Stripe = require("stripe");
+const { createBookingAndCheckoutSession: createDirectBookingAndCheckoutSession } = require("./direct-booking");
 
 admin.initializeApp();
 
@@ -62,6 +63,51 @@ function bookingSummary(booking) {
 function isCompletedCheckoutSession(session = {}) {
   return session.payment_status === "paid" || session.payment_status === "no_payment_required";
 }
+
+exports.createBookingAndCheckoutSession = onCall(
+  {
+    region: "us-central1",
+    timeoutSeconds: 30,
+    memory: "256MiB",
+    invoker: "public",
+    secrets: [STRIPE_SECRET_KEY]
+  },
+  async (request) => {
+    try {
+      const result = await createDirectBookingAndCheckoutSession({
+        request,
+        db,
+        stripe: getStripe(),
+        normaliseUrl,
+        addCheckoutParams,
+        bookingSummary,
+        serviceName: SERVICE_NAME,
+        priceCents: INSPECTION_PRICE_CENTS,
+        priceDisplay: INSPECTION_PRICE_DISPLAY,
+        currency: CURRENCY
+      });
+
+      logger.info("Created backend booking and Stripe Checkout Session", {
+        bookingId: result.bookingId,
+        sessionId: result.sessionId,
+        source: "backend_booking_checkout"
+      });
+
+      return result;
+    } catch (error) {
+      logger.error("Could not create backend booking checkout session", {
+        message: error.message,
+        code: error.code || null
+      });
+
+      if (error.code === "invalid-argument") {
+        throw new HttpsError("invalid-argument", error.message);
+      }
+
+      throw new HttpsError("internal", "Could not create booking checkout session.");
+    }
+  }
+);
 
 exports.createBookingCheckoutSession = onCall(
   {
