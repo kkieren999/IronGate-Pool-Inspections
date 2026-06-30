@@ -22,6 +22,7 @@
         let html = await response.text();
         html = html.replace('<head>', '<head><base href="/">');
         Object.entries(replacements).forEach(([from, to]) => { html = html.replaceAll(from, to); });
+        html = html.replace('</body>', '<script type="module" src="/js/admin-bookings.js"><\/script></body>');
         document.open();
         document.write(html);
         document.close();
