@@ -36,6 +36,8 @@ const BOOKING_ALLOWED_FIELDS = [
   "privacyAccepted"
 ];
 
+const CHECKOUT_HOLD_MINUTES = 30;
+
 function asString(value, fallback = "") {
   if (value === undefined || value === null) return fallback;
   return String(value).trim();
@@ -47,6 +49,18 @@ function asBoolean(value) {
 
 function cleanPhone(value) {
   return asString(value).replace(/[\s()-]/g, "");
+}
+
+function codedError(code, message) {
+  const error = new Error(message);
+  error.code = code;
+  return error;
+}
+
+function comparableSlotId(item = {}) {
+  if (item.id) return String(item.id);
+  if (item.start) return String(item.start).replace(":", "_");
+  return "";
 }
 
 function assertValidBooking(booking) {
@@ -63,22 +77,20 @@ function assertValidBooking(booking) {
 
   for (const key of required) {
     if (!asString(booking[key])) {
-      const error = new Error(`Missing required booking field: ${key}`);
-      error.code = "invalid-argument";
-      throw error;
+      throw codedError("invalid-argument", `Missing required booking field: ${key}`);
     }
   }
 
+  if (booking.propertyAddressSelected !== true) {
+    throw codedError("invalid-argument", "Please select the property address from the suggestions.");
+  }
+
   if (!asBoolean(booking.termsAccepted) || !asBoolean(booking.privacyAccepted)) {
-    const error = new Error("Terms and privacy policy must be accepted.");
-    error.code = "invalid-argument";
-    throw error;
+    throw codedError("invalid-argument", "Terms and privacy policy must be accepted.");
   }
 
   if (!/^\S+@\S+\.\S+$/.test(asString(booking.email))) {
-    const error = new Error("Invalid customer email address.");
-    error.code = "invalid-argument";
-    throw error;
+    throw codedError("invalid-argument", "Invalid customer email address.");
   }
 }
 
@@ -142,6 +154,74 @@ function publicBookingData(rawBooking = {}, config = {}) {
   };
 }
 
+function assertSlotCanBeReserved(slot = {}) {
+  if (!slot || typeof slot !== "object") {
+    throw codedError("failed-precondition", "Selected time slot is no longer available.");
+  }
+
+  if (slot.available === false || slot.booked === true || slot.locked === true || slot.reserved === true) {
+    throw codedError("failed-precondition", "Selected time slot has already been booked. Please choose another time.");
+  }
+}
+
+function buildReservedSlot(existingSlot = {}, selectedId, bookingId, booking = {}, reservedAt) {
+  return {
+    ...existingSlot,
+    id: existingSlot.id || selectedId,
+    start: existingSlot.start || booking.preferredTimeStart,
+    end: existingSlot.end || booking.preferredTimeEnd,
+    label: existingSlot.label || booking.preferredTimeLabel || booking.preferredTime,
+    available: false,
+    booked: true,
+    locked: true,
+    reserved: true,
+    reservationStatus: "pending_checkout",
+    bookingId,
+    bookedByBookingId: bookingId,
+    customerName: booking.customerName || "",
+    propertyAddress: booking.propertyAddress || "",
+    paymentStatus: "checkout_created",
+    reservedAt
+  };
+}
+
+function reserveSelectedSlot(currentSlots, selectedId, bookingId, booking, reservedAt) {
+  if (Array.isArray(currentSlots)) {
+    let found = false;
+    const updated = currentSlots.map((slot) => {
+      if (comparableSlotId(slot) !== selectedId) return slot;
+      found = true;
+      assertSlotCanBeReserved(slot);
+      return buildReservedSlot(slot, selectedId, bookingId, booking, reservedAt);
+    });
+
+    if (!found) {
+      throw codedError("failed-precondition", "Selected time slot is no longer available.");
+    }
+
+    return updated;
+  }
+
+  const slots = currentSlots && typeof currentSlots === "object" ? currentSlots : {};
+  const existing = slots[selectedId];
+  assertSlotCanBeReserved(existing);
+
+  return {
+    ...slots,
+    [selectedId]: buildReservedSlot(existing, selectedId, bookingId, booking, reservedAt)
+  };
+}
+
+async function expireCheckoutSession(stripe, sessionId) {
+  if (!sessionId) return;
+
+  try {
+    await stripe.checkout.sessions.expire(sessionId);
+  } catch (error) {
+    // The session may already be complete or expired. The Firestore transaction failure is the important error.
+  }
+}
+
 async function createBookingAndCheckoutSession({
   request,
   db,
@@ -159,9 +239,7 @@ async function createBookingAndCheckoutSession({
   const bookingInput = request.data?.booking || {};
 
   if (!successUrl || !cancelUrl) {
-    const error = new Error("Missing or invalid success/cancel URL.");
-    error.code = "invalid-argument";
-    throw error;
+    throw codedError("invalid-argument", "Missing or invalid success/cancel URL.");
   }
 
   assertValidBooking(bookingInput);
@@ -174,13 +252,15 @@ async function createBookingAndCheckoutSession({
     priceDisplay,
     currency
   });
+  const checkoutExpiresAtSeconds = Math.floor(Date.now() / 1000) + CHECKOUT_HOLD_MINUTES * 60;
 
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     client_reference_id: bookingId,
     customer_email: booking.email || undefined,
     success_url: addCheckoutParams(successUrl, bookingId),
-    cancel_url: cancelUrl.toString(),
+    cancel_url: addCheckoutParams(cancelUrl, bookingId),
+    expires_at: checkoutExpiresAtSeconds,
     allow_promotion_codes: true,
     billing_address_collection: "auto",
     line_items: [
@@ -212,13 +292,52 @@ async function createBookingAndCheckoutSession({
     }
   });
 
-  await bookingRef.set({
-    ...booking,
-    stripeCheckoutSessionId: session.id,
-    stripeCheckoutUrl: session.url,
-    stripeAmountTotal: priceCents,
-    stripeCurrency: currency
-  });
+  try {
+    await db.runTransaction(async (transaction) => {
+      const availabilityRef = db.collection("availability").doc(booking.preferredDate);
+      const availabilitySnapshot = await transaction.get(availabilityRef);
+
+      if (!availabilitySnapshot.exists) {
+        throw codedError("failed-precondition", "Selected date is no longer available.");
+      }
+
+      const availability = availabilitySnapshot.data() || {};
+      const reservedAt = admin.firestore.Timestamp.now();
+      const checkoutExpiresAt = admin.firestore.Timestamp.fromMillis(checkoutExpiresAtSeconds * 1000);
+      const slots = reserveSelectedSlot(
+        availability.slots,
+        booking.preferredTimeSlot,
+        bookingId,
+        booking,
+        reservedAt
+      );
+
+      transaction.set(availabilityRef, {
+        slots,
+        updatedAt: reservedAt,
+        updatedBy: "booking_checkout_reservation"
+      }, { merge: true });
+
+      transaction.set(bookingRef, {
+        ...booking,
+        stripeCheckoutSessionId: session.id,
+        stripeCheckoutUrl: session.url,
+        stripeAmountTotal: priceCents,
+        stripeCurrency: currency,
+        checkoutExpiresAt,
+        availabilityLocked: true,
+        availabilityLockStatus: "checkout_reserved",
+        availabilityLockError: null,
+        availabilityLockedAt: reservedAt,
+        availabilityLockDate: booking.preferredDate,
+        availabilityLockSlot: booking.preferredTimeSlot,
+        availabilityReservationStatus: "pending_checkout"
+      });
+    });
+  } catch (error) {
+    await expireCheckoutSession(stripe, session.id);
+    throw error;
+  }
 
   return {
     bookingId,
