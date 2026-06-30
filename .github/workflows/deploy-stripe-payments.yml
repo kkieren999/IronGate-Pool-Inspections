@@ -10,6 +10,10 @@ on:
       - "firebase.json"
       - ".github/workflows/deploy-stripe-payments.yml"
 
+concurrency:
+  group: firebase-stripe-payments-deploy
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
