@@ -8,7 +8,7 @@ const submitButton = document.querySelector("#booking-submit");
 const message = document.querySelector("#booking-message");
 const priceNotice = document.querySelector("#booking-price-notice");
 const functions = getFunctions(app, "us-central1");
-const createBookingAndCheckoutSession = httpsCallable(functions, "createBookingAndCheckoutSession");
+const createBookingCheckoutSession = httpsCallable(functions, "createBookingCheckoutSession");
 
 let redirectStarted = false;
 
@@ -157,7 +157,7 @@ async function handleBackendBookingSubmit(event) {
   setMessage("Creating your booking and opening secure Stripe payment...", "success");
 
   try {
-    const result = await createBookingAndCheckoutSession({
+    const result = await createBookingCheckoutSession({
       booking,
       successUrl: buildPageUrl("/success/"),
       cancelUrl: buildPageUrl("/cancelled/")
