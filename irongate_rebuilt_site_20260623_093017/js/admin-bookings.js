@@ -230,7 +230,7 @@ function insertBookingsPanel() {
         <div>
           <p class="section-kicker">Booking Management</p>
           <h2>Inspection dashboard</h2>
-          <p class="muted-help">View bookings, move inspections, cancel bookings and mark jobs completed without opening Firestore.</p>
+          <p class="muted-help">View bookings, move inspections, cancel or delete bookings, and mark jobs completed without opening Firestore.</p>
         </div>
         <button class="btn soft-btn" type="button" id="reload-bookings">Reload</button>
       </div>
@@ -378,6 +378,7 @@ function renderBookingDetail() {
         <button class="btn soft-btn" type="button" id="mark-completed">Mark completed</button>
         <button class="btn soft-btn" type="button" id="mark-certificate">Certificate issued</button>
         <button class="btn danger-btn" type="button" id="mark-cancelled">Cancel booking</button>
+        <button class="btn danger-btn" type="button" id="delete-booking">Delete from system</button>
       </div>
     </form>
   `;
@@ -388,6 +389,7 @@ function renderBookingDetail() {
   $("#mark-completed").addEventListener("click", () => updateBookingStage(booking, "completed"));
   $("#mark-certificate").addEventListener("click", () => updateBookingStage(booking, "certificate_issued"));
   $("#mark-cancelled").addEventListener("click", () => cancelBooking(booking));
+  $("#delete-booking").addEventListener("click", () => deleteBooking(booking));
   loadMoveSlots(booking);
 }
 
@@ -650,6 +652,40 @@ async function cancelBooking(booking) {
   } catch (error) {
     console.error(error);
     setPanelMessage(error.message || "Could not cancel booking.", "error");
+  }
+}
+
+async function deleteBooking(booking) {
+  const lockDate = bookingAvailabilityDate(booking);
+  const lockSlot = bookingAvailabilitySlot(booking);
+  const name = booking.customerName || "this customer";
+  const firstConfirm = `Permanently delete booking for ${name}? This removes it from the admin system and cannot be undone.`;
+  if (!window.confirm(firstConfirm)) return;
+  if (!window.confirm("Are you absolutely sure? Delete should only be used for duplicate, test, or incorrect bookings.")) return;
+
+  try {
+    await runTransaction(db, async (transaction) => {
+      const bookingRef = doc(db, "bookings", booking.id);
+      if (lockDate && lockSlot) {
+        const availabilityRef = doc(db, "availability", lockDate);
+        const snap = await transaction.get(availabilityRef);
+        if (snap.exists()) {
+          transaction.set(availabilityRef, {
+            slots: releaseSlot(snap.data().slots, lockSlot, booking.id),
+            updatedAt: serverTimestamp(),
+            updatedBy: ADMIN_EMAIL
+          }, { merge: true });
+        }
+      }
+      transaction.delete(bookingRef);
+    });
+
+    state.selectedId = "";
+    setPanelMessage("Booking deleted from the system. Any linked time slot has been released where possible.", "success");
+    await loadBookings();
+  } catch (error) {
+    console.error(error);
+    setPanelMessage(error.message || "Could not delete booking.", "error");
   }
 }
 
