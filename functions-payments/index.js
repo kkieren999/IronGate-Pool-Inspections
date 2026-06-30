@@ -163,14 +163,19 @@ async function confirmAvailabilityReservation(bookingId, booking = {}, paymentSt
     let changed = false;
 
     if (Array.isArray(current)) {
+      let selectedChanged = false;
       slots = current.map((slot) => {
-        if (comparableSlotId(slot) !== selectedId) return slot;
-        if (!slotBelongsToBooking(slot, bookingId)) return slot;
+        const id = comparableSlotId(slot);
+        const isSelectedSlot = id === selectedId;
+        const isLinkedBuffer = slotBelongsToBooking(slot, bookingId) && slot.bufferForSlot === selectedId;
+        if (!isSelectedSlot && !isLinkedBuffer) return slot;
+        if (isSelectedSlot && !slotBelongsToBooking(slot, bookingId)) return slot;
         changed = true;
-        return confirmedSlot(slot, selectedId, bookingId, booking, confirmedAt, paymentStatus);
+        if (isSelectedSlot) selectedChanged = true;
+        return confirmedSlot(slot, id || selectedId, bookingId, booking, confirmedAt, paymentStatus);
       });
 
-      if (!changed) {
+      if (!selectedChanged) {
         slots = [
           ...slots,
           confirmedSlot({}, selectedId, bookingId, booking, confirmedAt, paymentStatus)
@@ -180,13 +185,21 @@ async function confirmAvailabilityReservation(bookingId, booking = {}, paymentSt
     } else {
       const existingSlots = current && typeof current === "object" ? current : {};
       const existing = existingSlots[selectedId] || {};
+      slots = { ...existingSlots };
+
       if (!existingSlots[selectedId] || slotBelongsToBooking(existing, bookingId)) {
         slots = {
-          ...existingSlots,
+          ...slots,
           [selectedId]: confirmedSlot(existing, selectedId, bookingId, booking, confirmedAt, paymentStatus)
         };
         changed = true;
       }
+
+      Object.entries(existingSlots).forEach(([id, slot]) => {
+        if (id === selectedId || !slotBelongsToBooking(slot, bookingId) || slot.bufferForSlot !== selectedId) return;
+        slots[id] = confirmedSlot(slot, id, bookingId, booking, confirmedAt, paymentStatus);
+        changed = true;
+      });
     }
 
     if (changed) {
@@ -219,21 +232,22 @@ async function releaseAvailabilityReservation(bookingId, booking = {}) {
 
     if (Array.isArray(current)) {
       slots = current.map((slot) => {
-        if (comparableSlotId(slot) !== selectedId || !slotBelongsToBooking(slot, bookingId)) return slot;
+        const id = comparableSlotId(slot);
+        if (!slotBelongsToBooking(slot, bookingId)) return slot;
+        if (id !== selectedId && slot.bufferForSlot !== selectedId) return slot;
         changed = true;
         return releasedSlot(slot, releasedAt);
       });
     } else {
       const existingSlots = current && typeof current === "object" ? current : {};
-      const existing = existingSlots[selectedId];
+      slots = { ...existingSlots };
 
-      if (existing && slotBelongsToBooking(existing, bookingId)) {
-        slots = {
-          ...existingSlots,
-          [selectedId]: releasedSlot(existing, releasedAt)
-        };
+      Object.entries(existingSlots).forEach(([id, slot]) => {
+        if (!slotBelongsToBooking(slot, bookingId)) return;
+        if (id !== selectedId && slot.bufferForSlot !== selectedId) return;
+        slots[id] = releasedSlot(slot, releasedAt);
         changed = true;
-      }
+      });
     }
 
     if (changed) {
