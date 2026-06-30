@@ -5,7 +5,7 @@ const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
 admin.initializeApp();
 
 const db = admin.firestore();
-const CONFIRMED_PAYMENT_STATUSES = new Set(["paid"]);
+const CONFIRMED_PAYMENT_STATUSES = new Set(["paid", "no_payment_required", "agency_invoice"]);
 
 function getComparableId(item = {}) {
   if (item.id) return String(item.id);
@@ -13,14 +13,21 @@ function getComparableId(item = {}) {
   return "";
 }
 
-function hasJustBecomeConfirmed(before = {}, after = {}) {
-  return !CONFIRMED_PAYMENT_STATUSES.has(before.paymentStatus) && CONFIRMED_PAYMENT_STATUSES.has(after.paymentStatus);
+function isConfirmedBooking(data = {}) {
+  return data.status === "confirmed" || CONFIRMED_PAYMENT_STATUSES.has(data.paymentStatus);
+}
+
+function shouldLockAvailability(before = {}, after = {}) {
+  if (!isConfirmedBooking(after)) return false;
+  if (after.availabilityLocked === true) return false;
+  if (!isConfirmedBooking(before)) return true;
+  return !after.availabilityLockStatus;
 }
 
 function timeFromSlotId(slotId = "") {
-  const match = String(slotId).match(/^(\d{2})_(\d{2})$/);
+  const match = String(slotId).match(/^(\d{1,2})_(\d{2})$/);
   if (!match) return "";
-  return `${match[1]}:${match[2]}`;
+  return `${String(match[1]).padStart(2, "0")}:${match[2]}`;
 }
 
 function addOneHour(time = "") {
@@ -91,7 +98,7 @@ async function lockAvailabilityForConfirmedBooking(bookingId, booking = {}) {
           [selectedId]: buildLockedSlot({}, selectedId, bookingId, booking, lockedAt)
         },
         updatedAt: lockedAt,
-        updatedBy: "stripe_payment_lock"
+        updatedBy: "booking_confirmation_lock"
       }, { merge: true });
       return;
     }
@@ -121,7 +128,7 @@ async function lockAvailabilityForConfirmedBooking(bookingId, booking = {}) {
       transaction.set(availabilityRef, {
         slots: updated,
         updatedAt: lockedAt,
-        updatedBy: "stripe_payment_lock"
+        updatedBy: "booking_confirmation_lock"
       }, { merge: true });
       return;
     }
@@ -141,7 +148,7 @@ async function lockAvailabilityForConfirmedBooking(bookingId, booking = {}) {
         [selectedId]: buildLockedSlot(existing, selectedId, bookingId, booking, lockedAt)
       },
       updatedAt: lockedAt,
-      updatedBy: "stripe_payment_lock"
+      updatedBy: "booking_confirmation_lock"
     }, { merge: true });
   });
 
@@ -166,21 +173,26 @@ exports.lockAvailabilityAfterPayment = onDocumentUpdated({
   const before = event.data?.before?.data() || {};
   const after = event.data?.after?.data() || {};
 
-  if (!hasJustBecomeConfirmed(before, after)) {
-    logger.info("Availability lock skipped because booking did not just become paid", {
+  if (!shouldLockAvailability(before, after)) {
+    logger.info("Availability lock skipped", {
       bookingId,
+      beforeStatus: before.status || null,
+      afterStatus: after.status || null,
       beforePaymentStatus: before.paymentStatus || null,
-      afterPaymentStatus: after.paymentStatus || null
+      afterPaymentStatus: after.paymentStatus || null,
+      availabilityLocked: after.availabilityLocked || false,
+      availabilityLockStatus: after.availabilityLockStatus || null
     });
     return;
   }
 
   await lockAvailabilityForConfirmedBooking(bookingId, after);
 
-  logger.info("Availability lock processed for paid booking", {
+  logger.info("Availability lock processed for confirmed booking", {
     bookingId,
     preferredDate: after.preferredDate || null,
     preferredTimeSlot: after.preferredTimeSlot || null,
-    paymentStatus: after.paymentStatus || null
+    paymentStatus: after.paymentStatus || null,
+    status: after.status || null
   });
 });
