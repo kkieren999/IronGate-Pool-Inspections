@@ -64,6 +64,29 @@ function isCompletedCheckoutSession(session = {}) {
   return session.payment_status === "paid" || session.payment_status === "no_payment_required";
 }
 
+async function createBackendBookingCheckout(request) {
+  const result = await createDirectBookingAndCheckoutSession({
+    request,
+    db,
+    stripe: getStripe(),
+    normaliseUrl,
+    addCheckoutParams,
+    bookingSummary,
+    serviceName: SERVICE_NAME,
+    priceCents: INSPECTION_PRICE_CENTS,
+    priceDisplay: INSPECTION_PRICE_DISPLAY,
+    currency: CURRENCY
+  });
+
+  logger.info("Created backend booking and Stripe Checkout Session", {
+    bookingId: result.bookingId,
+    sessionId: result.sessionId,
+    source: "backend_booking_checkout"
+  });
+
+  return result;
+}
+
 exports.createBookingAndCheckoutSession = onCall(
   {
     region: "us-central1",
@@ -74,26 +97,7 @@ exports.createBookingAndCheckoutSession = onCall(
   },
   async (request) => {
     try {
-      const result = await createDirectBookingAndCheckoutSession({
-        request,
-        db,
-        stripe: getStripe(),
-        normaliseUrl,
-        addCheckoutParams,
-        bookingSummary,
-        serviceName: SERVICE_NAME,
-        priceCents: INSPECTION_PRICE_CENTS,
-        priceDisplay: INSPECTION_PRICE_DISPLAY,
-        currency: CURRENCY
-      });
-
-      logger.info("Created backend booking and Stripe Checkout Session", {
-        bookingId: result.bookingId,
-        sessionId: result.sessionId,
-        source: "backend_booking_checkout"
-      });
-
-      return result;
+      return await createBackendBookingCheckout(request);
     } catch (error) {
       logger.error("Could not create backend booking checkout session", {
         message: error.message,
@@ -118,6 +122,23 @@ exports.createBookingCheckoutSession = onCall(
     secrets: [STRIPE_SECRET_KEY]
   },
   async (request) => {
+    if (request.data?.booking) {
+      try {
+        return await createBackendBookingCheckout(request);
+      } catch (error) {
+        logger.error("Could not create backend booking checkout session through existing callable", {
+          message: error.message,
+          code: error.code || null
+        });
+
+        if (error.code === "invalid-argument") {
+          throw new HttpsError("invalid-argument", error.message);
+        }
+
+        throw new HttpsError("internal", "Could not create booking checkout session.");
+      }
+    }
+
     const bookingId = String(request.data?.bookingId || "").trim();
     const successUrl = normaliseUrl(request.data?.successUrl);
     const cancelUrl = normaliseUrl(request.data?.cancelUrl);
