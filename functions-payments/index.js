@@ -15,6 +15,7 @@ const INSPECTION_PRICE_CENTS = 24900;
 const INSPECTION_PRICE_DISPLAY = "$249";
 const CURRENCY = "aud";
 const SERVICE_NAME = "Pool Safety Inspection & Certificate";
+const PUBLIC_ERROR_CODES = new Set(["invalid-argument", "failed-precondition", "not-found"]);
 
 function getStripe() {
   const key = STRIPE_SECRET_KEY.value();
@@ -64,6 +65,187 @@ function isCompletedCheckoutSession(session = {}) {
   return session.payment_status === "paid" || session.payment_status === "no_payment_required";
 }
 
+function throwPublicHttpsError(error, fallbackMessage) {
+  if (PUBLIC_ERROR_CODES.has(error.code)) {
+    throw new HttpsError(error.code, error.message || fallbackMessage);
+  }
+
+  throw new HttpsError("internal", fallbackMessage);
+}
+
+function comparableSlotId(item = {}) {
+  if (item.id) return String(item.id);
+  if (item.start) return String(item.start).replace(":", "_");
+  return "";
+}
+
+function slotBelongsToBooking(slot = {}, bookingId) {
+  const existingBookingId = slot.bookedByBookingId || slot.bookingId || "";
+  return existingBookingId === bookingId;
+}
+
+function addOneHour(time = "") {
+  const [hours, minutes] = String(time || "").split(":").map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return "";
+  const start = new Date(Date.UTC(2000, 0, 1, hours, minutes));
+  start.setUTCHours(start.getUTCHours() + 1);
+  return `${String(start.getUTCHours()).padStart(2, "0")}:${String(start.getUTCMinutes()).padStart(2, "0")}`;
+}
+
+function bookingSlotBase(selectedId, booking = {}) {
+  const start = booking.preferredTimeStart || String(selectedId).replace("_", ":");
+  const end = booking.preferredTimeEnd || addOneHour(start);
+
+  return {
+    id: selectedId,
+    start,
+    end,
+    label: booking.preferredTimeLabel || booking.preferredTime || (start && end ? `${start} – ${end}` : selectedId),
+    bookingId: booking.id || "",
+    bookedByBookingId: booking.id || "",
+    customerName: booking.customerName || "",
+    propertyAddress: booking.propertyAddress || ""
+  };
+}
+
+function confirmedSlot(existingSlot = {}, selectedId, bookingId, booking = {}, confirmedAt, paymentStatus) {
+  return {
+    ...bookingSlotBase(selectedId, { ...booking, id: bookingId }),
+    ...existingSlot,
+    id: existingSlot.id || selectedId,
+    available: false,
+    booked: true,
+    locked: true,
+    reserved: false,
+    reservationStatus: "confirmed",
+    bookingId,
+    bookedByBookingId: bookingId,
+    customerName: booking.customerName || existingSlot.customerName || "",
+    propertyAddress: booking.propertyAddress || existingSlot.propertyAddress || "",
+    paymentStatus,
+    confirmedAt
+  };
+}
+
+function releasedSlot(existingSlot = {}, releasedAt) {
+  return {
+    ...existingSlot,
+    available: true,
+    booked: false,
+    locked: false,
+    reserved: false,
+    reservationStatus: "released",
+    bookingId: null,
+    bookedByBookingId: null,
+    customerName: "",
+    propertyAddress: "",
+    paymentStatus: "expired",
+    releasedAt
+  };
+}
+
+async function confirmAvailabilityReservation(bookingId, booking = {}, paymentStatus = "paid") {
+  const dateKey = booking.preferredDate;
+  const selectedId = booking.preferredTimeSlot;
+
+  if (!dateKey || !selectedId) return;
+
+  const availabilityRef = db.collection("availability").doc(dateKey);
+  const confirmedAt = admin.firestore.Timestamp.now();
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(availabilityRef);
+    if (!snapshot.exists) return;
+
+    const data = snapshot.data() || {};
+    const current = data.slots;
+    let slots = current;
+    let changed = false;
+
+    if (Array.isArray(current)) {
+      slots = current.map((slot) => {
+        if (comparableSlotId(slot) !== selectedId) return slot;
+        if (!slotBelongsToBooking(slot, bookingId)) return slot;
+        changed = true;
+        return confirmedSlot(slot, selectedId, bookingId, booking, confirmedAt, paymentStatus);
+      });
+
+      if (!changed) {
+        slots = [
+          ...slots,
+          confirmedSlot({}, selectedId, bookingId, booking, confirmedAt, paymentStatus)
+        ];
+        changed = true;
+      }
+    } else {
+      const existingSlots = current && typeof current === "object" ? current : {};
+      const existing = existingSlots[selectedId] || {};
+      if (!existingSlots[selectedId] || slotBelongsToBooking(existing, bookingId)) {
+        slots = {
+          ...existingSlots,
+          [selectedId]: confirmedSlot(existing, selectedId, bookingId, booking, confirmedAt, paymentStatus)
+        };
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      transaction.set(availabilityRef, {
+        slots,
+        updatedAt: confirmedAt,
+        updatedBy: "booking_checkout_confirmed"
+      }, { merge: true });
+    }
+  });
+}
+
+async function releaseAvailabilityReservation(bookingId, booking = {}) {
+  const dateKey = booking.preferredDate;
+  const selectedId = booking.preferredTimeSlot;
+
+  if (!dateKey || !selectedId) return;
+
+  const availabilityRef = db.collection("availability").doc(dateKey);
+  const releasedAt = admin.firestore.Timestamp.now();
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(availabilityRef);
+    if (!snapshot.exists) return;
+
+    const data = snapshot.data() || {};
+    const current = data.slots;
+    let slots = current;
+    let changed = false;
+
+    if (Array.isArray(current)) {
+      slots = current.map((slot) => {
+        if (comparableSlotId(slot) !== selectedId || !slotBelongsToBooking(slot, bookingId)) return slot;
+        changed = true;
+        return releasedSlot(slot, releasedAt);
+      });
+    } else {
+      const existingSlots = current && typeof current === "object" ? current : {};
+      const existing = existingSlots[selectedId];
+
+      if (existing && slotBelongsToBooking(existing, bookingId)) {
+        slots = {
+          ...existingSlots,
+          [selectedId]: releasedSlot(existing, releasedAt)
+        };
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      transaction.set(availabilityRef, {
+        slots,
+        updatedAt: releasedAt,
+        updatedBy: "booking_checkout_released"
+      }, { merge: true });
+    }
+  });
+}
+
 async function createBackendBookingCheckout(request) {
   const result = await createDirectBookingAndCheckoutSession({
     request,
@@ -78,7 +260,7 @@ async function createBackendBookingCheckout(request) {
     currency: CURRENCY
   });
 
-  logger.info("Created backend booking and Stripe Checkout Session", {
+  logger.info("Created backend booking and reserved Stripe Checkout Session slot", {
     bookingId: result.bookingId,
     sessionId: result.sessionId,
     source: "backend_booking_checkout"
@@ -104,11 +286,7 @@ exports.createBookingAndCheckoutSession = onCall(
         code: error.code || null
       });
 
-      if (error.code === "invalid-argument") {
-        throw new HttpsError("invalid-argument", error.message);
-      }
-
-      throw new HttpsError("internal", "Could not create booking checkout session.");
+      throwPublicHttpsError(error, "Could not create booking checkout session.");
     }
   }
 );
@@ -131,11 +309,7 @@ exports.createBookingCheckoutSession = onCall(
           code: error.code || null
         });
 
-        if (error.code === "invalid-argument") {
-          throw new HttpsError("invalid-argument", error.message);
-        }
-
-        throw new HttpsError("internal", "Could not create booking checkout session.");
+        throwPublicHttpsError(error, "Could not create booking checkout session.");
       }
     }
 
@@ -171,7 +345,7 @@ exports.createBookingCheckoutSession = onCall(
       client_reference_id: bookingId,
       customer_email: booking.email || undefined,
       success_url: addCheckoutParams(successUrl, bookingId),
-      cancel_url: cancelUrl.toString(),
+      cancel_url: addCheckoutParams(cancelUrl, bookingId),
       allow_promotion_codes: true,
       billing_address_collection: "auto",
       line_items: [
@@ -255,14 +429,18 @@ async function markCheckoutSessionPaid(session) {
     return;
   }
 
+  const bookingRef = db.collection("bookings").doc(bookingId);
+  const bookingSnapshot = await bookingRef.get();
+  const booking = bookingSnapshot.exists ? bookingSnapshot.data() || {} : {};
   const discount = session.total_details?.amount_discount || 0;
   const hasDiscount = discount > 0;
   const checkoutComplete = isCompletedCheckoutSession(session);
+  const paymentStatus = checkoutComplete ? "paid" : session.payment_status || "unknown";
 
-  await db.collection("bookings").doc(bookingId).set(
+  await bookingRef.set(
     {
       status: checkoutComplete ? "confirmed" : "payment_processing",
-      paymentStatus: checkoutComplete ? "paid" : session.payment_status || "unknown",
+      paymentStatus,
       stripePaymentStatus: session.payment_status || "unknown",
       paymentMethod: "stripe_checkout",
       stripeCheckoutSessionId: session.id,
@@ -280,16 +458,23 @@ async function markCheckoutSessionPaid(session) {
       stripeCurrency: session.currency || CURRENCY,
       discountApplied: hasDiscount,
       noCostCheckout: session.payment_status === "no_payment_required" || session.amount_total === 0,
+      availabilityReservationStatus: checkoutComplete ? "confirmed" : "payment_processing",
+      availabilityLockStatus: checkoutComplete ? "confirmed" : "payment_processing",
+      availabilityLockError: null,
       paidAt: checkoutComplete ? admin.firestore.FieldValue.serverTimestamp() : null,
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
     },
     { merge: true }
   );
 
+  if (checkoutComplete) {
+    await confirmAvailabilityReservation(bookingId, booking, paymentStatus);
+  }
+
   logger.info("Marked booking payment from Stripe webhook", {
     bookingId,
     sessionId: session.id,
-    paymentStatus: checkoutComplete ? "paid" : session.payment_status,
+    paymentStatus,
     stripePaymentStatus: session.payment_status,
     amountDiscount: discount,
     amountTotal: session.amount_total || null
@@ -303,11 +488,22 @@ async function markCheckoutSessionExpired(session) {
     return;
   }
 
-  await db.collection("bookings").doc(bookingId).set(
+  const bookingRef = db.collection("bookings").doc(bookingId);
+  const bookingSnapshot = await bookingRef.get();
+  const booking = bookingSnapshot.exists ? bookingSnapshot.data() || {} : {};
+
+  await releaseAvailabilityReservation(bookingId, booking);
+
+  await bookingRef.set(
     {
       status: "payment_expired",
       paymentStatus: "expired",
       stripeCheckoutSessionId: session.id,
+      availabilityLocked: false,
+      availabilityReservationStatus: "released",
+      availabilityLockStatus: "checkout_expired",
+      availabilityLockError: null,
+      availabilityReleasedAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
     },
     { merge: true }
