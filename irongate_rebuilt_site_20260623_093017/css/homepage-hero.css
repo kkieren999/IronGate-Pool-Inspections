@@ -32,7 +32,18 @@
 }
 
 .btn-wide {
-  min-width: 292px;
+  min-width: min(584px, 100%);
+  min-height: 112px;
+  padding: 0 48px;
+  border-radius: 16px;
+  gap: 18px;
+  font-size: 1.28rem;
+  font-weight: 800;
+}
+
+.btn-wide svg {
+  width: 34px;
+  height: 34px;
 }
 
 .hero-services-cta {
@@ -63,5 +74,16 @@
 @media (max-width: 580px) {
   .hero-inner {
     padding-bottom: 238px;
+  }
+
+  .btn-wide {
+    min-height: 86px;
+    padding: 0 24px;
+    font-size: 1.08rem;
+  }
+
+  .btn-wide svg {
+    width: 28px;
+    height: 28px;
   }
 }
