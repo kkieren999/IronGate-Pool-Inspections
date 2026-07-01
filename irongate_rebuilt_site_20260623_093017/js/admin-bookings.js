@@ -419,6 +419,15 @@ function slotBelongsToBooking(slot = {}, id) {
   return (slot.bookingId || slot.bookedByBookingId || "") === id;
 }
 
+function nextSlotId(slot = {}) {
+  const nextStart = slot.end || timeFromMinutes(minutesFromTime(slot.start) + 60);
+  return nextStart ? nextStart.replace(":", "_") : "";
+}
+
+function slotIsBlocked(slot = {}) {
+  return slot.booked === true || slot.locked === true || slot.reserved === true || slot.available === false;
+}
+
 function slotsToMap(slots) {
   if (Array.isArray(slots)) {
     return slots.reduce((map, slot) => {
@@ -447,21 +456,25 @@ function mapToOriginalShape(original, map) {
 
 function releaseSlot(slots, id, idToRelease) {
   const map = slotsToMap(slots);
-  const slot = map[id];
-  if (!slot || !slotBelongsToBooking(slot, idToRelease)) return mapToOriginalShape(slots, map);
-  map[id] = {
-    ...slot,
-    available: true,
-    booked: false,
-    locked: false,
-    reserved: false,
-    reservationStatus: "released_by_admin",
-    bookingId: null,
-    bookedByBookingId: null,
-    customerName: "",
-    propertyAddress: "",
-    paymentStatus: "released"
-  };
+  Object.entries(map).forEach(([slotKey, slot]) => {
+    if (!slotBelongsToBooking(slot, idToRelease)) return;
+    if (slotKey !== id && slot.bufferForSlot !== id) return;
+    map[slotKey] = {
+      ...slot,
+      available: true,
+      booked: false,
+      locked: false,
+      reserved: false,
+      reservationStatus: "released_by_admin",
+      bufferSlot: false,
+      bufferForSlot: null,
+      bookingId: null,
+      bookedByBookingId: null,
+      customerName: "",
+      propertyAddress: "",
+      paymentStatus: "released"
+    };
+  });
   return mapToOriginalShape(slots, map);
 }
 
@@ -471,6 +484,11 @@ function reserveSlot(slots, slot, booking) {
   if (!existing) throw new Error("The selected new time is no longer available.");
   if ((existing.booked || existing.locked || existing.reserved || existing.available === false) && !slotBelongsToBooking(existing, booking.id)) {
     throw new Error("The selected new time has already been booked. Choose another slot.");
+  }
+  const bufferId = nextSlotId(slot);
+  const bufferSlot = bufferId ? map[bufferId] : null;
+  if (bufferSlot && slotIsBlocked(bufferSlot) && !slotBelongsToBooking(bufferSlot, booking.id)) {
+    throw new Error("The selected new time needs the following hour available as a buffer. Choose another slot.");
   }
   map[slot.id] = {
     ...existing,
@@ -489,14 +507,53 @@ function reserveSlot(slots, slot, booking) {
     propertyAddress: booking.propertyAddress || "",
     paymentStatus: booking.paymentStatus || "paid"
   };
+  if (bufferId) {
+    const bufferStart = slot.end || timeFromMinutes(minutesFromTime(slot.start) + 60);
+    const bufferEnd = timeFromMinutes(minutesFromTime(bufferStart) + 60);
+    map[bufferId] = {
+      ...(bufferSlot || {}),
+      id: bufferId,
+      start: bufferSlot?.start || bufferStart,
+      end: bufferSlot?.end || bufferEnd,
+      label: bufferSlot?.label || `${labelTime(bufferStart)} - ${labelTime(bufferEnd)}`,
+      available: false,
+      booked: true,
+      locked: true,
+      reserved: false,
+      reservationStatus: "admin_moved_buffer",
+      bufferSlot: true,
+      bufferForSlot: slot.id,
+      bookingId: booking.id,
+      bookedByBookingId: booking.id,
+      customerName: booking.customerName || "",
+      propertyAddress: booking.propertyAddress || "",
+      paymentStatus: booking.paymentStatus || "paid"
+    };
+  }
   return mapToOriginalShape(slots, map);
 }
 
 function availableSlotsFromDoc(data = {}, booking = null) {
   const raw = Array.isArray(data.slots) ? data.slots : Object.values(data.slots || {});
-  return raw
+  const slots = raw
     .map((slot) => ({ ...slot, id: slotId(slot) }))
-    .filter((slot) => slot.id && (slot.available !== false && !slot.booked && !slot.locked && !slot.reserved || (booking && slotBelongsToBooking(slot, booking.id))))
+    .filter((slot) => slot.id);
+  const map = new Map(slots.map((slot) => [slot.id, slot]));
+  const bufferedSlotIds = new Set();
+  slots.forEach((slot) => {
+    if (slot.booked || slot.locked || slot.reserved) {
+      const bufferedId = nextSlotId(slot);
+      if (bufferedId) bufferedSlotIds.add(bufferedId);
+    }
+  });
+
+  return slots
+    .filter((slot) => {
+      if (booking && slotBelongsToBooking(slot, booking.id) && !slot.bufferSlot) return true;
+      if (slotIsBlocked(slot) || bufferedSlotIds.has(slot.id)) return false;
+      const followingSlot = map.get(nextSlotId(slot));
+      return !followingSlot || !slotIsBlocked(followingSlot);
+    })
     .sort((a, b) => minutesFromTime(a.start) - minutesFromTime(b.start));
 }
 
