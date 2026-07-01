@@ -50,6 +50,24 @@ function buildPageUrl(path) {
   return new URL(path, window.location.origin).toString();
 }
 
+function todayBusinessDateKey() {
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Brisbane",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date()).reduce((map, part) => {
+    map[part.type] = part.value;
+    return map;
+  }, {});
+
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function isTodayOrPastDateKey(dateKey) {
+  return String(dateKey || "") <= todayBusinessDateKey();
+}
+
 function selectedSlotDetails() {
   const selectedButton = document.querySelector(".booking-slot-btn.is-selected");
   const slotId = getValue("#preferredTimeSlot") || selectedButton?.dataset?.slotId || "";
@@ -81,6 +99,7 @@ function validateBookingPayload(payload) {
   if (!payload.existingCertificateStatus) return "Please select whether there is an existing pool safety certificate.";
   if (!payload.poolRegisteredStatus) return "Please confirm whether the pool is registered with QBCC.";
   if (!payload.preferredDate) return "Please select an inspection date.";
+  if (isTodayOrPastDateKey(payload.preferredDate)) return "Please choose an inspection date from tomorrow onwards.";
   if (!payload.preferredTimeSlot) return "Please select an inspection time.";
   if (!payload.preferredTimeStart || !payload.preferredTimeEnd) return "Please reselect the inspection time slot.";
   if (!payload.isPropertyOwner && !payload.authorisedToBook) return "Please confirm you are the owner or authorised to arrange the inspection.";
