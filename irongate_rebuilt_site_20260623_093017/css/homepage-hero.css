@@ -1,0 +1,67 @@
+/* Homepage checklist/service CTA refinements. */
+.hero {
+  min-height: calc(124vh - var(--header-height));
+}
+
+.hero-inner {
+  position: relative;
+  z-index: 2;
+  padding-bottom: 280px;
+}
+
+.btn-secondary-light {
+  color: var(--navy);
+  border-color: rgba(66, 199, 245, 0.78);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 16px 34px rgba(3, 18, 38, 0.26),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.62);
+}
+
+.btn-secondary-light svg {
+  color: var(--blue);
+}
+
+.btn-secondary-light:hover {
+  color: var(--navy);
+  background: #ffffff;
+  border-color: var(--blue);
+  box-shadow:
+    0 20px 42px rgba(3, 18, 38, 0.32),
+    0 0 0 5px rgba(66, 199, 245, 0.12);
+}
+
+.btn-wide {
+  min-width: 292px;
+}
+
+.hero-services-cta {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 30px;
+}
+
+.hero .wave-layer {
+  bottom: 0;
+}
+
+@media (max-width: 1180px) {
+  .hero-inner {
+    padding-bottom: 260px;
+  }
+}
+
+@media (max-width: 900px) {
+  .hero-inner {
+    padding-bottom: 250px;
+  }
+}
+
+@media (max-width: 580px) {
+  .hero-inner {
+    padding-bottom: 238px;
+  }
+}
