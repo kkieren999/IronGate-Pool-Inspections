@@ -219,35 +219,6 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast("Checklist reset");
   }
 
-  function buildSummaryText() {
-    const counts = getCounts();
-    const flagged = Object.entries(state.answers)
-      .filter(([, answer]) => answer === "review" || answer === "risk")
-      .map(([index, answer]) => `- ${checks[index].shortTitle}: ${answer === "risk" ? "Needs attention" : "Not sure"}`);
-
-    return [
-      "IronGate homeowner pool safety self-check summary",
-      "",
-      `Looks OK: ${counts.good}`,
-      `Not sure: ${counts.review}`,
-      `Needs attention: ${counts.risk}`,
-      "",
-      flagged.length ? "Items to review:" : "No items were marked for review.",
-      ...flagged,
-      "",
-      "This self-check is general guidance only and does not confirm legal compliance."
-    ].join("\n");
-  }
-
-  async function copySummary() {
-    try {
-      await navigator.clipboard.writeText(buildSummaryText());
-      showToast("Summary copied");
-    } catch (error) {
-      showToast("Copy unavailable");
-    }
-  }
-
   function showToast(message) {
     if (!elements.toast) return;
     elements.toast.textContent = message;
@@ -268,8 +239,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (event.target.closest("[data-prev]")) movePrev();
     if (event.target.closest("[data-reset]")) resetChecklist();
-    if (event.target.closest("[data-copy]")) copySummary();
-    if (event.target.closest("[data-print]")) window.print();
   });
 
   render();
