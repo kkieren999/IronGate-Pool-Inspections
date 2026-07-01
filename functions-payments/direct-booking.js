@@ -63,6 +63,55 @@ function comparableSlotId(item = {}) {
   return "";
 }
 
+function todayBusinessDateKey() {
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Brisbane",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date()).reduce((map, part) => {
+    map[part.type] = part.value;
+    return map;
+  }, {});
+
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function minutesFromTime(time = "") {
+  const [hours, minutes] = String(time || "").split(":").map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 0;
+  return hours * 60 + minutes;
+}
+
+function timeFromMinutes(totalMinutes) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function addOneHour(time = "") {
+  return timeFromMinutes(minutesFromTime(time) + 60);
+}
+
+function slotIdFromTime(time = "") {
+  return String(time || "").replace(":", "_");
+}
+
+function nextSlotId(slot = {}, booking = {}) {
+  const nextStart = slot.end || booking.preferredTimeEnd || addOneHour(slot.start || booking.preferredTimeStart);
+  return nextStart ? slotIdFromTime(nextStart) : "";
+}
+
+function assertBookableDate(dateKey) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateKey || ""))) {
+    throw codedError("invalid-argument", "Invalid inspection date.");
+  }
+
+  if (String(dateKey) <= todayBusinessDateKey()) {
+    throw codedError("failed-precondition", "Please choose an inspection date from tomorrow onwards.");
+  }
+}
+
 function assertValidBooking(booking) {
   const required = [
     "customerName",
@@ -92,6 +141,8 @@ function assertValidBooking(booking) {
   if (!/^\S+@\S+\.\S+$/.test(asString(booking.email))) {
     throw codedError("invalid-argument", "Invalid customer email address.");
   }
+
+  assertBookableDate(booking.preferredDate);
 }
 
 function publicBookingData(rawBooking = {}, config = {}) {
@@ -185,18 +236,63 @@ function buildReservedSlot(existingSlot = {}, selectedId, bookingId, booking = {
   };
 }
 
+function buildBufferSlot(existingSlot = {}, bufferId, selectedId, bookingId, booking = {}, reservedAt) {
+  const start = existingSlot.start || booking.preferredTimeEnd || String(bufferId).replace("_", ":");
+  const end = existingSlot.end || addOneHour(start);
+
+  return {
+    ...existingSlot,
+    id: existingSlot.id || bufferId,
+    start,
+    end,
+    label: existingSlot.label || `${start} - ${end}`,
+    available: false,
+    booked: true,
+    locked: true,
+    reserved: true,
+    reservationStatus: "pending_checkout_buffer",
+    bufferSlot: true,
+    bufferForSlot: selectedId,
+    bookingId,
+    bookedByBookingId: bookingId,
+    customerName: booking.customerName || "",
+    propertyAddress: booking.propertyAddress || "",
+    paymentStatus: "checkout_created",
+    reservedAt
+  };
+}
+
 function reserveSelectedSlot(currentSlots, selectedId, bookingId, booking, reservedAt) {
   if (Array.isArray(currentSlots)) {
     let found = false;
+    let selectedSlot = null;
     const updated = currentSlots.map((slot) => {
       if (comparableSlotId(slot) !== selectedId) return slot;
       found = true;
       assertSlotCanBeReserved(slot);
+      selectedSlot = slot;
       return buildReservedSlot(slot, selectedId, bookingId, booking, reservedAt);
     });
 
     if (!found) {
       throw codedError("failed-precondition", "Selected time slot is no longer available.");
+    }
+
+    const bufferId = nextSlotId(selectedSlot, booking);
+    if (bufferId) {
+      let bufferFound = false;
+      const withBuffer = updated.map((slot) => {
+        if (comparableSlotId(slot) !== bufferId) return slot;
+        bufferFound = true;
+        assertSlotCanBeReserved(slot);
+        return buildBufferSlot(slot, bufferId, selectedId, bookingId, booking, reservedAt);
+      });
+
+      if (!bufferFound) {
+        withBuffer.push(buildBufferSlot({}, bufferId, selectedId, bookingId, booking, reservedAt));
+      }
+
+      return withBuffer;
     }
 
     return updated;
@@ -205,10 +301,19 @@ function reserveSelectedSlot(currentSlots, selectedId, bookingId, booking, reser
   const slots = currentSlots && typeof currentSlots === "object" ? currentSlots : {};
   const existing = slots[selectedId];
   assertSlotCanBeReserved(existing);
+  const bufferId = nextSlotId(existing, booking);
+  const bufferSlot = bufferId ? slots[bufferId] : null;
+
+  if (bufferSlot) {
+    assertSlotCanBeReserved(bufferSlot);
+  }
 
   return {
     ...slots,
-    [selectedId]: buildReservedSlot(existing, selectedId, bookingId, booking, reservedAt)
+    [selectedId]: buildReservedSlot(existing, selectedId, bookingId, booking, reservedAt),
+    ...(bufferId ? {
+      [bufferId]: buildBufferSlot(bufferSlot || {}, bufferId, selectedId, bookingId, booking, reservedAt)
+    } : {})
   };
 }
 
