@@ -144,6 +144,24 @@ function isPastDate(date) {
   return compare < today;
 }
 
+function todayBusinessDateKey() {
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Brisbane",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date()).reduce((map, part) => {
+    map[part.type] = part.value;
+    return map;
+  }, {});
+
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function isTodayOrPastDateKey(dateKey) {
+  return String(dateKey || "") <= todayBusinessDateKey();
+}
+
 function minutesFromTime(time) {
   const [hours, minutes] = String(time || "").split(":").map(Number);
   if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return 0;
@@ -175,31 +193,58 @@ function normaliseSlot(slot) {
     end,
     label: slot.label || `${formatTimeLabel(start)} – ${formatTimeLabel(end)}`,
     available: slot.available !== false,
-    booked: slot.booked === true
+    booked: slot.booked === true,
+    locked: slot.locked === true,
+    reserved: slot.reserved === true,
+    bufferForSlot: slot.bufferForSlot || ""
   };
 }
 
-function normaliseSlots(saved, date) {
-  if (isPastDate(date) || !saved?.slots) return [];
+function nextSlotId(slot) {
+  const nextStart = slot?.end || timeFromMinutes(minutesFromTime(slot?.start) + 60);
+  return nextStart ? nextStart.replace(":", "_") : "";
+}
+
+function blockedSlotIdsForBuffers(slots) {
+  return slots.reduce((blocked, slot) => {
+    if (slot?.booked || slot?.locked || slot?.reserved) {
+      const nextId = nextSlotId(slot);
+      if (nextId) blocked.add(nextId);
+    }
+    return blocked;
+  }, new Set());
+}
+
+function slotIsFree(slot) {
+  return Boolean(slot && slot.available && !slot.booked && !slot.locked && !slot.reserved);
+}
+
+function normaliseSlots(saved, dateKey) {
+  if (isTodayOrPastDateKey(dateKey) || !saved?.slots) return [];
   const rawSlots = Array.isArray(saved.slots) ? saved.slots : Object.values(saved.slots || {});
-  return rawSlots
-    .map(normaliseSlot)
-    .filter((slot) => slot && slot.available && !slot.booked)
+  const slots = rawSlots.map(normaliseSlot).filter(Boolean);
+  const slotsById = new Map(slots.map((slot) => [slot.id, slot]));
+  const bufferedSlotIds = blockedSlotIdsForBuffers(slots);
+  return slots
+    .filter((slot) => {
+      if (!slotIsFree(slot) || bufferedSlotIds.has(slot.id)) return false;
+      const nextSlot = slotsById.get(nextSlotId(slot));
+      return !nextSlot || slotIsFree(nextSlot);
+    })
     .sort((a, b) => minutesFromTime(a.start) - minutesFromTime(b.start));
 }
 
 function getAvailableSlots(dateKey) {
   if (!dateKey) return [];
-  const date = parseDateKey(dateKey);
   const saved = availabilityByDate.get(dateKey) || null;
-  return normaliseSlots(saved, date);
+  return normaliseSlots(saved, dateKey);
 }
 
 function normaliseAvailability(dateKey, date) {
   const saved = availabilityByDate.get(dateKey) || null;
   const availableSlots = getAvailableSlots(dateKey);
 
-  if (isPastDate(date)) return { status: "unavailable", label: "Past date", isBookable: false };
+  if (isTodayOrPastDateKey(dateKey)) return { status: "unavailable", label: "Unavailable", isBookable: false };
   if (availableSlots.length > 0) {
     return {
       status: "available",
