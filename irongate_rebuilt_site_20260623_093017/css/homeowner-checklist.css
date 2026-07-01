@@ -442,27 +442,6 @@
   line-height: 1.5;
 }
 
-.utility-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.utility-actions button {
-  flex: 1;
-  min-height: 42px;
-  border: 0;
-  border-radius: 999px;
-  background: #eaf8ff;
-  color: var(--navy);
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.utility-actions button:hover {
-  background: #d8f2ff;
-}
-
 .toast {
   position: fixed;
   left: 50%;
@@ -566,7 +545,6 @@
   .homeowner-checklist-page .checklist-page-heading,
   .homeowner-checklist-page .checker-panel,
   .homeowner-checklist-page .site-footer,
-  .homeowner-checklist-page .utility-actions,
   .homeowner-checklist-page .toast {
     display: none !important;
   }
