@@ -22,6 +22,60 @@
         let html = await response.text();
         html = html.replace('<head>', '<head><base href="/">');
         Object.entries(replacements).forEach(([from, to]) => { html = html.replaceAll(from, to); });
+
+        html = html.replaceAll(
+          'Shift-click another date to select multiple days.',
+          'Shift-click to select a continuous range. Ctrl-click (Windows) or Command-click (Mac) to add or remove individual dates.'
+        );
+        html = html.replace(
+          'Click a date to edit one day. Shift-click another date to select a range. Existing paid/booked slots are preserved when you edit availability.',
+          'Click a date to edit one day. Shift-click another date to select a continuous range. Ctrl-click (Windows) or Command-click (Mac) to select non-adjacent dates. Existing paid/booked slots are preserved when you edit availability.'
+        );
+        html = html.replace('Selected range</span>', 'Selected dates</span>');
+        html = html.replace(
+          'button.addEventListener("click", (event) => handleCalendarDateClick(key, event.shiftKey));',
+          'button.addEventListener("click", (event) => handleCalendarDateClick(key, event.shiftKey, event.ctrlKey || event.metaKey));'
+        );
+        html = html.replace(
+          '    function selectedRangeLabel() {\n      const dates = selectedDateList();\n      if (!dates.length) return "No date selected";\n      if (dates.length === 1) return displayDate(dates[0]);\n      return `${displayShortDate(dates[0])} – ${displayShortDate(dates[dates.length - 1])}`;\n    }',
+          `    function selectedRangeLabel() {
+      const dates = selectedDateList();
+      if (!dates.length) return "No date selected";
+      if (dates.length === 1) return displayDate(dates[0]);
+      const continuousDates = getDateKeysBetween(dates[0], dates[dates.length - 1]);
+      const isContinuous = continuousDates.length === dates.length && continuousDates.every((date, index) => date === dates[index]);
+      if (isContinuous) return displayShortDate(dates[0]) + " – " + displayShortDate(dates[dates.length - 1]);
+      const preview = dates.slice(0, 4).map(displayShortDate).join(", ");
+      return dates.length + " selected dates: " + preview + (dates.length > 4 ? ", …" : "");
+    }`
+        );
+        html = html.replace(
+          '    async function handleCalendarDateClick(key, isShiftClick) {\n      if (isShiftClick && anchorDate) {',
+          `    async function handleCalendarDateClick(key, isShiftClick, isToggleClick) {
+      if (isToggleClick) {
+        const nextSelection = new Set(selectedDates);
+        const removingDate = nextSelection.has(key);
+
+        if (removingDate && nextSelection.size === 1) {
+          msg(dayMessage, "At least one date must remain selected. Click another date normally to change the selection.", "error");
+          return;
+        }
+
+        if (removingDate) nextSelection.delete(key);
+        else nextSelection.add(key);
+
+        selectedDates = nextSelection;
+        currentDate = selectedDates.has(key) ? key : selectedDateList()[selectedDateList().length - 1];
+        anchorDate = currentDate;
+        dateInput.value = currentDate;
+        msg(dayMessage, selectedDates.size + " date" + (selectedDates.size === 1 ? "" : "s") + " selected. The times below will apply to every highlighted date.", "success");
+        renderCalendar();
+        renderBlocks();
+        return;
+      }
+      if (isShiftClick && anchorDate) {`
+        );
+
         html = html.replace('</body>', '<script type="module" src="/js/admin-bookings.js"><\/script></body>');
         document.open();
         document.write(html);
