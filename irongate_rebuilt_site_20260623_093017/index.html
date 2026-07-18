@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/hero-wave-adjust.css" />
   <link rel="stylesheet" href="css/homepage-hero.css?v=20260702c" />
-  <link rel="stylesheet" href="css/homepage-sections.css?v=20260718" />
+  <link rel="stylesheet" href="css/homepage-sections.css?v=20260718b" />
 </head>
 <body>
   <header class="site-header" id="top">
@@ -44,34 +44,53 @@
       <div class="hero-watermark" aria-hidden="true"></div>
 
       <div class="hero-inner">
-        <div class="hero-content">
-          <p class="eyebrow">Brisbane Pool Safety Inspections & Certificates</p>
-          <h1 id="hero-title">Pool Safety<br><span>Inspections.</span></h1>
-          <span class="title-rule" aria-hidden="true"></span>
-          <p class="brand-jingle">Clear reports. Practical repair guidance. Safer pools.</p>
-          <p class="hero-lead">$149 pool barrier inspections for homeowners, sellers, landlords, real estate agents and property managers across Brisbane Southside.</p>
+        <div class="hero-main-grid">
+          <div class="hero-content">
+            <p class="eyebrow">Brisbane Pool Safety Inspections & Certificates</p>
+            <h1 id="hero-title">Pool Safety<br><span>Inspections.</span></h1>
+            <span class="title-rule" aria-hidden="true"></span>
+            <p class="brand-jingle">Clear reports. Practical repair guidance. Safer pools.</p>
+            <p class="hero-lead">$149 pool barrier inspections for homeowners, sellers, landlords, real estate agents and property managers across Brisbane Southside.</p>
 
-          <div class="hero-actions">
-            <a class="btn btn-primary" href="/homeowner-checklist/">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l1 2h3v15H5V6h3l1-2Zm0 7h6M9 15h4M8 19h8"/></svg>
-              Homeowner Checklist
-            </a>
+            <div class="hero-actions">
+              <a class="btn btn-primary" href="/homeowner-checklist/">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l1 2h3v15H5V6h3l1-2Zm0 7h6M9 15h4M8 19h8"/></svg>
+                Homeowner Checklist
+              </a>
+            </div>
+
+            <div class="trust-row" aria-label="Inspection highlights">
+              <div class="trust-item">
+                <span class="trust-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.4 2.8 8.5 7 10 4.2-1.5 7-5.6 7-10V6l-7-3Zm-3 9 2 2 4-5"/></svg></span>
+                <span>Pool Safety Inspections</span>
+              </div>
+              <div class="trust-item">
+                <span class="trust-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l1 2h3v15H5V6h3l1-2Zm0 7h6M9 15h6M8 19h8"/></svg></span>
+                <span>Certificates Issued If Compliant</span>
+              </div>
+              <div class="trust-item">
+                <span class="trust-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h11M12 8l4 4-4 4M19 5v14"/></svg></span>
+                <span>Unlimited Reinspections</span>
+              </div>
+            </div>
           </div>
 
-          <div class="trust-row" aria-label="Inspection highlights">
-            <div class="trust-item">
-              <span class="trust-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.4 2.8 8.5 7 10 4.2-1.5 7-5.6 7-10V6l-7-3Zm-3 9 2 2 4-5"/></svg></span>
-              <span>Pool Safety Inspections</span>
+          <aside class="hero-video" aria-label="IronGate pool inspection video">
+            <div class="hero-video-card">
+              <!-- Upload the finished video to assets/irongate-pool-inspection-overview.mp4 -->
+              <video controls playsinline preload="metadata" poster="assets/hero_image_v2.png" onplay="this.closest('.hero-video-card').classList.add('is-playing')">
+                <source src="assets/irongate-pool-inspection-overview.mp4" type="video/mp4" />
+                Your browser does not support embedded video.
+              </video>
+              <div class="hero-video-placeholder" aria-hidden="true">
+                <span class="hero-video-play">
+                  <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </span>
+                <strong>Inspection video coming soon</strong>
+                <span>Your walkthrough will appear here when the MP4 is uploaded.</span>
+              </div>
             </div>
-            <div class="trust-item">
-              <span class="trust-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6l1 2h3v15H5V6h3l1-2Zm0 7h6M9 15h6M8 19h8"/></svg></span>
-              <span>Certificates Issued If Compliant</span>
-            </div>
-            <div class="trust-item">
-              <span class="trust-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h11M12 8l4 4-4 4M19 5v14"/></svg></span>
-              <span>Unlimited Reinspections</span>
-            </div>
-          </div>
+          </aside>
         </div>
 
         <div class="hero-services-cta">
@@ -88,25 +107,6 @@
           <path class="wave-b" d="M0 63c157 67 320 77 489 21 183-61 329-59 490-2 183 65 343 66 461 12v56H0V63Z"/>
           <path class="wave-c" d="M0 94c173 56 336 58 489 7 183-62 338-56 501 1 170 60 322 55 450 14v34H0V94Z"/>
         </svg>
-      </div>
-    </section>
-
-    <section class="video-showcase" aria-label="IronGate pool inspection video">
-      <div class="video-frame">
-        <!-- Upload the finished video to assets/irongate-pool-inspection-overview.mp4 -->
-        <video controls playsinline preload="metadata" poster="assets/hero_image_v2.png" onplay="this.closest('.video-frame').classList.add('is-playing')">
-          <source src="assets/irongate-pool-inspection-overview.mp4" type="video/mp4" />
-          Your browser does not support embedded video.
-        </video>
-        <div class="video-placeholder" aria-hidden="true">
-          <div class="video-placeholder-card">
-            <span class="video-placeholder-icon">
-              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-            </span>
-            <strong>Inspection walkthrough video coming soon.</strong>
-            <span>The video player is ready and will use the final MP4 as soon as it is uploaded to the linked assets folder.</span>
-          </div>
-        </div>
       </div>
     </section>
 
