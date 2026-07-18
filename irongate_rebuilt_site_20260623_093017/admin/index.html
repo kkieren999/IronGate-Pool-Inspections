@@ -76,6 +76,11 @@
       if (isShiftClick && anchorDate) {`
         );
 
+        html = html.replace(
+          'payloads.forEach(([key, payload]) => batch.set(doc(db, "availability", key), payload, { merge: true }));',
+          'payloads.forEach(([key, payload]) => batch.set(doc(db, "availability", key), payload, { merge: false }));'
+        );
+
         html = html.replace('</body>', '<script type="module" src="/js/admin-bookings.js"><\/script></body>');
         document.open();
         document.write(html);
