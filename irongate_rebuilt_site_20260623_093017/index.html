@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/hero-wave-adjust.css" />
   <link rel="stylesheet" href="css/homepage-hero.css?v=20260702c" />
+  <link rel="stylesheet" href="css/homepage-sections.css?v=20260718" />
 </head>
 <body>
   <header class="site-header" id="top">
@@ -31,8 +32,8 @@
     <nav class="main-nav" aria-label="Primary navigation">
       <a class="active" href="#home">Home</a>
       <a href="#services">Service</a>
+      <a href="#pricing">Why $149</a>
       <a href="#about">About</a>
-      <a href="#inspections">Why Irongate</a>
     </nav>
   </header>
 
@@ -90,6 +91,25 @@
       </div>
     </section>
 
+    <section class="video-showcase" aria-label="IronGate pool inspection video">
+      <div class="video-frame">
+        <!-- Upload the finished video to assets/irongate-pool-inspection-overview.mp4 -->
+        <video controls playsinline preload="metadata" poster="assets/hero_image_v2.png" onplay="this.closest('.video-frame').classList.add('is-playing')">
+          <source src="assets/irongate-pool-inspection-overview.mp4" type="video/mp4" />
+          Your browser does not support embedded video.
+        </video>
+        <div class="video-placeholder" aria-hidden="true">
+          <div class="video-placeholder-card">
+            <span class="video-placeholder-icon">
+              <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </span>
+            <strong>Inspection walkthrough video coming soon.</strong>
+            <span>The video player is ready and will use the final MP4 as soon as it is uploaded to the linked assets folder.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="section services" id="services">
       <div class="container section-heading">
         <p class="section-kicker">Our Service</p>
@@ -121,7 +141,49 @@
           <a class="btn btn-card" href="/booking/">Book an Inspection</a>
         </article>
       </div>
+    </section>
 
+    <section class="section pricing" id="pricing" aria-labelledby="pricing-title">
+      <div class="container pricing-layout">
+        <div class="pricing-copy">
+          <p class="section-kicker">Transparent Pricing</p>
+          <h2 id="pricing-title">Why the inspection is $149.</h2>
+          <p class="pricing-lead">You should know what you are paying for. The fee combines the certificate and lodgement component with the professional work required to inspect, document and support your pool barrier through to a clear outcome.</p>
+          <ul class="pricing-trust-list">
+            <li>One clear upfront price with no hidden inspection add-ons.</li>
+            <li>A licensed professional assessment, not a quick visual check.</li>
+            <li>Photo documentation, practical repair guidance and unlimited reinspections included.</li>
+          </ul>
+        </div>
+
+        <div class="price-breakdown" aria-label="$149 price breakdown">
+          <div class="price-line">
+            <div class="price-amount">$49</div>
+            <div class="price-detail">
+              <h3>Certificate identification and QBCC lodgement</h3>
+              <p>When the pool barrier is compliant and a certificate is issued, this portion covers the certificate identification and successful lodgement component.</p>
+            </div>
+          </div>
+
+          <div class="price-line">
+            <div class="price-amount">$100</div>
+            <div class="price-detail">
+              <h3>Professional inspection, reporting and support</h3>
+              <p>This covers the inspector's skill, travel and on-site time, a thorough barrier assessment, photo documentation, clear reporting, practical repair guidance, administration and included reinspections where needed.</p>
+            </div>
+          </div>
+
+          <div class="price-total">
+            <div class="price-total-copy">
+              <span>Total inspection price</span>
+              <strong>A fair, transparent price for a careful and accountable service.</strong>
+            </div>
+            <div class="price-total-amount">$149</div>
+          </div>
+
+          <p class="pricing-note">The certificate component applies when a compliant pool safety certificate is issued. Government fees can be adjusted periodically; the advertised total inspection price remains $149 unless otherwise stated before booking.</p>
+        </div>
+      </div>
     </section>
 
     <section class="section about" id="about">
