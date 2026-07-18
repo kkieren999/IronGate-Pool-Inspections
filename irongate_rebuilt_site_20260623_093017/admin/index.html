@@ -31,9 +31,23 @@
           'Click a date to edit one day. Shift-click another date to select a range. Existing paid/booked slots are preserved when you edit availability.',
           'Click a date to edit one day. Shift-click another date to select a continuous range. Ctrl-click (Windows) or Command-click (Mac) to select non-adjacent dates. Existing paid/booked slots are preserved when you edit availability.'
         );
+        html = html.replace('Selected range</span>', 'Selected dates</span>');
         html = html.replace(
           'button.addEventListener("click", (event) => handleCalendarDateClick(key, event.shiftKey));',
           'button.addEventListener("click", (event) => handleCalendarDateClick(key, event.shiftKey, event.ctrlKey || event.metaKey));'
+        );
+        html = html.replace(
+          '    function selectedRangeLabel() {\n      const dates = selectedDateList();\n      if (!dates.length) return "No date selected";\n      if (dates.length === 1) return displayDate(dates[0]);\n      return `${displayShortDate(dates[0])} – ${displayShortDate(dates[dates.length - 1])}`;\n    }',
+          `    function selectedRangeLabel() {
+      const dates = selectedDateList();
+      if (!dates.length) return "No date selected";
+      if (dates.length === 1) return displayDate(dates[0]);
+      const continuousDates = getDateKeysBetween(dates[0], dates[dates.length - 1]);
+      const isContinuous = continuousDates.length === dates.length && continuousDates.every((date, index) => date === dates[index]);
+      if (isContinuous) return displayShortDate(dates[0]) + " – " + displayShortDate(dates[dates.length - 1]);
+      const preview = dates.slice(0, 4).map(displayShortDate).join(", ");
+      return dates.length + " selected dates: " + preview + (dates.length > 4 ? ", …" : "");
+    }`
         );
         html = html.replace(
           '    async function handleCalendarDateClick(key, isShiftClick) {\n      if (isShiftClick && anchorDate) {',
@@ -54,7 +68,7 @@
         currentDate = selectedDates.has(key) ? key : selectedDateList()[selectedDateList().length - 1];
         anchorDate = currentDate;
         dateInput.value = currentDate;
-        msg(dayMessage, selectedDates.size + " non-adjacent date" + (selectedDates.size === 1 ? "" : "s") + " selected. The times below will apply to every highlighted date.", "success");
+        msg(dayMessage, selectedDates.size + " date" + (selectedDates.size === 1 ? "" : "s") + " selected. The times below will apply to every highlighted date.", "success");
         renderCalendar();
         renderBlocks();
         return;
