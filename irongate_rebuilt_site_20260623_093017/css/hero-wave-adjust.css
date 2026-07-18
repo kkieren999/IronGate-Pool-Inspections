@@ -20,6 +20,23 @@
   min-width: 0;
 }
 
+/* Give the embedded hero video roughly one-third more visual width on desktop. */
+@media (min-width: 1181px) {
+  .hero-inner {
+    padding-left: clamp(28px, 3.5vw, 56px) !important;
+    padding-right: clamp(28px, 3.5vw, 56px) !important;
+  }
+
+  .hero-main-grid {
+    grid-template-columns: minmax(340px, 0.68fr) minmax(0, 1.32fr) !important;
+    gap: clamp(24px, 2.5vw, 40px) !important;
+  }
+
+  .hero-video {
+    width: min(100%, 865px) !important;
+  }
+}
+
 @media (max-width: 900px) {
   .service-layout {
     grid-template-columns: 1fr;
