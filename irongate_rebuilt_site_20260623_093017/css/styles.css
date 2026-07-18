@@ -517,18 +517,22 @@ h1 span { color: var(--blue); }
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
-  padding: 0 14px;
-  margin-bottom: 20px;
+
+  min-height: 68px;          /* was 34px */
+  padding: 0 28px;           /* was 0 14px */
+  margin-bottom: 40px;       /* was 20px */
   border-radius: 999px;
+
   background: linear-gradient(135deg, #159ee8, #42c7f5);
   color: #fff;
-  font-size: 0.78rem;
+
+  font-size: 1.56rem;        /* was 0.78rem */
   font-weight: 900;
   line-height: 1;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.16em;    /* was 0.08em */
   text-transform: uppercase;
-  box-shadow: 0 12px 24px rgba(21, 158, 232, 0.24);
+
+  box-shadow: 0 24px 48px rgba(21, 158, 232, 0.24);
 }
 
 .plan-badge--soft {
