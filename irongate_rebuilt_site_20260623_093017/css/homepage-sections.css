@@ -1,90 +1,134 @@
-/* Homepage sections added July 2026: full-width video and transparent pricing. */
+/* Homepage hero video and transparent pricing refinements. */
 
-.video-showcase {
-  position: relative;
-  width: 100%;
-  padding: 0;
-  overflow: hidden;
-  background: var(--navy-3);
+.hero {
+  min-height: calc(112vh - var(--header-height));
 }
 
-.video-frame {
+.hero-inner {
   position: relative;
-  width: 100%;
-  height: clamp(300px, 42vw, 620px);
-  overflow: hidden;
-  background:
-    linear-gradient(135deg, rgba(3, 18, 38, 0.56), rgba(8, 41, 79, 0.2)),
-    var(--navy-3);
+  z-index: 2;
+  padding: 64px clamp(34px, 5.5vw, 88px) 270px;
 }
 
-.video-frame video {
+.hero-main-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.92fr);
+  gap: clamp(30px, 4vw, 68px);
+  align-items: center;
+  width: 100%;
+}
+
+.hero-main-grid .hero-content {
+  width: 100%;
+  max-width: 760px;
+}
+
+.hero-video {
+  width: min(100%, 650px);
+  justify-self: end;
+  transform: translateY(-12px);
+}
+
+.hero-video-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 32px;
+  background: rgba(3, 18, 38, 0.88);
+  box-shadow:
+    0 32px 80px rgba(3, 18, 38, 0.42),
+    0 8px 24px rgba(3, 18, 38, 0.24),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.hero-video-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    inset 0 -70px 100px rgba(3, 18, 38, 0.12);
+}
+
+.hero-video-card video {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
+  display: block;
   object-fit: cover;
   object-position: center;
   background: var(--navy-3);
 }
 
-.video-placeholder {
+.hero-video-placeholder {
   position: absolute;
   inset: 0;
+  z-index: 3;
   display: grid;
-  place-items: center;
-  padding: 24px;
+  place-content: center;
+  justify-items: center;
+  gap: 9px;
+  padding: 28px;
+  text-align: center;
+  color: #fff;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(3, 18, 38, 0.08), rgba(3, 18, 38, 0.5));
+  background:
+    linear-gradient(180deg, rgba(3, 18, 38, 0.18), rgba(3, 18, 38, 0.66)),
+    radial-gradient(circle at 50% 32%, rgba(66, 199, 245, 0.22), transparent 36%);
   transition: opacity 0.25s ease, visibility 0.25s ease;
 }
 
-.video-frame.is-playing .video-placeholder {
+.hero-video-card.is-playing .hero-video-placeholder {
   opacity: 0;
   visibility: hidden;
 }
 
-.video-placeholder-card {
-  width: min(620px, 92vw);
-  padding: 28px 30px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 22px;
-  color: #fff;
-  text-align: center;
-  background: rgba(3, 18, 38, 0.72);
-  box-shadow: 0 24px 70px rgba(3, 18, 38, 0.35);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.video-placeholder-icon {
-  width: 66px;
-  height: 66px;
-  margin: 0 auto 16px;
+.hero-video-play {
+  width: 72px;
+  height: 72px;
   display: grid;
   place-items: center;
+  margin-bottom: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--blue), var(--blue-2));
-  box-shadow: 0 14px 34px rgba(21, 158, 232, 0.34);
+  background: linear-gradient(135deg, rgba(21, 158, 232, 0.96), rgba(66, 199, 245, 0.96));
+  box-shadow:
+    0 16px 38px rgba(3, 18, 38, 0.34),
+    0 0 0 9px rgba(255, 255, 255, 0.08);
 }
 
-.video-placeholder-icon svg {
-  width: 28px;
-  height: 28px;
+.hero-video-play svg {
+  width: 29px;
+  height: 29px;
   margin-left: 4px;
   fill: #fff;
 }
 
-.video-placeholder-card strong {
-  display: block;
-  font-size: clamp(1.35rem, 2.4vw, 2rem);
+.hero-video-placeholder strong {
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
   line-height: 1.15;
   letter-spacing: -0.025em;
+  text-shadow: 0 4px 18px rgba(3, 18, 38, 0.5);
 }
 
-.video-placeholder-card span {
-  display: block;
-  margin-top: 10px;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.98rem;
+.hero-video-placeholder > span:last-child {
+  max-width: 350px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.hero-services-cta {
+  margin-top: 44px;
 }
 
 .pricing {
@@ -252,7 +296,48 @@
   line-height: 1.55;
 }
 
+@media (max-width: 1180px) {
+  .hero {
+    min-height: calc(118vh - var(--header-height));
+  }
+
+  .hero-inner {
+    padding: 58px 44px 260px;
+  }
+
+  .hero-main-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(330px, 0.86fr);
+    gap: 30px;
+  }
+
+  .hero-video {
+    transform: none;
+  }
+}
+
 @media (max-width: 900px) {
+  .hero {
+    min-height: auto;
+  }
+
+  .hero-inner {
+    padding: 76px 28px 238px;
+  }
+
+  .hero-main-grid {
+    grid-template-columns: 1fr;
+    gap: 38px;
+  }
+
+  .hero-main-grid .hero-content {
+    max-width: 700px;
+  }
+
+  .hero-video {
+    width: min(100%, 720px);
+    justify-self: center;
+  }
+
   .pricing-layout {
     grid-template-columns: 1fr;
     gap: 36px;
@@ -260,16 +345,39 @@
 }
 
 @media (max-width: 580px) {
-  .video-frame {
-    height: clamp(280px, 74vw, 420px);
+  .hero-inner {
+    padding: 66px 20px 224px;
   }
 
-  .video-placeholder-card {
-    padding: 22px 18px;
+  .hero-main-grid {
+    gap: 30px;
   }
 
-  .video-placeholder-card span {
-    font-size: 0.88rem;
+  .hero-video-card {
+    aspect-ratio: 16 / 10.5;
+    border-radius: 22px;
+  }
+
+  .hero-video-placeholder {
+    padding: 20px 16px;
+  }
+
+  .hero-video-play {
+    width: 58px;
+    height: 58px;
+  }
+
+  .hero-video-play svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .hero-video-placeholder > span:last-child {
+    font-size: 0.82rem;
+  }
+
+  .hero-services-cta {
+    margin-top: 32px;
   }
 
   .price-breakdown {
