@@ -22,6 +22,46 @@
         let html = await response.text();
         html = html.replace('<head>', '<head><base href="/">');
         Object.entries(replacements).forEach(([from, to]) => { html = html.replaceAll(from, to); });
+
+        html = html.replaceAll(
+          'Shift-click another date to select multiple days.',
+          'Shift-click to select a continuous range. Ctrl-click (Windows) or Command-click (Mac) to add or remove individual dates.'
+        );
+        html = html.replace(
+          'Click a date to edit one day. Shift-click another date to select a range. Existing paid/booked slots are preserved when you edit availability.',
+          'Click a date to edit one day. Shift-click another date to select a continuous range. Ctrl-click (Windows) or Command-click (Mac) to select non-adjacent dates. Existing paid/booked slots are preserved when you edit availability.'
+        );
+        html = html.replace(
+          'button.addEventListener("click", (event) => handleCalendarDateClick(key, event.shiftKey));',
+          'button.addEventListener("click", (event) => handleCalendarDateClick(key, event.shiftKey, event.ctrlKey || event.metaKey));'
+        );
+        html = html.replace(
+          '    async function handleCalendarDateClick(key, isShiftClick) {\n      if (isShiftClick && anchorDate) {',
+          `    async function handleCalendarDateClick(key, isShiftClick, isToggleClick) {
+      if (isToggleClick) {
+        const nextSelection = new Set(selectedDates);
+        const removingDate = nextSelection.has(key);
+
+        if (removingDate && nextSelection.size === 1) {
+          msg(dayMessage, "At least one date must remain selected. Click another date normally to change the selection.", "error");
+          return;
+        }
+
+        if (removingDate) nextSelection.delete(key);
+        else nextSelection.add(key);
+
+        selectedDates = nextSelection;
+        currentDate = selectedDates.has(key) ? key : selectedDateList()[selectedDateList().length - 1];
+        anchorDate = currentDate;
+        dateInput.value = currentDate;
+        msg(dayMessage, selectedDates.size + " non-adjacent date" + (selectedDates.size === 1 ? "" : "s") + " selected. The times below will apply to every highlighted date.", "success");
+        renderCalendar();
+        renderBlocks();
+        return;
+      }
+      if (isShiftClick && anchorDate) {`
+        );
+
         html = html.replace('</body>', '<script type="module" src="/js/admin-bookings.js"><\/script></body>');
         document.open();
         document.write(html);
