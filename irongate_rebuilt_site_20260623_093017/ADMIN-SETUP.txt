@@ -12,7 +12,7 @@ IRONGATE ADMIN AVAILABILITY SETUP
 8. Go to Firestore Database > Rules.
 9. Copy/paste the rules provided in ChatGPT.
 10. Open:
-   admin-availability.html
+   /admin/
 
 HOW IT WORKS
 - Public booking page reads the availability collection.

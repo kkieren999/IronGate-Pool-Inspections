@@ -2,15 +2,15 @@ IronGate Time-Slot Admin Console
 ================================
 
 What changed:
-- admin-availability.html now manages 1-hour time slots for each date.
-- booking.html now shows available time slots after the client selects a date.
+- /admin/ now manages 1-hour time slots for each date.
+- /booking/ now shows available time slots after the client selects a date.
 - Clients can select only one slot per booking.
 - Bookings save preferredTimeSlot and preferredTimeLabel into Firestore.
 
 How to use:
 1. Upload all files to GitHub / hosting.
 2. Publish the Firestore rules from firestore.rules.
-3. Open admin-availability.html.
+3. Open /admin/.
 4. Sign in with irongate.pool.bne@gmail.com.
 5. Click a date.
 6. Use Standard day, Morning only, Afternoon only, or Closed.

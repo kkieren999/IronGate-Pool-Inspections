@@ -33,7 +33,7 @@ function buildBookingEmail(bookingId, booking = {}) {
     ["Existing certificate", value(booking, "existingCertificateStatus")],
     ["Pool register status", value(booking, "poolRegisterStatus")],
     ["Pool register message", value(booking, "poolRegisterMessage")],
-    ["Price", value(booking, "priceDisplay", "$249 inc GST")],
+    ["Price", value(booking, "priceDisplay", "$149 inc GST")],
     ["Access instructions", value(booking, "accessInstructions", "No access instructions provided")],
     ["Notes", value(booking, "notes", "No notes provided")]
   ];

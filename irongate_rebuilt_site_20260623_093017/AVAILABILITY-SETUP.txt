@@ -1,6 +1,6 @@
 IRONGATE AVAILABILITY CALENDAR SETUP
 
-This rebuilt version adds a visible booking calendar to booking.html.
+This rebuilt version adds a visible booking calendar to /booking/.
 
 HOW IT WORKS
 - Weekdays are shown as available by default.

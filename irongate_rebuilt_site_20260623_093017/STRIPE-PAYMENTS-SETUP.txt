@@ -1,7 +1,7 @@
 IRONGATE STRIPE PAYMENTS SETUP
 
 Payment model
-- Full upfront payment: $249 inc GST.
+- Full upfront payment: $149 inc GST.
 - The customer completes the booking form.
 - The booking is saved to Firestore with status pending_payment.
 - The frontend will call createBookingCheckoutSession.

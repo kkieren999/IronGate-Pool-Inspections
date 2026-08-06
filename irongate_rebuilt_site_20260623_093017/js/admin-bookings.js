@@ -316,7 +316,7 @@ function renderBookings() {
       row.innerHTML = `
         <div class="booking-row-top">
           <div><strong>${booking.customerName || "Unnamed customer"}</strong><br><span>${displayDate(booking.preferredDate)} · ${booking.preferredTimeLabel || booking.preferredTime || "No time"}</span></div>
-          <small>${booking.priceDisplay || "$249"}</small>
+          <small>${booking.priceDisplay || "$149"}</small>
         </div>
         <small>${booking.propertyAddress || "No address"}</small>
         <div class="booking-pill-line">

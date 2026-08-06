@@ -3,18 +3,18 @@ IRONGATE FIRESTORE BOOKING SITE — CALENDAR VERSION
 This site includes the IronGate public website, booking form, visible booking calendar and Firebase booking capture.
 
 WHAT IS INCLUDED
-- index.html with booking links to booking.html
-- booking.html with a visible monthly calendar and customer-facing booking request copy
+- index.html with booking links to /booking/
+- /booking/ with a visible monthly calendar and customer-facing booking request copy
 - js/booking.js saves booking requests into Firestore
 - js/firebase-config.js with the Firebase frontend config
 - css/styles.css with calendar styles
-- success.html and cancelled.html placeholders for the upcoming Stripe setup
+- /success/ and /cancelled/ placeholders for the upcoming Stripe setup
 - firestore.rules with bookings + availability rules
 - AVAILABILITY-SETUP.txt with click-by-click availability document examples
 - functions-email/ with the deployed Gmail notification function
 
 CURRENT BOOKING FLOW
-1. Customer opens booking.html.
+1. Customer opens /booking/.
 2. Customer fills out the booking form.
 3. Customer chooses an available date and 1-hour time slot.
 4. Customer clicks Submit Booking Request.

@@ -13,7 +13,7 @@ const createBookingCheckoutSession = httpsCallable(functions, "createBookingChec
 let redirectStarted = false;
 
 function setCustomerFacingCopy() {
-  if (priceNotice) priceNotice.textContent = "Pool Safety Inspection & Certificate — $249";
+  if (priceNotice) priceNotice.textContent = "Pool Safety Inspection & Certificate — $149";
   if (submitButton && !submitButton.disabled) submitButton.textContent = "Continue to Secure Payment";
 }
 
