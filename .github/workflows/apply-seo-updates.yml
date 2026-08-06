@@ -6,6 +6,7 @@ on:
       - seo-local-search-update
     paths:
       - "scripts/apply_seo_updates.py"
+      - "scripts/fix_clean_route_slashes.py"
       - ".github/workflows/apply-seo-updates.yml"
 
 permissions:
@@ -32,7 +33,9 @@ jobs:
           python-version: "3.13"
 
       - name: Apply website and backend updates
-        run: python scripts/apply_seo_updates.py
+        run: |
+          python scripts/apply_seo_updates.py
+          python scripts/fix_clean_route_slashes.py
 
       - name: Check generated changes
         run: |
@@ -48,5 +51,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Apply local SEO, pricing and clean URL updates"
+          git commit -m "Apply route slash validation fixes"
           git push origin HEAD:seo-local-search-update
