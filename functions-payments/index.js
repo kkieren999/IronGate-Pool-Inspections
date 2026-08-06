@@ -11,8 +11,8 @@ const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 const db = admin.firestore();
 
-const INSPECTION_PRICE_CENTS = 24900;
-const INSPECTION_PRICE_DISPLAY = "$249";
+const INSPECTION_PRICE_CENTS = 14900;
+const INSPECTION_PRICE_DISPLAY = "$149";
 const CURRENCY = "aud";
 const SERVICE_NAME = "Pool Safety Inspection & Certificate";
 const PUBLIC_ERROR_CODES = new Set(["invalid-argument", "failed-precondition", "not-found"]);

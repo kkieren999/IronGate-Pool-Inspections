@@ -212,7 +212,7 @@ function buildBookingNotificationMessage(bookingId, data = {}) {
   const poolRegisterMessage = bookingValue(data, "poolRegisterMessage");
   const notes = bookingValue(data, "notes", "No notes provided");
   const accessInstructions = bookingValue(data, "accessInstructions", "No access instructions provided");
-  const priceDisplay = bookingValue(data, "priceDisplay", "$249 inc GST");
+  const priceDisplay = bookingValue(data, "priceDisplay", "$149 inc GST");
 
   const rows = [
     ["Booking ID", bookingId],

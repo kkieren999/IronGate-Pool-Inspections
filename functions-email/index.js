@@ -9,7 +9,7 @@ admin.initializeApp();
 const GMAIL_APP_PASSWORD = defineSecret("GMAIL_APP_PASSWORD");
 const ADMIN_EMAIL = "irongate.pool.bne@gmail.com";
 const BUSINESS_PHONE = "0481 442 260";
-const DEFAULT_PRICE_DISPLAY = "$249";
+const DEFAULT_PRICE_DISPLAY = "$149";
 const CONFIRMED_PAYMENT_STATUSES = new Set(["paid"]);
 const EMAIL_TEMPLATE_VERSION = "payment-confirmation-v1";
 const ADMIN_UPDATE_TEMPLATE_VERSION = "booking-admin-update-v1";

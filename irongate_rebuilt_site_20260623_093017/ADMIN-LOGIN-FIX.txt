@@ -6,6 +6,6 @@ If the admin console sign in fails, check these in Firebase:
 2. Authentication -> Users -> user must exist as irongate.pool.bne@gmail.com.
 3. Use the exact password you set when you added the user.
 4. Authentication -> Settings -> Authorized domains must include your live website domain.
-5. Do not open admin-availability.html with file://. Use Live Server, Firebase Hosting, or your web host.
+5. Do not open /admin/ with file://. Use Live Server, Firebase Hosting, or your web host.
 
 The updated admin console now shows the exact Firebase error code on screen.

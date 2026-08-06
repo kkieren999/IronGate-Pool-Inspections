@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /success/
+Disallow: /cancelled/
+Disallow: /agency-booking-received/
+
+Sitemap: https://irongatepool.com.au/sitemap.xml

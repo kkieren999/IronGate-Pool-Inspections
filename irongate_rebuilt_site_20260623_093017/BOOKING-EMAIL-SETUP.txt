@@ -48,7 +48,7 @@ Deploy from GitHub
 6. Click Run workflow.
 
 Testing
-1. Submit a new test booking on booking.html.
+1. Submit a new test booking on /booking/.
 2. Confirm the booking appears in Firestore Database > bookings.
 3. Wait 10-30 seconds.
 4. Check irongate.pool.bne@gmail.com.

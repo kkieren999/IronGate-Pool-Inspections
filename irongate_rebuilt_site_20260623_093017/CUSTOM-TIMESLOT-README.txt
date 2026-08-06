@@ -10,10 +10,10 @@ What changed:
 - Client can select one slot only.
 
 Admin page:
-admin-availability.html
+/admin/
 
 Client booking page:
-booking.html
+/booking/
 
 Firestore collection used:
 availability/{YYYY-MM-DD}
