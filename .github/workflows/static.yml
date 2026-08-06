@@ -26,6 +26,7 @@ jobs:
 
       - name: Prepare deploy folder
         run: |
+          set -euo pipefail
           rm -rf public
           mkdir -p public
           cp -a irongate_rebuilt_site_20260623_093017/. public/
@@ -35,19 +36,41 @@ jobs:
           find public -type f \( -name '*.html' -o -name '*.js' -o -name '*.txt' \) -print0 \
             | xargs -0 sed -i 's/24900/14900/g; s/\$249/\$149/g; s/PSI 000000/PS15616387/g'
 
-          # Bust browser/CDN caches for scripts that write the booking price at runtime.
-          sed -i 's#src="js/booking.js"#src="/js/booking.js?v=20260806-149"#g' public/booking/index.html
-          sed -i 's#src="js/booking-stripe.js"#src="/js/booking-stripe.js?v=20260806-149"#g' public/booking/index.html
+          # Bust browser/CDN caches for scripts that can write the booking price at runtime.
+          sed -i 's#src="js/booking.js[^\"]*"#src="/js/booking.js?v=20260807-149"#g' public/booking/index.html
+          sed -i 's#src="js/booking-stripe.js[^\"]*"#src="/js/booking-stripe.js?v=20260807-149"#g' public/booking/index.html
 
       - name: Verify published booking price
         run: |
-          grep -F 'Pool Safety Inspection & Certificate — $149' public/booking/index.html
-          grep -F 'const inspectionPriceCents = 14900;' public/js/booking.js
-          grep -F 'Pool Safety Inspection & Certificate — $149' public/js/booking-stripe.js
-          if grep -R -F '$249' public/booking public/js/booking.js public/js/booking-stripe.js; then
-            echo 'Stale $249 booking price found in deploy artifact.' >&2
-            exit 1
-          fi
+          python - <<'PY'
+          from pathlib import Path
+
+          booking_html = Path('public/booking/index.html').read_text(encoding='utf-8')
+          booking_js = Path('public/js/booking.js').read_text(encoding='utf-8')
+          stripe_js = Path('public/js/booking-stripe.js').read_text(encoding='utf-8')
+          combined = '\n'.join((booking_html, booking_js, stripe_js))
+
+          checks = {
+              'booking HTML contains the $149 price notice':
+                  'id="booking-price-notice"' in booking_html and '$149' in booking_html,
+              'booking JavaScript uses 14900 cents':
+                  'const inspectionPriceCents = 14900;' in booking_js,
+              'Stripe-facing JavaScript displays $149':
+                  '$149' in stripe_js,
+              'booking scripts use cache-busting URLs':
+                  '/js/booking.js?v=20260807-149' in booking_html
+                  and '/js/booking-stripe.js?v=20260807-149' in booking_html,
+              'no stale $249 display remains': '$249' not in combined,
+              'no stale 24900-cent amount remains': '24900' not in combined,
+          }
+
+          failed = [name for name, passed in checks.items() if not passed]
+          for name, passed in checks.items():
+              print(f"{'PASS' if passed else 'FAIL'}: {name}")
+
+          if failed:
+              raise SystemExit('Published booking validation failed: ' + '; '.join(failed))
+          PY
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
