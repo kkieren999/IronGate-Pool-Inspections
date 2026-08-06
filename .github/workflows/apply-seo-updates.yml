@@ -1,0 +1,52 @@
+name: Apply approved SEO and pricing updates
+
+on:
+  push:
+    branches:
+      - seo-local-search-update
+    paths:
+      - "scripts/apply_seo_updates.py"
+      - ".github/workflows/apply-seo-updates.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-seo-local-search-update
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout update branch
+        uses: actions/checkout@v6
+        with:
+          ref: seo-local-search-update
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Apply website and backend updates
+        run: python scripts/apply_seo_updates.py
+
+      - name: Check generated changes
+        run: |
+          git diff --check
+          git status --short
+
+      - name: Commit generated source updates
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No source changes were needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Apply local SEO, pricing and clean URL updates"
+          git push origin HEAD:seo-local-search-update
