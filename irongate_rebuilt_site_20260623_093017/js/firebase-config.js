@@ -12,3 +12,9 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+
+if (typeof window !== "undefined" && window.location.pathname.startsWith("/admin")) {
+  import("./admin-private-booking.js").catch((error) => {
+    console.error("Could not load private booking admin tools:", error);
+  });
+}
