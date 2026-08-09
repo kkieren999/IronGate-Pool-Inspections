@@ -129,14 +129,107 @@ service cloud.firestore {
         && request.resource.data.createdAt == request.time;
     }
 
+    function privateInviteBookingChangedFieldsAllowed() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        "customerName",
+        "email",
+        "phone",
+        "propertyAddress",
+        "propertyAddressSelected",
+        "propertyPlaceId",
+        "isPropertyOwner",
+        "authorisedToBook",
+        "clientType",
+        "inspectionReason",
+        "poolType",
+        "existingCertificateStatus",
+        "poolRegisteredStatus",
+        "willBeHomeForInspection",
+        "accessPermissionIfNotHome",
+        "animalsOnProperty",
+        "animalsOffLeash",
+        "animalsWillBeSecured",
+        "accessInstructions",
+        "hasPoolExemption",
+        "minorRepairsContactAccepted",
+        "nonComplianceAcknowledged",
+        "informationAccuracyConfirmed",
+        "notes",
+        "termsAccepted",
+        "privacyAccepted",
+        "privateInviteProof",
+        "privateInviteSubmittedAt",
+        "updatedAt"
+      ]);
+    }
+
+    function validPrivateInviteBookingUpdate(bookingId) {
+      let invite = get(/databases/$(database)/documents/privateBookingInvites/$(resource.data.privateInviteToken)).data;
+      return resource.data.privateInviteToken is string
+        && resource.data.privateInviteToken.size() >= 32
+        && resource.data.source == "private_booking_invite"
+        && resource.data.status == "private_invite_pending"
+        && resource.data.paymentStatus == "not_started"
+        && privateInviteBookingChangedFieldsAllowed()
+        && invite.bookingId == bookingId
+        && invite.status == "active"
+        && invite.expiresAt > request.time
+        && invite.date == resource.data.preferredDate
+        && invite.slotId == resource.data.preferredTimeSlot
+        && invite.start == resource.data.preferredTimeStart
+        && invite.end == resource.data.preferredTimeEnd
+        && request.resource.data.privateInviteProof == resource.data.privateInviteToken
+        && request.resource.data.privateInviteSubmittedAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.customerName is string
+        && request.resource.data.customerName.size() >= 2
+        && request.resource.data.customerName.size() <= 140
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 180
+        && request.resource.data.phone is string
+        && request.resource.data.phone.matches('^(04[0-9]{8}|\\+614[0-9]{8})$')
+        && request.resource.data.propertyAddress is string
+        && request.resource.data.propertyAddress.size() >= 8
+        && request.resource.data.propertyAddress.size() <= 400
+        && request.resource.data.propertyAddressSelected == true
+        && (request.resource.data.isPropertyOwner == true || request.resource.data.authorisedToBook == true)
+        && request.resource.data.nonComplianceAcknowledged == true
+        && request.resource.data.informationAccuracyConfirmed == true
+        && request.resource.data.termsAccepted == true
+        && request.resource.data.privacyAccepted == true
+        && (request.resource.data.animalsOffLeash != true || request.resource.data.animalsWillBeSecured == true);
+    }
+
+    function validPrivateInvitePublicUpdate(inviteId) {
+      return resource.data.status == "active"
+        && resource.data.expiresAt > request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status",
+          "submittedAt",
+          "submittedEmail"
+        ])
+        && request.resource.data.status == "submitted"
+        && request.resource.data.submittedAt == request.time
+        && request.resource.data.submittedEmail is string
+        && request.resource.data.submittedEmail.size() <= 180;
+    }
+
     match /availability/{dateId} {
       allow read: if true;
       allow create, update, delete: if isAdmin();
     }
 
     match /bookings/{bookingId} {
-      allow create: if validPublicBookingCreate();
-      allow read, update, delete: if isAdmin();
+      allow create: if isAdmin() || validPublicBookingCreate();
+      allow read, delete: if isAdmin();
+      allow update: if isAdmin() || validPrivateInviteBookingUpdate(bookingId);
+    }
+
+    match /privateBookingInvites/{inviteId} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || validPrivateInvitePublicUpdate(inviteId);
     }
 
     match /agencyPartners/{partnerId} {
