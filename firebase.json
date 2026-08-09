@@ -12,5 +12,8 @@
       "source": "functions-payments",
       "codebase": "payments"
     }
-  ]
+  ],
+  "firestore": {
+    "rules": "firestore.rules"
+  }
 }
