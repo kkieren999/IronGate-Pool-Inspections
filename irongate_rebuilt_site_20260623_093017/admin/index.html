@@ -191,7 +191,7 @@
                 <div>
                   <p class="section-kicker">Calendar</p>
                   <h2>Booking availability</h2>
-                  <p class="muted-help">Click a date to edit one day. Shift-click another date to select a range. Existing paid/booked slots are preserved when you edit availability.</p>
+                  <p class="muted-help">Click a date to edit one day. Shift-click another date to select a range. Ctrl-click (Cmd-click on Mac) dates to add or remove individual days. Existing paid/booked slots are preserved when you edit availability.</p>
                 </div>
                 <div class="month-controls">
                   <button type="button" id="prev-month" aria-label="Previous month">‹</button>
@@ -208,12 +208,12 @@
                 <span><i class="legend-dot legend-green"></i>Saved times</span>
                 <span><i class="legend-dot legend-red"></i>No times</span>
                 <span><i class="legend-dot legend-blue"></i>Editing</span>
-                <span><i class="legend-dot legend-purple"></i>Selected range</span>
+                <span><i class="legend-dot legend-purple"></i>Selected days</span>
               </div>
               <div class="selection-bar">
                 <div>
                   <strong id="selected-range-title">1 day selected</strong><br>
-                  <span id="selected-range-help">Shift-click another date to select multiple days.</span>
+                  <span id="selected-range-help">Shift-click for a range, or Ctrl/Cmd-click to pick individual days.</span>
                 </div>
                 <button class="btn soft-btn" type="button" id="clear-selected-days">Back to single day</button>
               </div>
@@ -625,14 +625,22 @@
       const dates = selectedDateList();
       if (!dates.length) return "No date selected";
       if (dates.length === 1) return displayDate(dates[0]);
-      return `${displayShortDate(dates[0])} – ${displayShortDate(dates[dates.length - 1])}`;
+      const contiguous = dates.every((key, index) => {
+        if (index === 0) return true;
+        const next = parseDateKey(dates[index - 1]);
+        next.setDate(next.getDate() + 1);
+        return toDateKey(next) === key;
+      });
+      if (contiguous) return `${displayShortDate(dates[0])} – ${displayShortDate(dates[dates.length - 1])}`;
+      if (dates.length <= 4) return dates.map(displayShortDate).join(", ");
+      return `${dates.slice(0, 3).map(displayShortDate).join(", ")} + ${dates.length - 3} more`;
     }
 
     function updateEditorLabels() {
       const count = selectedDates.size || (currentDate ? 1 : 0);
       const multi = count > 1;
       if (selectedRangeTitle) selectedRangeTitle.textContent = `${count} day${count === 1 ? "" : "s"} selected`;
-      if (selectedRangeHelp) selectedRangeHelp.textContent = multi ? "The editor below now applies to every selected purple date." : "Shift-click another date to select multiple days.";
+      if (selectedRangeHelp) selectedRangeHelp.textContent = multi ? "The editor below applies to every selected purple date. Ctrl/Cmd-click to add or remove individual days." : "Shift-click for a range, or Ctrl/Cmd-click to pick individual days.";
       if (editorKicker) editorKicker.textContent = multi ? "Selected Dates" : "Selected Date";
       if (editorModePill) {
         editorModePill.textContent = multi ? "Multi-day edit" : "Single-day edit";
@@ -696,13 +704,54 @@
         if (key === currentDate) button.classList.add("is-editing");
         if (selectedDates.has(key) && key !== currentDate) button.classList.add("is-range");
         button.innerHTML = `<span class="day-number">${day}</span><span class="day-status">${count ? `${count} time${count === 1 ? "" : "s"}` : "No times"}</span>`;
-        button.addEventListener("click", (event) => handleCalendarDateClick(key, event.shiftKey));
+        button.addEventListener("click", (event) => handleCalendarDateClick(key, event.shiftKey, event.ctrlKey || event.metaKey));
         calendarEl.appendChild(button);
       }
       updateEditorLabels();
     }
 
-    async function handleCalendarDateClick(key, isShiftClick) {
+    async function handleCalendarDateClick(key, isShiftClick, isToggleClick) {
+      if (isToggleClick) {
+        if (!selectedDates.size) {
+          anchorDate = key;
+          selectedDates = new Set([key]);
+          currentDate = key;
+          dateInput.value = key;
+          await loadSingleDate(key);
+          return;
+        }
+
+        const nextSelected = new Set(selectedDates);
+        if (nextSelected.has(key)) {
+          if (nextSelected.size === 1) {
+            msg(dayMessage, "Keep at least one date selected. Click another date to switch days.", "error");
+            return;
+          }
+          nextSelected.delete(key);
+          selectedDates = nextSelected;
+          if (currentDate === key) {
+            const remaining = selectedDateList();
+            currentDate = remaining[remaining.length - 1] || "";
+            dateInput.value = currentDate;
+          }
+          if (anchorDate === key) anchorDate = currentDate;
+          msg(dayMessage, `${selectedDates.size} dates selected. The times below will apply to all selected dates.`, "success");
+          renderCalendar();
+          renderBlocks();
+          return;
+        }
+
+        nextSelected.add(key);
+        selectedDates = nextSelected;
+        currentDate = key;
+        anchorDate = key;
+        dateInput.value = key;
+        msg(dayMessage, `${selectedDates.size} dates selected. The times below will apply to all selected dates.`, "success");
+        renderCalendar();
+        renderBlocks();
+        return;
+      }
+
       if (isShiftClick && anchorDate) {
         selectedDates = new Set(getDateKeysBetween(anchorDate, key));
         currentDate = key;
