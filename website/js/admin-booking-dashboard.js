@@ -7,9 +7,12 @@ import { collection, getDocs, limit, orderBy, query } from "https://www.gstatic.
 const ADMIN_EMAIL = "irongate.pool.bne@gmail.com";
 const auth = getAuth(app);
 const $ = (selector) => document.querySelector(selector);
-const todayBrisbane = () => new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Australia/Brisbane", year: "numeric", month: "2-digit", day: "2-digit"
-}).format(new Date());
+const todayBrisbane = () => {
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Brisbane", year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(new Date()).reduce((map, part) => { map[part.type] = part.value; return map; }, {});
+  return parts.year + "-" + parts.month + "-" + parts.day;
+};
 const text = (value) => value === null || value === undefined || value === "" ? "Not provided" : String(value);
 let records = [];
 let activeBookingId = "";
@@ -91,7 +94,11 @@ function renderDetails() {
     ["Refunded", safeAmount(b.stripeAmountRefunded ?? 0)],
     ["Stripe PaymentIntent", b.stripePaymentIntentId],
     ["Calendar event", b.googleCalendarEventId ? "Linked" : "Not linked"],
-    ["Customer notification", b.customerNotificationSentType || b.customerNotificationError || "Not recorded"]
+    ["Calendar sync", b.calendarSyncStatus || "Not recorded"],
+    ["Calendar sync error", b.calendarSyncError],
+    ["Customer notification", b.customerNotificationError ? "Failed: " + b.customerNotificationError :
+      (b.customerNotificationId && b.customerNotificationSentId === b.customerNotificationId ? "Sent" :
+        b.customerNotificationId ? "Pending" : b.customerNotificationSentType || "Not recorded")]
   ]);
   window.dispatchEvent(new CustomEvent("irongate:booking-selected", { detail: { bookingId: record.id } }));
 }
