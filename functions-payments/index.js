@@ -11,7 +11,7 @@ const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 const db = admin.firestore();
 const { executeAdminBookingChange } = require("./admin-booking-service");
-const { adminRefundBooking, reconcileRefundEvent } = require("./admin-refunds");
+const { adminRefundBooking, adminReconcileBookingRefunds, reconcileRefundEvent } = require("./admin-refunds");
 
 const INSPECTION_PRICE_CENTS = 14900;
 const INSPECTION_PRICE_DISPLAY = "$149";
@@ -595,3 +595,9 @@ exports.adminRefundBooking = onCall({
   region: "us-central1", timeoutSeconds: 60, memory: "256MiB",
   invoker: "public", secrets: [STRIPE_SECRET_KEY]
 }, async (request) => adminRefundBooking(request, getStripe()));
+
+
+exports.adminReconcileBookingRefunds = onCall({
+  region: "us-central1", timeoutSeconds: 60, memory: "256MiB",
+  invoker: "public", secrets: [STRIPE_SECRET_KEY]
+}, async (request) => adminReconcileBookingRefunds(request, getStripe()));

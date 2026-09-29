@@ -55,7 +55,7 @@ async function reconcilePaymentRefunds(stripe, bookingId, paymentIntentId, lates
   const stamp = admin.firestore.FieldValue.serverTimestamp();
   // Stripe list reflects current state; do not let an older webhook downgrade a settled refund.
   const matchedRefund = latest ? (refunds.find((item) => item.id === latest.id) || latest) :
-    (refunds.find((item) => item.metadata?.actionId) || null);
+    (refunds.find((item) => item.status === "succeeded") || refunds[0] || null);
   await db.runTransaction(async (tx) => {
     const snapshot = await tx.get(bookingRef);
     if (!snapshot.exists || snapshot.data()?.stripePaymentIntentId !== paymentIntentId) return;
@@ -75,17 +75,28 @@ async function reconcilePaymentRefunds(stripe, bookingId, paymentIntentId, lates
       patch.lastStripeRefundId = matchedRefund.id;
       patch.lastStripeRefundStatus = matchedRefund.status || "pending";
       patch.lastRefundAmountCents = Number(matchedRefund.amount || 0);
-      if (matchedRefund.status === "succeeded" &&
-          current.lastRefundNotifiedId !== matchedRefund.id) {
-        patch.lastRefundNotifiedId = matchedRefund.id;
-        patch.customerNotificationType = "refund_updated";
-        patch.customerNotificationId = "refund_" + matchedRefund.id + "_succeeded";
-        patch.customerNotificationError = null;
-      }
     }
     const actionId = matchedRefund?.metadata?.actionId;
     const actionRef = actionId && VALID_ID.test(actionId) ? refundActionRef(bookingId, actionId) : null;
     const actionSnap = actionRef ? await tx.get(actionRef) : null;
+    const noticeRef = matchedRefund?.status === "succeeded" && /^re_[a-zA-Z0-9]+$/.test(matchedRefund.id)
+      ? db.collection("refundNotifications").doc(bookingId + "_" + matchedRefund.id) : null;
+    const notice = noticeRef ? await tx.get(noticeRef) : null;
+    if (noticeRef && !notice.exists) {
+      tx.create(noticeRef, {
+        bookingId, stripeRefundId: matchedRefund.id,
+        amountCents: Number(matchedRefund.amount || 0), createdAt: stamp
+      });
+      patch.lastRefundNotifiedId = matchedRefund.id;
+      patch.customerNotificationType = "refund_updated";
+      patch.customerNotificationId = "refund_" + matchedRefund.id + "_succeeded";
+      patch.customerNotificationError = null;
+    } else if (noticeRef && notice.exists) {
+      // An out-of-order webhook must not queue the same customer email again.
+      delete patch.customerNotificationType;
+      delete patch.customerNotificationId;
+      delete patch.customerNotificationError;
+    }
     tx.update(bookingRef, patch);
     if (actionRef && actionSnap?.exists && actionSnap.data()?.paymentIntentId === paymentIntentId &&
         actionSnap.data()?.bookingId === bookingId) {
@@ -215,6 +226,21 @@ async function adminRefundBooking(request, stripe) {
     throw error;
   }
 }
+async function adminReconcileBookingRefunds(request, stripe) {
+  await requireAdmin(request);
+  const bookingId = validId(request.data?.bookingId, "booking ID");
+  const snap = await db.collection("bookings").doc(bookingId).get();
+  if (!snap.exists) throw new HttpsError("not-found", "Booking not found.");
+  const booking = snap.data() || {};
+  if (booking.paymentStatus !== "paid" ||
+      !/^pi_[a-zA-Z0-9]+$/.test(String(booking.stripePaymentIntentId || ""))) {
+    throw new HttpsError("failed-precondition", "Only a captured Stripe payment can be reconciled.");
+  }
+  // Only reads Stripe, then updates accounting. It never creates a refund.
+  const result = await reconcilePaymentRefunds(stripe, bookingId, booking.stripePaymentIntentId);
+  if (!result) throw new HttpsError("failed-precondition", "Stripe payment no longer matches the booking.");
+  return { bookingId, ...result };
+}
 async function reconcileRefundEvent(stripe, refund) {
   const intentId = piId(refund?.payment_intent);
   if (!intentId) { logger.warn("Refund event lacks PaymentIntent", { refundId: refund?.id || null }); return; }
@@ -223,4 +249,4 @@ async function reconcileRefundEvent(stripe, refund) {
   if (matched.size !== 1) throw new Error("Multiple bookings share one Stripe PaymentIntent; manual reconciliation required.");
   return reconcilePaymentRefunds(stripe, matched.docs[0].id, intentId, refund);
 }
-module.exports = { adminRefundBooking, reconcileRefundEvent, listPaymentRefunds, reconcilePaymentRefunds };
+module.exports = { adminRefundBooking, adminReconcileBookingRefunds, reconcileRefundEvent, listPaymentRefunds, reconcilePaymentRefunds };
