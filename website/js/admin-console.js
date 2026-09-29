@@ -1,4 +1,5 @@
 import "./admin-private-booking.js";
+import "./admin-booking-dashboard.js";
 import { app, db } from "./firebase-config.js";
     import { collection, deleteDoc, doc, documentId, getDoc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
     import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
@@ -595,6 +596,7 @@ import { app, db } from "./firebase-config.js";
       document.querySelectorAll("[data-tab]").forEach((button) => button.setAttribute("aria-selected", String(button.dataset.tab === tabName)));
       document.querySelectorAll("[role='tabpanel']").forEach((panel) => { panel.hidden = panel.id !== `panel-${tabName}`; });
       if (tabName === "partners") loadAgencyPartners();
+      window.dispatchEvent(new CustomEvent("irongate:admin-tab", { detail: { tab: tabName } }));
     }
 
     function normalisePartnerCode(value) {
