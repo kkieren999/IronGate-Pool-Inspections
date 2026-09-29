@@ -23,52 +23,22 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-
-      - name: Prepare deploy folder
-        shell: bash
-        run: |
-          set -euo pipefail
-          rm -rf public
-          mkdir -p public
-          cp -a irongate_rebuilt_site_20260623_093017/. public/
-          cp CNAME public/CNAME
-
-          find public -type f \( -name '*.html' -o -name '*.js' -o -name '*.txt' \) -print0 \
-            | xargs -0 sed -i 's/24900/14900/g; s/\$249/\$149/g; s/PSI 000000/PS15616387/g'
-
-          sed -i 's#src="js/booking.js[^\"]*"#src="/js/booking.js?v=20260807-149b"#g' public/booking/index.html
-          sed -i 's#src="js/booking-stripe.js[^\"]*"#src="/js/booking-stripe.js?v=20260807-149b"#g' public/booking/index.html
-
-      - name: Verify published booking price
-        shell: bash
-        run: |
-          set -euo pipefail
-          grep -F '$149' public/booking/index.html >/dev/null
-          grep -F 'const inspectionPriceCents = 14900;' public/js/booking.js >/dev/null
-          grep -F '$149' public/js/booking-stripe.js >/dev/null
-          grep -F '/js/booking.js?v=20260807-149b' public/booking/index.html >/dev/null
-          grep -F '/js/booking-stripe.js?v=20260807-149b' public/booking/index.html >/dev/null
-
-          if grep -R -F '$249' public/booking public/js/booking.js public/js/booking-stripe.js; then
-            echo 'Stale $249 booking price found in deploy artifact.' >&2
-            exit 1
-          fi
-
-          if grep -R -F '24900' public/booking public/js/booking.js public/js/booking-stripe.js; then
-            echo 'Stale 24900-cent amount found in deploy artifact.' >&2
-            exit 1
-          fi
-
-          echo 'Published booking artifact verified at $149.'
-
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Verify source
+        run: node --test tests/site.test.mjs
+      - name: Build publish directory
+        run: node scripts/build-site.mjs
+      - name: Verify publish directory
+        run: SITE_ROOT=public node --test tests/site.test.mjs
       - name: Setup Pages
         uses: actions/configure-pages@v5
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
           path: './public'
-
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

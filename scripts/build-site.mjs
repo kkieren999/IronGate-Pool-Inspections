@@ -1,0 +1,10 @@
+import { cp, copyFile, mkdir, rm } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const out = resolve(root, "public");
+await rm(out, { recursive: true, force: true });
+await mkdir(out, { recursive: true });
+await cp(resolve(root, "website"), out, { recursive: true });
+await copyFile(resolve(root, "CNAME"), resolve(out, "CNAME"));
+console.log("Built public/ from website/ without rewriting source.");
