@@ -158,6 +158,10 @@ function assertValidBooking(booking) {
     throw codedError("invalid-argument", "Terms and privacy policy must be accepted.");
   }
 
+  if (!/^(?:04\d{8}|0[2378]\d{8}|\+614\d{8}|\+61[2378]\d{8})$/.test(cleanPhone(booking.phone))) {
+    throw codedError("invalid-argument", "Enter a valid Australian contact phone number.");
+  }
+
   if (!/^\S+@\S+\.\S+$/.test(asString(booking.email))) {
     throw codedError("invalid-argument", "Invalid customer email address.");
   }
