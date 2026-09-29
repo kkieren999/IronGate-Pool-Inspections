@@ -70,6 +70,9 @@ function renderDetails() {
   ref.className = "muted-help";
   ref.textContent = "Booking reference: " + record.id;
   panel.appendChild(ref);
+  const actionHost = document.createElement("div");
+  actionHost.id = "booking-actions-host";
+  panel.appendChild(actionHost);
   detailSection(panel, "Appointment", [
     ["Status", bookingStatus(b)], ["Inspection status", b.inspectionStatus],
     ["Date", b.preferredDateDisplay || b.preferredDate], ["Time", b.preferredTimeLabel || b.preferredTime],

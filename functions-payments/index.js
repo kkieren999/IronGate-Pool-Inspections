@@ -10,6 +10,7 @@ admin.initializeApp();
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 const db = admin.firestore();
+const { executeAdminBookingChange } = require("./admin-booking-service");
 
 const INSPECTION_PRICE_CENTS = 14900;
 const INSPECTION_PRICE_DISPLAY = "$149";
@@ -560,3 +561,12 @@ exports.stripeWebhook = onRequest(
     }
   }
 );
+
+
+exports.adminMoveBooking = onCall({
+  region: "us-central1", timeoutSeconds: 30, memory: "256MiB", invoker: "public"
+}, async (request) => executeAdminBookingChange(request, "move"));
+
+exports.adminCancelBooking = onCall({
+  region: "us-central1", timeoutSeconds: 30, memory: "256MiB", invoker: "public"
+}, async (request) => executeAdminBookingChange(request, "cancel"));

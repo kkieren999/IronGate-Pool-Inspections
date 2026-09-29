@@ -28,11 +28,11 @@ jobs:
         with:
           node-version: "22"
       - name: Verify source
-        run: node --test tests/site.test.mjs
+        run: node --test tests/*.test.mjs
       - name: Build publish directory
         run: node scripts/build-site.mjs
       - name: Verify publish directory
-        run: SITE_ROOT=public node --test tests/site.test.mjs
+        run: SITE_ROOT=public node --test tests/*.test.mjs
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

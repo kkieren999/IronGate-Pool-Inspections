@@ -129,6 +129,13 @@
     .booking-readonly-note { padding:12px; border-radius:12px; background:#fff7e9; border:1px solid #f0d9aa; color:#814c0b; font-weight:700; }
     @media(max-width:1080px) { .ops-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .booking-workspace {grid-template-columns:1fr;} }
     @media(max-width:700px) { .booking-toolbar {grid-template-columns:1fr;} .ops-metrics {grid-template-columns:1fr 1fr;} .booking-detail dl {grid-template-columns:1fr;} }
+
+    .booking-actions { border-top:1px solid #dce9f4; margin:18px 0; padding-top:15px; display:grid; gap:12px; }
+    .booking-actions details { padding:13px; background:#fff; border:1px solid #d7e1ec; border-radius:13px; }
+    .booking-actions summary { font-weight:900; color:var(--navy); cursor:pointer; }
+    .booking-actions form { margin-top:15px; }
+    .booking-actions .toggle-line { justify-content:flex-start; }
+    .booking-activity-entry { padding:12px; margin:8px 0; border-radius:11px; background:#f7fbff; border:1px solid #dce9f4; overflow-wrap:anywhere; }
   </style>
   <!-- IRONGATE SEO START -->
   <link rel="canonical" href="https://irongatepool.com.au/admin/" />
@@ -219,7 +226,7 @@
           <div class="admin-panel" id="panel-bookings" role="tabpanel" aria-labelledby="tab-bookings" hidden>
             <section class="admin-card">
               <div class="clean-card-heading"><div><p class="section-kicker">Booking management</p><h2>Recent bookings</h2>
-                <p class="muted-help">Read-only details for the most recent 150 bookings. Move, cancellation and refund actions will be added in subsequent PRs.</p></div></div>
+                <p class="muted-help">Review the latest 150 bookings. Confirmed appointments can be moved or cancelled securely; refund controls follow in the next PR.</p></div></div>
               <div class="booking-toolbar">
                 <label>Search bookings<input id="booking-search" type="search" placeholder="Name, property, email, reference" autocomplete="off" /></label>
                 <label>Filter status<select id="booking-status-filter"><option value="all">All statuses</option><option value="confirmed">Confirmed</option><option value="pending">Awaiting payment</option><option value="cancelled">Cancelled</option><option value="completed">Completed</option></select></label>
@@ -437,6 +444,7 @@
           </div>
 
           <div class="admin-panel" id="panel-systems" role="tabpanel" aria-labelledby="tab-systems" hidden>
+            <section class="admin-card"><h2>Recent booking activity</h2><p class="muted-help">Latest 25 move/cancel actions. Records are written by server functions and cannot be edited from the browser.</p><div id="admin-activity" role="status">Sign in to see activity.</div></section>
             <section class="admin-card">
               <p class="section-kicker">Automation</p>
               <h2>Booking flow status</h2>
