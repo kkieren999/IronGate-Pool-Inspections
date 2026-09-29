@@ -98,7 +98,7 @@ function validateBookingPayload(payload) {
   if (["agent", "agency"].includes(payload.bookingRoleCode) && !payload.agencyName) return "Please enter your company or agency name.";
   if (payload.bookingRoleCode === "other" && !payload.bookingRelationship) return "Please explain your relationship to the property.";
   if (!payload.email) return "Please enter your email address.";
-  if (!payload.phone) return "Please enter your Australian mobile number.";
+  if (!payload.phone) return "Please enter an Australian contact number.";
   if (!payload.propertyAddress) return "Please enter the inspection property address.";
   if (!payload.propertyAddressSelected) return "Please select the property address from the suggestions.";
   if (!payload.inspectionReason) return "Please select the reason for inspection.";
