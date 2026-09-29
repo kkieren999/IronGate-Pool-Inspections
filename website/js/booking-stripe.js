@@ -46,6 +46,7 @@ function normaliseAustralianMobile(value) {
   if (/^04\d{8}$/.test(cleaned)) return cleaned;
   if (/^\+614\d{8}$/.test(cleaned)) return cleaned;
   if (/^614\d{8}$/.test(cleaned)) return `+${cleaned}`;
+  if (/^61[2378]\d{8}$/.test(cleaned)) return `+${cleaned}`;
   return cleaned;
 }
 
