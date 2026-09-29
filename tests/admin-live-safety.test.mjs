@@ -65,3 +65,12 @@ test("checkout and expiry code preserve synthetic buffer provenance", () => {
   assert.match(webhook, /slots = current\.flatMap/);
   assert.match(webhook, /else delete slots\[id\]/);
 });
+
+test("paid booking conflicts are excluded from automatic email, calendar and availability fulfillment", () => {
+  const avail = readFileSync(new URL("../functions-availability/index.js", import.meta.url), "utf8");
+  const email = readFileSync(new URL("../functions-email/index.js", import.meta.url), "utf8");
+  const calendar = readFileSync(new URL("../functions-calendar/calendar-sync-policy.js", import.meta.url), "utf8");
+  for (const source of [avail, email, calendar]) {
+    assert.match(source, /"payment_exception"/);
+  }
+});
