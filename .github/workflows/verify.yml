@@ -1,0 +1,23 @@
+name: Verify repository cleanup
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Verify source
+        run: node --test tests/site.test.mjs
+      - name: Build static artifact
+        run: node scripts/build-site.mjs
+      - name: Verify publish output
+        run: SITE_ROOT=public node --test tests/site.test.mjs

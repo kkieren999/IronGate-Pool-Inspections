@@ -283,28 +283,6 @@ async function createBackendBookingCheckout(request) {
   return result;
 }
 
-exports.createBookingAndCheckoutSession = onCall(
-  {
-    region: "us-central1",
-    timeoutSeconds: 30,
-    memory: "256MiB",
-    invoker: "public",
-    secrets: [STRIPE_SECRET_KEY]
-  },
-  async (request) => {
-    try {
-      return await createBackendBookingCheckout(request);
-    } catch (error) {
-      logger.error("Could not create backend booking checkout session", {
-        message: error.message,
-        code: error.code || null
-      });
-
-      throwPublicHttpsError(error, "Could not create booking checkout session.");
-    }
-  }
-);
-
 exports.createBookingCheckoutSession = onCall(
   {
     region: "us-central1",

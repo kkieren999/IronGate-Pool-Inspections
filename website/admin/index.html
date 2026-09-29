@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en" data-irongate-clean-route="/admin/">
+<head>
+  <base href="/" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>IronGate Admin Console | Availability & Agency Partners</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    body.availability-admin { background: #f4f8fc; }
+    [hidden] { display: none !important; }
+    .admin-shell { display: grid; gap: 22px; }
+    .admin-hero-clean { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 22px; align-items: end; padding: clamp(24px, 4vw, 38px); border-radius: 34px; color: #fff; background: radial-gradient(circle at top right, rgba(21,158,232,.34), transparent 36%), linear-gradient(135deg, #061b39, #08294f 58%, #0b3867); box-shadow: var(--shadow); overflow: hidden; }
+    .admin-hero-clean h1 { color: #fff; font-size: clamp(2.1rem, 5vw, 4rem); margin: 0; line-height: .95; letter-spacing: -.04em; }
+    .admin-hero-clean p { margin: 12px 0 0; color: rgba(255,255,255,.82); max-width: 780px; font-weight: 700; }
+    .admin-status { padding: 10px 14px; border-radius: 999px; background: rgba(255,255,255,.12); font-weight: 900; white-space: nowrap; }
+    .admin-hero-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; }
+    .hero-link { display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 0 15px; border-radius: 999px; background: rgba(255,255,255,.12); color: #fff; font-weight: 900; text-decoration: none; border: 1px solid rgba(255,255,255,.16); }
+    .hero-link:hover { background: rgba(255,255,255,.18); color: #fff; }
+    .admin-card { background: #fff; border: 1px solid rgba(7,24,52,.08); border-radius: 28px; padding: clamp(20px, 3vw, 30px); box-shadow: var(--shadow); }
+    .admin-card h2 { color: var(--navy); margin: 0; }
+    .admin-card h3 { color: var(--navy); margin: 0; }
+    .console-menu { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .console-tab { border: 1px solid rgba(7,24,52,.08); border-radius: 22px; padding: 18px; background: #fff; color: var(--navy); text-align: left; cursor: pointer; box-shadow: 0 12px 26px rgba(4,26,55,.06); transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease; }
+    .console-tab:hover { transform: translateY(-2px); border-color: rgba(21,158,232,.35); }
+    .console-tab[aria-selected="true"] { border-color: rgba(21,158,232,.65); background: linear-gradient(135deg, #eef9ff, #ffffff); box-shadow: 0 18px 38px rgba(4,26,55,.1); }
+    .console-tab strong { display: block; font-size: 1.05rem; }
+    .console-tab span { display: block; margin-top: 6px; color: var(--muted); font-weight: 800; line-height: 1.35; }
+    .admin-panel { display: grid; gap: 22px; margin-top: 22px; }
+    .clean-card-heading { display: flex; justify-content: space-between; align-items: start; gap: 16px; margin-bottom: 18px; }
+    .muted-help { color: var(--muted); font-weight: 700; margin: 6px 0 0; }
+    .month-controls { display: inline-flex; align-items: center; gap: 10px; padding: 8px; border: 1px solid rgba(21,158,232,.16); border-radius: 999px; background: #f4fbff; }
+    .month-controls strong { min-width: 190px; text-align: center; color: var(--navy); font-size: 1.12rem; }
+    .month-controls button { width: 44px; height: 44px; border: 1px solid #d7e1ec; border-radius: 999px; background: #fff; color: var(--navy); font-size: 1.7rem; line-height: 1; font-weight: 900; cursor: pointer; }
+    .month-controls button:hover { border-color: var(--blue); color: var(--blue); }
+    .calendar-weekdays, .admin-calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
+    .calendar-weekdays { margin-bottom: 10px; }
+    .calendar-weekdays span { text-align: center; color: var(--muted); font-weight: 900; font-size: .82rem; text-transform: uppercase; letter-spacing: .06em; }
+    .calendar-empty { min-height: 106px; }
+    .calendar-day { min-height: 106px; border: 1px solid #d7e1ec; border-radius: 20px; background: #fff; color: var(--navy); cursor: pointer; text-align: left; padding: 14px; display: grid; align-content: space-between; gap: 10px; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease; }
+    .calendar-day:hover { transform: translateY(-2px); border-color: rgba(21,158,232,.65); box-shadow: 0 16px 30px rgba(4,26,55,.09); }
+    .calendar-day.is-past { opacity: .45; }
+    .calendar-day.is-editing { outline: 4px solid rgba(21,158,232,.22); border-color: var(--blue); background: #eef9ff; }
+    .calendar-day.is-range { border-color: #7c3aed; background: #f3efff; box-shadow: inset 0 0 0 2px rgba(124,58,237,.14); }
+    .day-number { width: 38px; height: 38px; display: inline-grid; place-items: center; border-radius: 999px; background: #f5f9fd; font-weight: 900; font-size: 1.1rem; }
+    .calendar-day.is-editing .day-number { background: var(--blue); color: #fff; }
+    .calendar-day.is-range .day-number { background: #7c3aed; color: #fff; }
+    .day-status { display: inline-flex; align-items: center; justify-content: center; min-height: 28px; padding: 0 10px; border-radius: 999px; font-size: .76rem; font-weight: 900; background: #f5f9fd; }
+    .calendar-day.has-blocks .day-status { color: #0f8a43; background: #eafaf0; }
+    .calendar-day.no-blocks .day-status { color: #d61f1f; background: #fff1f1; }
+    .legend-line { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; color: var(--muted); font-weight: 800; font-size: .93rem; }
+    .legend-dot { display: inline-block; width: 12px; height: 12px; border-radius: 999px; margin-right: 6px; vertical-align: middle; }
+    .legend-green { background: #0f8a43; }
+    .legend-red { background: #d61f1f; }
+    .legend-blue { background: var(--blue); }
+    .legend-purple { background: #7c3aed; }
+    .selection-bar { margin-top: 18px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; padding: 16px; border-radius: 20px; background: linear-gradient(135deg, #f4fbff, #f8f5ff); border: 1px solid rgba(21,158,232,.18); }
+    .selection-bar strong { color: var(--navy); }
+    .selection-bar span { color: var(--muted); font-weight: 800; }
+    .work-area { display: grid; grid-template-columns: minmax(280px, .75fr) minmax(0, 1.25fr); gap: 22px; align-items: start; }
+    .editor-mode { display: inline-flex; margin-bottom: 10px; padding: 8px 12px; border-radius: 999px; font-weight: 900; background: #eef9ff; color: var(--blue); }
+    .editor-mode[data-mode="multi"] { background: #f3efff; color: #7c3aed; }
+    .admin-form { display: grid; gap: 16px; }
+    .admin-form label { display: grid; gap: 8px; color: var(--navy); font-weight: 800; }
+    .admin-form input, .admin-form select, .admin-form textarea { width: 100%; border: 1px solid #d7e1ec; border-radius: 14px; padding: 14px 15px; background: #f9fbfe; font: inherit; }
+    .admin-form textarea { min-height: 100px; resize: vertical; }
+    .time-add-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; }
+    .quick-times { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+    .quick-time { border: 1px solid rgba(21,158,232,.28); background: #eef9ff; color: var(--navy); border-radius: 12px; min-height: 42px; font-weight: 900; cursor: pointer; }
+    .quick-time:hover { background: #dff4ff; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+    .soft-btn { background: #f5f9fd !important; color: var(--navy) !important; border-color: rgba(7,24,52,.08) !important; }
+    .danger-btn { background: #fff1f1 !important; color: #d61f1f !important; border-color: rgba(214,31,31,.22) !important; }
+    .summary-pill { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; background: #eaf8ff; color: var(--blue); font-weight: 900; margin-bottom: 14px; }
+    .block-list, .partner-list { display: grid; gap: 10px; }
+    .block-item, .partner-item { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 14px 16px; border-radius: 16px; background: #f4fbff; border: 1px solid rgba(21,158,232,.16); }
+    .block-item strong, .partner-item strong { display: block; color: var(--navy); }
+    .block-item span, .partner-item span { color: var(--muted); font-size: .92rem; font-weight: 800; }
+    .partner-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .meta-pill { display: inline-flex; padding: 6px 9px; border-radius: 999px; background: #fff; border: 1px solid rgba(7,24,52,.08); color: var(--muted); font-size: .78rem; font-weight: 900; }
+    .meta-pill.is-active { color: #0f8a43; background: #eafaf0; }
+    .meta-pill.is-inactive { color: #d61f1f; background: #fff1f1; }
+    .remove-block { border: 0; border-radius: 999px; padding: 8px 12px; background: #fff1f1; color: #d61f1f; font-weight: 900; cursor: pointer; }
+    .empty-blocks { padding: 18px; border-radius: 16px; background: #f7fafc; color: var(--muted); font-weight: 700; }
+    .partner-grid { display: grid; grid-template-columns: minmax(290px, .9fr) minmax(0, 1.1fr); gap: 22px; align-items: start; }
+    .partner-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .partner-form-grid .full { grid-column: 1 / -1; }
+    .toggle-line { display: flex !important; flex-direction: row !important; gap: 10px !important; align-items: center !important; }
+    .toggle-line input { width: auto !important; }
+    details.clean-details { border: 1px solid rgba(7,24,52,.08); border-radius: 18px; background: #f9fbfe; padding: 0; overflow: hidden; }
+    details.clean-details summary { cursor: pointer; padding: 15px 16px; color: var(--navy); font-weight: 900; list-style: none; }
+    details.clean-details summary::-webkit-details-marker { display: none; }
+    .details-inner { padding: 0 16px 16px; display: grid; gap: 14px; }
+    .bulk-grid { display: grid; gap: 16px; }
+    .bulk-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .bulk-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+    .bulk-days label { display: flex; justify-content: center; align-items: center; gap: 6px; border: 1px solid #d7e1ec; border-radius: 12px; padding: 10px; background: #fff; }
+    .form-note[data-type="success"] { color: #0f8a43 !important; }
+    .form-note[data-type="error"] { color: #d61f1f !important; }
+    .system-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .system-tile { padding: 18px; border-radius: 20px; background: #f7fbff; border: 1px solid rgba(21,158,232,.14); }
+    .system-tile strong { color: var(--navy); display: block; }
+    .system-tile span { color: var(--muted); display: block; margin-top: 6px; font-weight: 800; }
+    @media (max-width: 1050px) { .work-area, .partner-grid { grid-template-columns: 1fr; } .quick-times { grid-template-columns: repeat(4, minmax(0, 1fr)); } .console-menu, .system-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .admin-hero-clean, .clean-card-heading, .time-add-row, .bulk-row, .partner-form-grid { grid-template-columns: 1fr; display: grid; } .admin-hero-actions { justify-content: flex-start; } .month-controls { justify-content: space-between; } .calendar-weekdays, .admin-calendar-grid { gap: 6px; } .calendar-empty { min-height: 62px; } .calendar-day { min-height: 74px; padding: 8px; border-radius: 14px; } .day-number { width: 30px; height: 30px; font-size: .95rem; } .day-status { font-size: .64rem; padding: 0 6px; } .quick-times, .bulk-days { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  </style>
+  <!-- IRONGATE SEO START -->
+  <link rel="canonical" href="https://irongatepool.com.au/admin/" />
+  <link rel="icon" href="/assets/logo-no-text.png" type="image/png" />
+  <meta name="robots" content="noindex, follow" />
+  <meta property="og:locale" content="en_AU" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="IronGate Pool Inspections" />
+  <meta property="og:title" content="IronGate Admin Console | Availability & Agency Partners" />
+  <meta property="og:description" content="Admin Console for IronGate Pool Inspections." />
+  <meta property="og:url" content="https://irongatepool.com.au/admin/" />
+  <meta property="og:image" content="https://irongatepool.com.au/assets/hero_image_v2.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="IronGate Admin Console | Availability & Agency Partners" />
+  <meta name="twitter:description" content="Admin Console for IronGate Pool Inspections." />
+  <meta name="twitter:image" content="https://irongatepool.com.au/assets/hero_image_v2.png" />
+  <!-- IRONGATE SEO END -->
+</head>
+<body class="availability-admin">
+  <header class="site-header admin-header" id="top">
+    <a class="brand" href="/#home" aria-label="IronGate Pool Inspections home">
+      <span class="brand-mark" aria-hidden="true"><img src="assets/logo-no-text.png" alt="" /></span>
+      <span class="brand-copy">
+        <span class="brand-name"><span class="brand-iron">IRON</span><span class="brand-gate">GATE</span></span>
+        <span class="brand-subtitle">POOL INSPECTIONS</span>
+      </span>
+    </a>
+    <nav class="main-nav legal-nav admin-nav" aria-label="Admin navigation">
+      <a href="/booking/">Booking page</a>
+      <a href="/#home">Website</a>
+      <button class="admin-signout-btn" type="button" id="signout" hidden>Sign out</button>
+    </nav>
+  </header>
+
+  <main>
+    <section class="section">
+      <div class="container admin-shell">
+        <div class="admin-hero-clean">
+          <div>
+            <p class="section-kicker">Admin Console</p>
+            <h1>IronGate Operations</h1>
+            <p>Manage booking availability, approved agency partners, invoice accounts and the automated systems that support paid bookings.</p>
+          </div>
+          <div>
+            <div class="admin-status" id="status-pill">Checking sign in…</div>
+            <div class="admin-hero-actions" style="margin-top:12px;">
+              <a class="hero-link" href="/booking/">View booking page</a>
+              <a class="hero-link" href="/#home">View website</a>
+            </div>
+          </div>
+        </div>
+
+        <section class="admin-card" id="login-card">
+          <h2>Sign in</h2>
+          <p class="muted-help">Use the admin email you added in Firebase Authentication.</p>
+          <form class="admin-form" id="login-form">
+            <label>Email <input type="email" id="email" autocomplete="email" required /></label>
+            <label>Password <input type="password" id="password" autocomplete="current-password" required /></label>
+            <button class="btn btn-primary" type="submit">Sign in</button>
+            <p class="form-note" id="login-message" role="status" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section id="console" hidden>
+          <nav class="console-menu" aria-label="Admin console sections" role="tablist">
+            <button class="console-tab" type="button" id="tab-availability" data-tab="availability" role="tab" aria-selected="true" aria-controls="panel-availability">
+              <strong>Availability Calendar</strong>
+              <span>Create dates and 1-hour public booking times.</span>
+            </button>
+            <button class="console-tab" type="button" id="tab-partners" data-tab="partners" role="tab" aria-selected="false" aria-controls="panel-partners">
+              <strong>Agency Partners</strong>
+              <span>Manage approved agency invoice accounts and partner codes.</span>
+            </button>
+            <button class="console-tab" type="button" id="tab-systems" data-tab="systems" role="tab" aria-selected="false" aria-controls="panel-systems">
+              <strong>Automation Status</strong>
+              <span>Understand what happens after payment or invoice approval.</span>
+            </button>
+          </nav>
+
+          <div class="admin-panel" id="panel-availability" role="tabpanel" aria-labelledby="tab-availability">
+            <section class="admin-card">
+              <div class="clean-card-heading">
+                <div>
+                  <p class="section-kicker">Calendar</p>
+                  <h2>Booking availability</h2>
+                  <p class="muted-help">Click a date to edit one day. Shift-click another date to select a range. Ctrl-click (Cmd-click on Mac) dates to add or remove individual days. Existing paid/booked slots are preserved when you edit availability.</p>
+                </div>
+                <div class="month-controls">
+                  <button type="button" id="prev-month" aria-label="Previous month">‹</button>
+                  <strong id="month-title">Loading</strong>
+                  <button type="button" id="next-month" aria-label="Next month">›</button>
+                </div>
+              </div>
+
+              <div class="calendar-weekdays" aria-hidden="true">
+                <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+              </div>
+              <div class="admin-calendar-grid" id="admin-calendar" aria-label="Admin availability calendar"></div>
+              <div class="legend-line">
+                <span><i class="legend-dot legend-green"></i>Saved times</span>
+                <span><i class="legend-dot legend-red"></i>No times</span>
+                <span><i class="legend-dot legend-blue"></i>Editing</span>
+                <span><i class="legend-dot legend-purple"></i>Selected days</span>
+              </div>
+              <div class="selection-bar">
+                <div>
+                  <strong id="selected-range-title">1 day selected</strong><br>
+                  <span id="selected-range-help">Shift-click for a range, or Ctrl/Cmd-click to pick individual days.</span>
+                </div>
+                <button class="btn soft-btn" type="button" id="clear-selected-days">Back to single day</button>
+              </div>
+            </section>
+
+            <div class="work-area">
+              <section class="admin-card">
+                <p class="section-kicker" id="editor-kicker">Selected Day</p>
+                <span class="editor-mode" id="editor-mode-pill">Single-day edit</span>
+                <h2 id="selected-heading">No date selected</h2>
+                <p class="muted-help" id="editor-help">Add the 1-hour times you are available for this date.</p>
+
+                <form class="admin-form" id="day-form">
+                  <label>Date <input type="date" id="selected-date" required /></label>
+                  <div class="time-add-row">
+                    <label>Start time <input type="time" id="slot-start" step="3600" value="08:00" /></label>
+                    <button class="btn btn-primary" type="button" id="add-block">Add time</button>
+                  </div>
+
+                  <div>
+                    <span class="field-title">Quick add</span>
+                    <div class="quick-times" id="quick-times">
+                      <button type="button" class="quick-time" data-time="07:00">7 AM</button>
+                      <button type="button" class="quick-time" data-time="08:00">8 AM</button>
+                      <button type="button" class="quick-time" data-time="09:00">9 AM</button>
+                      <button type="button" class="quick-time" data-time="10:00">10 AM</button>
+                      <button type="button" class="quick-time" data-time="11:00">11 AM</button>
+                      <button type="button" class="quick-time" data-time="12:00">12 PM</button>
+                      <button type="button" class="quick-time" data-time="13:00">1 PM</button>
+                      <button type="button" class="quick-time" data-time="14:00">2 PM</button>
+                      <button type="button" class="quick-time" data-time="15:00">3 PM</button>
+                      <button type="button" class="quick-time" data-time="16:00">4 PM</button>
+                      <button type="button" class="quick-time" data-time="17:00">5 PM</button>
+                      <button type="button" class="quick-time" data-time="18:00">6 PM</button>
+                    </div>
+                  </div>
+
+                  <details class="clean-details">
+                    <summary>More options</summary>
+                    <div class="details-inner">
+                      <label>Public note <input type="text" id="day-note" placeholder="Example: Please choose one available time below" /></label>
+                      <label>Internal note / closed reason <input type="text" id="day-reason" placeholder="Example: Extra Saturday / normal day / closed" /></label>
+                    </div>
+                  </details>
+
+                  <div class="actions">
+                    <button class="btn btn-primary" type="submit" id="save-day">Save this date</button>
+                    <button class="btn soft-btn" type="button" id="clear-blocks">Clear times</button>
+                    <button class="btn danger-btn" type="button" id="delete-day">Delete date</button>
+                  </div>
+                  <p class="form-note" id="day-message" role="status" aria-live="polite"></p>
+                </form>
+              </section>
+
+              <section class="admin-card">
+                <div class="summary-pill"><strong id="block-count">0</strong> available time/s in the editor</div>
+                <div class="block-list" id="block-list"></div>
+              </section>
+            </div>
+
+            <details class="admin-card clean-details">
+              <summary>Advanced: bulk setup and range deletion</summary>
+              <div class="details-inner">
+                <p class="muted-help">Use this when you want to create or delete availability across a large date range. Booked/confirmed slots are preserved.</p>
+                <form class="admin-form bulk-grid" id="bulk-form">
+                  <div class="bulk-row">
+                    <label>From date <input type="date" id="bulk-start" required /></label>
+                    <label>To date <input type="date" id="bulk-end" required /></label>
+                  </div>
+                  <div class="bulk-row">
+                    <label>Start time <input type="time" id="bulk-start-time" step="3600" value="08:00" required /></label>
+                    <label>Finish time <input type="time" id="bulk-end-time" step="3600" value="14:00" required /></label>
+                  </div>
+                  <div>
+                    <span class="field-title">Apply to days</span>
+                    <div class="bulk-days">
+                      <label><input type="checkbox" class="bulk-day" value="1" checked /> Mon</label>
+                      <label><input type="checkbox" class="bulk-day" value="2" checked /> Tue</label>
+                      <label><input type="checkbox" class="bulk-day" value="3" checked /> Wed</label>
+                      <label><input type="checkbox" class="bulk-day" value="4" checked /> Thu</label>
+                      <label><input type="checkbox" class="bulk-day" value="5" checked /> Fri</label>
+                      <label><input type="checkbox" class="bulk-day" value="6" /> Sat</label>
+                      <label><input type="checkbox" class="bulk-day" value="0" /> Sun</label>
+                    </div>
+                  </div>
+                  <label>Note <input type="text" id="bulk-note" placeholder="Example: Regular inspection hours" /></label>
+                  <div class="actions">
+                    <button class="btn btn-primary" type="submit" id="bulk-save">Create times for range</button>
+                    <button class="btn danger-btn" type="button" id="bulk-delete">Delete range availability</button>
+                  </div>
+                  <p class="form-note" id="bulk-message" role="status" aria-live="polite"></p>
+                </form>
+              </div>
+            </details>
+          </div>
+
+          <div class="admin-panel" id="panel-partners" role="tabpanel" aria-labelledby="tab-partners" hidden>
+            <div class="partner-grid">
+              <section class="admin-card">
+                <div class="clean-card-heading">
+                  <div>
+                    <p class="section-kicker">Agency Partners</p>
+                    <h2>Create or edit partner</h2>
+                    <p class="muted-help">Use partner codes for approved invoice bookings. Stripe promo codes are separate and are entered on the Stripe payment page.</p>
+                  </div>
+                </div>
+                <form class="admin-form" id="partner-form">
+                  <div class="partner-form-grid">
+                    <label>Partner code
+                      <input type="text" id="partner-code" placeholder="BIGHOUSE" autocomplete="off" required />
+                    </label>
+                    <label>Status
+                      <select id="partner-status">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </label>
+                    <label class="full">Agency name
+                      <input type="text" id="partner-agency-name" placeholder="BigHouse Agency" required />
+                    </label>
+                    <label>Primary contact
+                      <input type="text" id="partner-contact-name" placeholder="Property manager / office contact" />
+                    </label>
+                    <label>Contact email
+                      <input type="email" id="partner-contact-email" placeholder="agent@example.com" />
+                    </label>
+                    <label>Contact phone
+                      <input type="tel" id="partner-contact-phone" placeholder="04XX XXX XXX" />
+                    </label>
+                    <label>Stripe promo code
+                      <input type="text" id="partner-discount-code" placeholder="BIGHOUSE25" />
+                    </label>
+                    <label>Invoice terms
+                      <input type="text" id="partner-invoice-terms" value="7 days" />
+                    </label>
+                    <label class="full toggle-line">
+                      <input type="checkbox" id="partner-invoice-enabled" checked />
+                      <span>Enable approved agency invoice account</span>
+                    </label>
+                    <label class="full">Internal notes
+                      <textarea id="partner-notes" placeholder="Example: PM team uses BIGHOUSE partner code. Promo code is BIGHOUSE25 for pay-now bookings."></textarea>
+                    </label>
+                  </div>
+                  <div class="actions">
+                    <button class="btn btn-primary" type="submit" id="save-partner">Save partner</button>
+                    <button class="btn soft-btn" type="button" id="reset-partner">New partner</button>
+                    <button class="btn danger-btn" type="button" id="deactivate-partner">Deactivate partner</button>
+                  </div>
+                  <p class="form-note" id="partner-message" role="status" aria-live="polite"></p>
+                </form>
+              </section>
+
+              <section class="admin-card">
+                <div class="clean-card-heading">
+                  <div>
+                    <p class="section-kicker">Partner List</p>
+                    <h2>Approved agencies</h2>
+                    <p class="muted-help">Invoice bookings only work when the partner code is active and invoice account is enabled.</p>
+                  </div>
+                  <button class="btn soft-btn" type="button" id="reload-partners">Reload</button>
+                </div>
+                <div class="summary-pill"><strong id="partner-count">0</strong> partner/s</div>
+                <div class="partner-list" id="partner-list"></div>
+              </section>
+            </div>
+          </div>
+
+          <div class="admin-panel" id="panel-systems" role="tabpanel" aria-labelledby="tab-systems" hidden>
+            <section class="admin-card">
+              <p class="section-kicker">Automation</p>
+              <h2>Booking flow status</h2>
+              <p class="muted-help">These functions are controlled by Firebase and Stripe. This panel is a quick reference so the admin console reflects the whole system.</p>
+              <div class="system-grid" style="margin-top:18px;">
+                <div class="system-tile">
+                  <strong>Stripe payment</strong>
+                  <span>Homeowners and pay-now agents are sent to Stripe Checkout. Promotion codes are enabled.</span>
+                </div>
+                <div class="system-tile">
+                  <strong>Availability lock</strong>
+                  <span>Paid bookings and approved agency invoice bookings lock the selected slot.</span>
+                </div>
+                <div class="system-tile">
+                  <strong>Google Calendar</strong>
+                  <span>Confirmed bookings create events in the IronGate Pool Inspections calendar.</span>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/js/admin-console.js"></script>
+</body>
+</html>

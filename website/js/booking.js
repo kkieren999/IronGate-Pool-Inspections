@@ -1,6 +1,4 @@
-const form = document.querySelector("#booking-form");
 const message = document.querySelector("#booking-message");
-const submitButton = document.querySelector("#booking-submit");
 const priceNotice = document.querySelector("#booking-price-notice");
 const calendarGrid = document.querySelector("#calendar-grid");
 const calendarTitle = document.querySelector("#calendar-title");
@@ -18,14 +16,11 @@ const addressStatus = document.querySelector("#address-status");
 const addressSuggestions = document.querySelector("#address-suggestions");
 const exemptionToggle = document.querySelector("#hasPoolExemption");
 const exemptionPanel = document.querySelector("#exemption-upload-panel");
-const exemptionFileInput = document.querySelector("#exemptionFile");
 const animalsOnPropertyInput = document.querySelector("#animalsOnProperty");
 const animalsOffLeashInput = document.querySelector("#animalsOffLeash");
 const animalPanel = document.querySelector("#animal-restraint-panel");
 
-const inspectionPriceCents = 14900;
 const inspectionPriceDisplay = "$149";
-const maxUploadBytes = 10 * 1024 * 1024;
 const GEOAPIFY_API_KEY = "8d1bacfb41584094b808c255bc8ef70c";
 const QBCC_POOL_REGISTER_URL = "https://my.qbcc.qld.gov.au/myQBCC/s/pool-register";
 const QLD_POOL_REGISTER_RESOURCE_ID = "bb059c35-d826-4ccd-af31-24de4716864a";
@@ -79,21 +74,6 @@ if (priceNotice) {
   priceNotice.textContent = `Pool Safety Inspection & Certificate — ${inspectionPriceDisplay}`;
 }
 
-function getValue(selector) {
-  const element = document.querySelector(selector);
-  return element ? element.value.trim() : "";
-}
-
-function getChecked(selector) {
-  return document.querySelector(selector)?.checked === true;
-}
-
-function setLoading(isLoading, text = "Saving...") {
-  if (!submitButton) return;
-  submitButton.disabled = isLoading;
-  submitButton.textContent = isLoading ? text : "Save Booking Test";
-}
-
 function showMessage(text, type = "") {
   if (!message) return;
   message.textContent = text;
@@ -134,14 +114,6 @@ function formatDisplayDate(dateKey) {
 
 function getMonthEnd(date) {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0);
-}
-
-function isPastDate(date) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const compare = new Date(date);
-  compare.setHours(0, 0, 0, 0);
-  return compare < today;
 }
 
 function todayBusinessDateKey() {
@@ -406,34 +378,6 @@ function toggleConditionalPanels() {
   const animalConcern = animalsOnPropertyInput?.checked === true || animalsOffLeashInput?.checked === true;
   if (exemptionPanel) exemptionPanel.classList.toggle("is-visible", hasExemption);
   if (animalPanel) animalPanel.classList.toggle("is-visible", animalConcern);
-}
-
-function normaliseAustralianMobile(value) {
-  const compact = String(value || "").replace(/[\s()-]/g, "");
-  if (/^04\d{8}$/.test(compact)) return compact;
-  if (/^\+614\d{8}$/.test(compact)) return compact;
-  if (/^614\d{8}$/.test(compact)) return `+${compact}`;
-  return "";
-}
-
-function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
-}
-
-function validateFile(file) {
-  if (!file) return "Please upload the pool exemption document.";
-  const allowedTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
-  if (!allowedTypes.includes(file.type)) return "The exemption upload must be a PDF, JPG, PNG or WEBP file.";
-  if (file.size > maxUploadBytes) return "The exemption upload must be 10 MB or smaller.";
-  return "";
-}
-
-function sanitizeFileName(name) {
-  return String(name || "exemption-file")
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, "-")
-    .replace(/-+/g, "-")
-    .slice(0, 120);
 }
 
 function escapeHtml(value) {
@@ -875,43 +819,6 @@ async function verifyPoolRegistration() {
   }
 }
 
-function validateBookingForm() {
-  const email = getValue("#email");
-  const mobile = normaliseAustralianMobile(getValue("#phone"));
-  const hasAddress = getValue("#propertyAddress").length > 8;
-  const addressSelected = addressSelectedInput?.value === "true";
-  const isOwner = getChecked("#isPropertyOwner");
-  const authorised = getChecked("#authorisedToBook");
-  const animalsNeedAttention = getChecked("#animalsOnProperty") || getChecked("#animalsOffLeash");
-  const hasExemption = getChecked("#hasPoolExemption");
-  const exemptionFile = exemptionFileInput?.files?.[0] || null;
-
-  if (!isValidEmail(email)) return "Please enter a valid email address.";
-  if (!mobile) return "Please enter a valid Australian mobile number, for example 04XX XXX XXX.";
-  if (!hasAddress) return "Please enter the property address.";
-  if (!addressSelected) return "Please select the property address from the address suggestions.";
-
-  if (!canContinueAfterPoolRegisterCheck()) {
-    if (poolRegisterStatus === "checking") return "Please wait for the pool register check to finish.";
-    if (poolRegisterStatus === "registered") return "Please confirm the pool registration information looks right before continuing.";
-    return "Please try another address, check/register the pool with QBCC, or confirm there is a pool at this property using the fail-safe option.";
-  }
-
-  if (!isOwner && !authorised) return "Please confirm you are the property owner or authorised to arrange the inspection.";
-  if (!selectedDate) return "Please choose an available inspection date from the calendar.";
-  if (!selectedTimeSlot) return "Please choose one available 1-hour time slot.";
-  if (!getChecked("#willBeHomeForInspection") && !getChecked("#accessPermissionIfNotHome")) return "Please confirm whether you will be home or whether access is permitted if you are not home.";
-  if (animalsNeedAttention && !getChecked("#animalsWillBeSecured")) return "Please confirm dogs or other animals will be securely restrained away from the inspection area.";
-  if (hasExemption) {
-    const fileError = validateFile(exemptionFile);
-    if (fileError) return fileError;
-  }
-  if (!getChecked("#nonComplianceAcknowledged")) return "Please acknowledge that a certificate cannot be issued until the pool barrier is compliant.";
-  if (!getChecked("#informationAccuracyConfirmed")) return "Please confirm the information provided is accurate.";
-  if (!getChecked("#termsAccepted")) return "Please accept the terms, privacy policy and refunds policy.";
-  return "";
-}
-
 function clearAddressSuggestions() {
   if (!addressSuggestions) return;
   addressSuggestions.innerHTML = "";
@@ -1032,144 +939,8 @@ function wireBasicEvents() {
   });
 }
 
-async function uploadExemptionIfNeeded(bookingId) {
-  const hasExemption = getChecked("#hasPoolExemption");
-  const exemptionFile = exemptionFileInput?.files?.[0] || null;
-  if (!hasExemption || !exemptionFile) return null;
-
-  const { app, getStorage, storageRef, uploadBytes } = await getFirebaseModules();
-  const storage = getStorage(app);
-  const fileName = `${Date.now()}-${sanitizeFileName(exemptionFile.name)}`;
-  const filePath = `booking-exemptions/${bookingId}/${fileName}`;
-  const fileRef = storageRef(storage, filePath);
-
-  await uploadBytes(fileRef, exemptionFile, {
-    contentType: exemptionFile.type,
-    customMetadata: { bookingId, originalFileName: exemptionFile.name }
-  });
-
-  return {
-    uploaded: true,
-    storagePath: filePath,
-    fileName: exemptionFile.name,
-    fileType: exemptionFile.type,
-    fileSize: exemptionFile.size
-  };
-}
-
-async function handleBookingSubmit(event) {
-  event.preventDefault();
-  showMessage("");
-
-  const validationError = validateBookingForm();
-  if (validationError) {
-    showMessage(validationError, "error");
-    return;
-  }
-
-  setLoading(true, getChecked("#hasPoolExemption") ? "Uploading..." : "Saving...");
-
-  try {
-    const { db, collection, doc, setDoc, serverTimestamp } = await getFirebaseModules();
-    const bookingDocRef = doc(collection(db, "bookings"));
-    const exemptionFileData = await uploadExemptionIfNeeded(bookingDocRef.id);
-    const termsAccepted = getChecked("#termsAccepted");
-    const hasExemption = getChecked("#hasPoolExemption");
-
-    setLoading(true, "Saving...");
-
-    const bookingData = {
-      customerName: getValue("#customerName"),
-      email: getValue("#email"),
-      phone: normaliseAustralianMobile(getValue("#phone")),
-      propertyAddress: getValue("#propertyAddress"),
-      propertyAddressSelected: addressSelectedInput?.value === "true",
-      propertyPlaceId: getValue("#propertyPlaceId"),
-      selectedAddress,
-
-      poolRegisterStatus,
-      poolRegisterMessage,
-      poolRegisterDetails,
-      poolRegisterCheckedAt,
-      poolRegisterLooksRight,
-      poolRegisterOverrideConfirmed,
-      poolRegisterLookupSource: POOL_REGISTER_LOOKUP_ENDPOINT ? "backend_lookup" : "qld_open_data_direct",
-
-      isPropertyOwner: getChecked("#isPropertyOwner"),
-      authorisedToBook: getChecked("#authorisedToBook"),
-      clientType: getChecked("#isPropertyOwner") ? "Property owner" : "Authorised representative",
-      inspectionReason: getValue("#inspectionReason"),
-      poolType: getValue("#poolType"),
-      existingCertificateStatus: getValue("#existingCertificateStatus"),
-      poolRegisteredStatus: getValue("#poolRegisteredStatus"),
-
-      preferredDate: selectedDate,
-      preferredDateDisplay: formatDisplayDate(selectedDate),
-      preferredTimeSlot: selectedTimeSlot.id,
-      preferredTimeLabel: selectedTimeSlot.label,
-      preferredTimeStart: selectedTimeSlot.start,
-      preferredTimeEnd: selectedTimeSlot.end,
-      preferredTime: selectedTimeSlot.label,
-
-      willBeHomeForInspection: getChecked("#willBeHomeForInspection"),
-      accessPermissionIfNotHome: getChecked("#accessPermissionIfNotHome"),
-      animalsOnProperty: getChecked("#animalsOnProperty"),
-      animalsOffLeash: getChecked("#animalsOffLeash"),
-      animalsWillBeSecured: getChecked("#animalsWillBeSecured"),
-      accessInstructions: getValue("#accessInstructions"),
-
-      hasPoolExemption: hasExemption,
-      exemptionFileUploaded: Boolean(exemptionFileData),
-      exemptionFile: exemptionFileData,
-      minorRepairsContactAccepted: getChecked("#minorRepairsContactAccepted"),
-      nonComplianceAcknowledged: getChecked("#nonComplianceAcknowledged"),
-      informationAccuracyConfirmed: getChecked("#informationAccuracyConfirmed"),
-      notes: getValue("#notes"),
-
-      serviceName: "Pool Safety Inspection & Certificate",
-      priceCents: inspectionPriceCents,
-      priceDisplay: inspectionPriceDisplay,
-      currency: "aud",
-      status: "pending_payment",
-      paymentStatus: "unpaid",
-      stripeSessionId: null,
-      stripePaymentIntentId: null,
-      termsAccepted,
-      privacyAccepted: termsAccepted,
-      source: "website_booking_form",
-      createdAt: serverTimestamp(),
-      paidAt: null
-    };
-
-    await setDoc(bookingDocRef, bookingData);
-    showMessage(`Booking saved successfully. Booking ID: ${bookingDocRef.id}`, "success");
-
-    form.reset();
-    selectedDate = "";
-    selectedAddress = null;
-    if (addressSelectedInput) addressSelectedInput.value = "false";
-    if (propertyPlaceIdInput) propertyPlaceIdInput.value = "";
-    setAddressStatus("Start typing and select the property address from the suggestions.", "");
-    resetPoolRegisterState();
-    resetSelectedSlot();
-    toggleConditionalPanels();
-    if (preferredDateInput) preferredDateInput.value = "";
-    if (selectedDateLabel) {
-      selectedDateLabel.textContent = "No date selected yet.";
-      selectedDateLabel.dataset.type = "";
-    }
-    renderCalendar();
-    renderTimeSlots();
-    console.log("Booking saved:", bookingDocRef.id);
-  } catch (error) {
-    console.error("Error saving booking:", error);
-    showMessage("We could not save the booking. Please refresh and try again, or call IronGate on 0481 442 260.", "error");
-  } finally {
-    setLoading(false);
-  }
-}
-
-if (form) form.addEventListener("submit", handleBookingSubmit);
+// Form submission is exclusively handled by booking-stripe.js.
+// The calendar, address and pool-register UI remain in this module.
 wireBasicEvents();
 initAddressAutocomplete();
 toggleConditionalPanels();

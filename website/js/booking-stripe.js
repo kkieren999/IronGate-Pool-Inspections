@@ -1,4 +1,3 @@
-import "./site-licence.js";
 import "./booking-customer-type.js";
 import { app, db } from "./firebase-config.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
@@ -335,7 +334,6 @@ async function handlePrivateBookingCheckout(booking) {
 
 async function handleBackendBookingSubmit(event) {
   event.preventDefault();
-  event.stopImmediatePropagation();
 
   if (redirectStarted) return;
   setMessage("");
@@ -381,16 +379,7 @@ async function handleBackendBookingSubmit(event) {
 setCustomerFacingCopy();
 
 if (form) {
-  form.addEventListener("submit", handleBackendBookingSubmit, { capture: true });
-}
-
-if (submitButton) {
-  const buttonObserver = new MutationObserver(() => {
-    if (!submitButton.disabled && submitButton.textContent.trim() === "Save Booking Test") {
-      submitButton.textContent = "Continue to Secure Payment";
-    }
-  });
-  buttonObserver.observe(submitButton, { childList: true, characterData: true, subtree: true });
+  form.addEventListener("submit", handleBackendBookingSubmit);
 }
 
 if (privateInviteToken) {
