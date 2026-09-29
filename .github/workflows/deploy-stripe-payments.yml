@@ -47,7 +47,7 @@ jobs:
           log_file="$(mktemp)"
           set -uo pipefail
           set +e
-          npx --yes firebase-tools@15.22.3 deploy --only functions:payments:createBookingCheckoutSession,functions:payments:createAgencyInvoiceBooking,functions:payments:stripeWebhook,functions:payments:adminMoveBooking,functions:payments:adminCancelBooking --project irongate-pool-inspection-256b4 --non-interactive 2>&1 | tee "$log_file"
+          npx --yes firebase-tools@15.22.3 deploy --only functions:payments:createBookingCheckoutSession,functions:payments:createAgencyInvoiceBooking,functions:payments:stripeWebhook,functions:payments:adminMoveBooking,functions:payments:adminCancelBooking,functions:payments:adminRefundBooking --project irongate-pool-inspection-256b4 --non-interactive 2>&1 | tee "$log_file"
           deploy_status=${PIPESTATUS[0]}
           set -e
           if [ "$deploy_status" -eq 0 ]; then

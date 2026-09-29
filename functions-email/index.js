@@ -239,7 +239,7 @@ function calendarUpdateAttachmentMethod(type) {
 }
 
 function shouldIncludeCalendarInvite(type) {
-  return !["completed", "certificate_issued"].includes(type);
+  return !["completed", "certificate_issued", "refund_updated"].includes(type);
 }
 
 function yesNo(value) {
@@ -452,6 +452,24 @@ function adminUpdateCopy(type, booking = {}) {
         ["Previous date", previousDate || "Not provided"],
         ["Previous time", previousTime || "Not provided"],
         ["Property", field(booking, "propertyAddress")]
+      ]
+    };
+  }
+
+  if (type === "refund_updated") {
+    const cents = Number(booking.lastRefundAmountCents || 0);
+    const refundAmount = Number.isFinite(cents) && cents > 0
+      ? new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(cents / 100)
+      : "a refund";
+    return {
+      subject: "Your IronGate payment refund has been processed",
+      title: "Refund update", badge: "Refund processed",
+      intro: "A refund of " + refundAmount + " has been processed to your original payment method. Your inspection date and cancellation status have not changed as part of this payment update.",
+      rows: [
+        ["Refund amount", refundAmount],
+        ["Refund status", field(booking, "refundStatus", "Processed")],
+        ["Property", field(booking, "propertyAddress")],
+        ["Booking status", field(booking, "status")]
       ]
     };
   }

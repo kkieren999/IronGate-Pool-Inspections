@@ -204,7 +204,7 @@
             <button class="console-tab" type="button" id="tab-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="panel-overview"><strong>Overview</strong><span>Today's work and booking priorities.</span></button>
             <button class="console-tab" type="button" id="tab-bookings" data-tab="bookings" role="tab" aria-selected="false" aria-controls="panel-bookings"><strong>Bookings</strong><span>Find appointments and review booking form details.</span></button>
             <button class="console-tab" type="button" id="tab-availability" data-tab="availability" role="tab" aria-selected="false" aria-controls="panel-availability"><strong>Calendar &amp; availability</strong><span>Manage time slots and private invitations.</span></button>
-            <button class="console-tab" type="button" id="tab-payments" data-tab="payments" role="tab" aria-selected="false" aria-controls="panel-payments"><strong>Payments &amp; refunds</strong><span>View payment states. Refund controls follow in a separate PR.</span></button>
+            <button class="console-tab" type="button" id="tab-payments" data-tab="payments" role="tab" aria-selected="false" aria-controls="panel-payments"><strong>Payments &amp; refunds</strong><span>Review Stripe payments and request full or partial refunds.</span></button>
             <button class="console-tab" type="button" id="tab-partners" data-tab="partners" role="tab" aria-selected="false" aria-controls="panel-partners"><strong>Customers &amp; agencies</strong><span>Manage existing agency partners.</span></button>
             <button class="console-tab" type="button" id="tab-systems" data-tab="systems" role="tab" aria-selected="false" aria-controls="panel-systems"><strong>Settings &amp; activity</strong><span>Automation reference and deployment checks.</span></button>
           </nav>
@@ -226,7 +226,7 @@
           <div class="admin-panel" id="panel-bookings" role="tabpanel" aria-labelledby="tab-bookings" hidden>
             <section class="admin-card">
               <div class="clean-card-heading"><div><p class="section-kicker">Booking management</p><h2>Recent bookings</h2>
-                <p class="muted-help">Review the latest 150 bookings. Confirmed appointments can be moved or cancelled securely; refund controls follow in the next PR.</p></div></div>
+                <p class="muted-help">Review the latest 150 bookings. Move and cancel confirmed appointments here; full and partial refunds are in Payments & refunds.</p></div></div>
               <div class="booking-toolbar">
                 <label>Search bookings<input id="booking-search" type="search" placeholder="Name, property, email, reference" autocomplete="off" /></label>
                 <label>Filter status<select id="booking-status-filter"><option value="all">All statuses</option><option value="confirmed">Confirmed</option><option value="pending">Awaiting payment</option><option value="cancelled">Cancelled</option><option value="completed">Completed</option></select></label>
@@ -242,8 +242,10 @@
 
           <div class="admin-panel" id="panel-payments" role="tabpanel" aria-labelledby="tab-payments" hidden>
             <section class="admin-card"><p class="section-kicker">Finance</p><h2>Payments &amp; refunds</h2>
-              <p class="booking-readonly-note">Payment status is read-only in this PR. Refunds will require a protected server action and confirmation; they will never be issued by editing a Firestore field.</p>
+              <p class="booking-readonly-note">Full and partial refunds require an explicit amount, reason and confirmation. Appointment cancellation is separate from issuing a refund.</p>
               <p class="muted-help" id="payments-overview">Select a booking under Bookings to review its payment details.</p>
+              <p class="muted-help">Select a recent paid booking below or select a booking first and then open this tab. The backend verifies all amounts directly with Stripe.</p>
+              <div class="booking-workspace"><div id="refund-queue" class="booking-results" aria-label="Paid bookings"></div><div id="refund-management-host" class="booking-detail">Select a paid booking to review refund options.</div></div>
             </section>
           </div>
 

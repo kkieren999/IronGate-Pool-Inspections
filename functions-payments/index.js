@@ -11,6 +11,7 @@ const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 const db = admin.firestore();
 const { executeAdminBookingChange } = require("./admin-booking-service");
+const { adminRefundBooking, reconcileRefundEvent } = require("./admin-refunds");
 
 const INSPECTION_PRICE_CENTS = 14900;
 const INSPECTION_PRICE_DISPLAY = "$149";
@@ -429,10 +430,11 @@ async function markCheckoutSessionPaid(session) {
   const hasDiscount = discount > 0;
   const checkoutComplete = isCompletedCheckoutSession(session);
   const paymentStatus = checkoutComplete ? "paid" : session.payment_status || "unknown";
+  const alreadyCancelled = booking.status === "cancelled";
 
   await bookingRef.set(
     {
-      status: checkoutComplete ? "confirmed" : "payment_processing",
+      status: alreadyCancelled ? "cancelled" : (checkoutComplete ? "confirmed" : "payment_processing"),
       paymentStatus,
       stripePaymentStatus: session.payment_status || "unknown",
       paymentMethod: "stripe_checkout",
@@ -460,7 +462,7 @@ async function markCheckoutSessionPaid(session) {
     { merge: true }
   );
 
-  if (checkoutComplete) {
+  if (checkoutComplete && !alreadyCancelled) {
     await confirmAvailabilityReservation(bookingId, booking, paymentStatus);
   }
 
@@ -484,6 +486,9 @@ async function markCheckoutSessionExpired(session) {
   const bookingRef = db.collection("bookings").doc(bookingId);
   const bookingSnapshot = await bookingRef.get();
   const booking = bookingSnapshot.exists ? bookingSnapshot.data() || {} : {};
+
+  if (!bookingSnapshot.exists || booking.paymentStatus === "paid" || booking.status === "cancelled" ||
+      (booking.stripeCheckoutSessionId && booking.stripeCheckoutSessionId !== session.id)) return;
 
   await releaseAvailabilityReservation(bookingId, booking);
 
@@ -550,6 +555,10 @@ exports.stripeWebhook = onRequest(
         await markCheckoutSessionExpired(event.data.object);
       }
 
+      if (["refund.created", "refund.updated", "refund.failed"].includes(event.type)) {
+        await reconcileRefundEvent(stripe, event.data.object);
+      }
+
       res.status(200).json({ received: true });
     } catch (error) {
       logger.error("Stripe webhook handling failed", {
@@ -570,3 +579,9 @@ exports.adminMoveBooking = onCall({
 exports.adminCancelBooking = onCall({
   region: "us-central1", timeoutSeconds: 30, memory: "256MiB", invoker: "public"
 }, async (request) => executeAdminBookingChange(request, "cancel"));
+
+
+exports.adminRefundBooking = onCall({
+  region: "us-central1", timeoutSeconds: 60, memory: "256MiB",
+  invoker: "public", secrets: [STRIPE_SECRET_KEY]
+}, async (request) => adminRefundBooking(request, getStripe()));
