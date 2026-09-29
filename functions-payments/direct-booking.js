@@ -10,6 +10,20 @@ const BOOKING_ALLOWED_FIELDS = [
   "isPropertyOwner",
   "authorisedToBook",
   "clientType",
+  "bookingRoleCode",
+  "agencyName",
+  "bookingRelationship",
+  "poolOwnerStatus",
+  "poolOwnerName",
+  "poolOwnerEmail",
+  "ownerDetailsPending",
+  "accessSameAsBooking",
+  "accessContactName",
+  "accessContactPhone",
+  "accessContactEmail",
+  "accessContactAgency",
+  "accessMethod",
+  "keyCollectionLocation",
   "inspectionReason",
   "poolType",
   "existingCertificateStatus",
@@ -37,6 +51,12 @@ const BOOKING_ALLOWED_FIELDS = [
 ];
 
 const CHECKOUT_HOLD_MINUTES = 30;
+const BOOKING_ROLES = Object.freeze({
+  owner: "Property owner",
+  agent: "Real estate agent / property manager",
+  agency: "Agency / organisation representative",
+  other: "Other authorised person"
+});
 
 function asString(value, fallback = "") {
   if (value === undefined || value === null) return fallback;
@@ -142,6 +162,61 @@ function assertValidBooking(booking) {
     throw codedError("invalid-argument", "Invalid customer email address.");
   }
 
+  const role = asString(booking.bookingRoleCode);
+  if (!Object.hasOwn(BOOKING_ROLES, role)) {
+    throw codedError("invalid-argument", "Choose a valid booking contact role.");
+  }
+  const isOwner = role === "owner";
+  if (booking.isPropertyOwner !== isOwner ||
+      (isOwner ? booking.poolOwnerStatus !== "self" : !asBoolean(booking.authorisedToBook))) {
+    throw codedError("invalid-argument", "Please confirm the pool owner or your authority to book.");
+  }
+  if (["agent", "agency"].includes(role) && !asString(booking.agencyName)) {
+    throw codedError("invalid-argument", "Company or agency name is required.");
+  }
+  if (role === "other" && !asString(booking.bookingRelationship)) {
+    throw codedError("invalid-argument", "Please describe your relationship to the property.");
+  }
+  const ownerStatus = asString(booking.poolOwnerStatus);
+  if (!["self", "different", "pending"].includes(ownerStatus) ||
+      (isOwner && ownerStatus !== "self") || (!isOwner && ownerStatus === "self")) {
+    throw codedError("invalid-argument", "Choose a valid pool owner status.");
+  }
+  if (ownerStatus === "different" && !asString(booking.poolOwnerName)) {
+    throw codedError("invalid-argument", "Pool owner's name is required when their details are known.");
+  }
+  if (ownerStatus === "pending" && booking.ownerDetailsPending !== true) {
+    throw codedError("invalid-argument", "Outstanding owner details must be recorded.");
+  }
+  if (booking.poolOwnerEmail && !/^\S+@\S+\.\S+$/.test(asString(booking.poolOwnerEmail))) {
+    throw codedError("invalid-argument", "Invalid pool owner email.");
+  }
+  if (booking.accessSameAsBooking !== true &&
+      (!asString(booking.accessContactName) || !/^[+0-9()\s-]{6,22}$/.test(asString(booking.accessContactPhone)))) {
+    throw codedError("invalid-argument", "Enter a valid separate access contact and phone number.");
+  }
+  if (booking.accessContactEmail && !/^\S+@\S+\.\S+$/.test(asString(booking.accessContactEmail))) {
+    throw codedError("invalid-argument", "Invalid access contact email.");
+  }
+  if (!["on_site", "keys", "lockbox", "other"].includes(booking.accessMethod) ||
+      (booking.accessMethod === "keys" && !asString(booking.keyCollectionLocation)) ||
+      (booking.accessMethod !== "on_site" && booking.accessPermissionIfNotHome !== true)) {
+    throw codedError("invalid-argument", "Please confirm valid property access arrangements.");
+  }
+  if (booking.animalsOnProperty === true && booking.animalsWillBeSecured !== true) {
+    throw codedError("invalid-argument", "Animals must be secured before inspection.");
+  }
+  const limits = {
+    customerName: 140, email: 180, agencyName: 140, bookingRelationship: 140,
+    poolOwnerName: 180, poolOwnerEmail: 180, accessContactName: 140,
+    accessContactPhone: 22, accessContactEmail: 180, accessContactAgency: 140,
+    keyCollectionLocation: 400, accessInstructions: 1500, notes: 1500
+  };
+  for (const [key, max] of Object.entries(limits)) {
+    if (asString(booking[key]).length > max) {
+      throw codedError("invalid-argument", "The " + key + " field is too long.");
+    }
+  }
   assertBookableDate(booking.preferredDate);
 }
 
@@ -160,7 +235,30 @@ function publicBookingData(rawBooking = {}, config = {}) {
   booking.propertyAddress = asString(booking.propertyAddress);
   booking.propertyAddressSelected = asBoolean(booking.propertyAddressSelected);
   booking.propertyPlaceId = asString(booking.propertyPlaceId);
-  booking.clientType = asString(booking.clientType, booking.isPropertyOwner ? "Property owner" : "Authorised representative");
+  booking.bookingRoleCode = asString(booking.bookingRoleCode);
+  booking.clientType = BOOKING_ROLES[booking.bookingRoleCode] || "";
+  booking.bookingRole = booking.clientType;
+  for (const key of [
+    "agencyName", "bookingRelationship", "poolOwnerName", "poolOwnerEmail",
+    "accessContactName", "accessContactPhone", "accessContactEmail",
+    "accessContactAgency", "keyCollectionLocation"
+  ]) booking[key] = asString(booking[key]);
+  booking.poolOwnerEmail = booking.poolOwnerEmail.toLowerCase();
+  booking.accessContactEmail = booking.accessContactEmail.toLowerCase();
+  booking.poolOwnerStatus = asString(booking.poolOwnerStatus);
+  booking.accessMethod = asString(booking.accessMethod);
+  booking.ownerDetailsPending = booking.poolOwnerStatus === "pending";
+  booking.accessSameAsBooking = asBoolean(booking.accessSameAsBooking);
+  if (booking.bookingRoleCode === "owner") {
+    booking.poolOwnerName = booking.customerName;
+    booking.poolOwnerEmail = booking.email;
+  }
+  if (booking.accessSameAsBooking) {
+    booking.accessContactName = booking.customerName;
+    booking.accessContactPhone = booking.phone;
+    booking.accessContactEmail = booking.email;
+    booking.accessContactAgency = booking.agencyName;
+  }
   booking.preferredDate = asString(booking.preferredDate);
   booking.preferredDateDisplay = asString(booking.preferredDateDisplay, booking.preferredDate);
   booking.preferredTimeSlot = asString(booking.preferredTimeSlot);
@@ -193,8 +291,7 @@ function publicBookingData(rawBooking = {}, config = {}) {
     priceCents: config.priceCents,
     priceDisplay: config.priceDisplay,
     currency: config.currency,
-    customerType: "homeowner",
-    bookingRole: "Homeowner",
+    customerType: booking.bookingRoleCode === "owner" ? "homeowner" : booking.bookingRoleCode,
     status: "pending_payment",
     paymentStatus: "checkout_created",
     paymentMethod: "stripe_checkout",
@@ -387,14 +484,14 @@ async function createBookingAndCheckoutSession({
       bookingId,
       serviceName,
       source: "irongate_booking_form_backend",
-      customerType: "homeowner"
+      customerType: booking.customerType
     },
     payment_intent_data: {
       metadata: {
         bookingId,
         serviceName,
         source: "irongate_booking_form_backend",
-        customerType: "homeowner"
+        customerType: booking.customerType
       }
     }
   });
