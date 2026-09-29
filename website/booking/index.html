@@ -54,6 +54,7 @@
     .booking-form [hidden] { display: none !important; }
     .optional-details { display: grid; gap: 14px; border: 1px solid rgba(7,24,52,.10); border-radius: 16px; background: #f9fbfe; padding: 14px 16px; }
     .optional-details summary { cursor: pointer; color: var(--navy); font-weight: 800; }
+    .optional-details:not([open]) > *:not(summary) { display: none !important; }
     .optional-details[open] { gap: 15px; }
     .optional-details[open] > *:not(summary) { margin-top: 12px; }
     .optional-details label { display: grid; gap: 8px; }
@@ -210,6 +211,7 @@
                   Do you have the pool owner's details?
                   <select id="poolOwnerStatus" required>
                     <option value="">Select one</option>
+                    <option value="self" hidden>Same as booking contact</option>
                     <option value="different">Yes — enter the pool owner's name</option>
                     <option value="pending">I will provide the details before the inspection</option>
                   </select>
