@@ -247,7 +247,8 @@ function yesNo(value) {
 }
 
 function hasJustBecomeConfirmed(before = {}, after = {}) {
-  return !CONFIRMED_PAYMENT_STATUSES.has(before.paymentStatus) && CONFIRMED_PAYMENT_STATUSES.has(after.paymentStatus);
+  return !["cancelled", "payment_exception", "payment_expired"].includes(after.status) &&
+    !CONFIRMED_PAYMENT_STATUSES.has(before.paymentStatus) && CONFIRMED_PAYMENT_STATUSES.has(after.paymentStatus);
 }
 
 function hasNewCustomerNotification(before = {}, after = {}) {
