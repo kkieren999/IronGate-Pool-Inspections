@@ -92,21 +92,31 @@ function selectedDateDisplay(dateKey) {
 }
 
 function validateBookingPayload(payload) {
+  if (!["owner", "agent", "agency", "other"].includes(payload.bookingRoleCode)) return "Please select your booking role.";
   if (!payload.customerName) return "Please enter your full name.";
+  if (["agent", "agency"].includes(payload.bookingRoleCode) && !payload.agencyName) return "Please enter your company or agency name.";
+  if (payload.bookingRoleCode === "other" && !payload.bookingRelationship) return "Please explain your relationship to the property.";
   if (!payload.email) return "Please enter your email address.";
   if (!payload.phone) return "Please enter your Australian mobile number.";
   if (!payload.propertyAddress) return "Please enter the inspection property address.";
   if (!payload.propertyAddressSelected) return "Please select the property address from the suggestions.";
   if (!payload.inspectionReason) return "Please select the reason for inspection.";
   if (!payload.poolType) return "Please select the pool type.";
-  if (!payload.existingCertificateStatus) return "Please select whether there is an existing pool safety certificate.";
-  if (!payload.poolRegisteredStatus) return "Please confirm whether the pool is registered with QBCC.";
+
   if (!payload.preferredDate) return "Please select an inspection date.";
   if (!privateInvite && isTodayOrPastDateKey(payload.preferredDate)) return "Please choose an inspection date from tomorrow onwards.";
   if (!payload.preferredTimeSlot) return "Please select an inspection time.";
   if (!payload.preferredTimeStart || !payload.preferredTimeEnd) return "Please reselect the inspection time slot.";
-  if (!payload.isPropertyOwner && !payload.authorisedToBook) return "Please confirm you are the owner or authorised to arrange the inspection.";
-  if (payload.animalsOffLeash && !payload.animalsWillBeSecured) return "Please confirm animals will be secured away from the inspection area.";
+  if (!payload.isPropertyOwner && !payload.authorisedToBook) return "Please confirm you are authorised to arrange the inspection.";
+  if (!["self", "different", "pending"].includes(payload.poolOwnerStatus)) return "Please confirm the pool owner details.";
+  if (payload.isPropertyOwner && payload.poolOwnerStatus !== "self") return "Please check the pool owner selection.";
+  if (!payload.isPropertyOwner && payload.poolOwnerStatus === "self") return "Select the pool owner's details.";
+  if (payload.poolOwnerStatus === "different" && !payload.poolOwnerName) return "Please enter the pool owner's full name.";
+  if (!payload.accessSameAsBooking && (!payload.accessContactName || !payload.accessContactPhone)) return "Please enter the separate property access contact's name and phone.";
+  if (!["on_site", "keys", "lockbox", "other"].includes(payload.accessMethod)) return "Please select the access arrangement.";
+  if (payload.accessMethod === "keys" && !payload.keyCollectionLocation) return "Please enter where we should collect the keys.";
+  if (payload.accessMethod !== "on_site" && !payload.accessPermissionIfNotHome) return "Please confirm the property access arrangement is authorised.";
+  if (payload.animalsOnProperty && !payload.animalsWillBeSecured) return "Please confirm animals will be secured away from the inspection area.";
   if (!payload.nonComplianceAcknowledged) return "Please acknowledge that a certificate can only be issued if compliant.";
   if (!payload.informationAccuracyConfirmed) return "Please confirm the information is accurate.";
   if (!payload.termsAccepted) return "Please accept the website policies before continuing.";
@@ -125,24 +135,44 @@ function validateBookingPayload(payload) {
 function collectBookingPayload() {
   const dateKey = getValue("#preferredDate");
   const slot = selectedSlotDetails();
-  const isOwner = getChecked("#isPropertyOwner");
+  const bookingRoleCode = getValue("#bookingRole");
+  const isOwner = bookingRoleCode === "owner";
+  const customerName = getValue("#customerName");
+  const email = getValue("#email");
+  const phone = normaliseAustralianMobile(getValue("#phone"));
+  const agency = bookingRoleCode === "agent" || bookingRoleCode === "agency";
+  const agencyName = agency ? getValue("#agencyName") : "";
+  const poolOwnerStatus = isOwner ? "self" : getValue("#poolOwnerStatus");
+  const accessSameAsBooking = getChecked("#accessSameAsBooking");
+  const accessMethod = getValue("#accessMethod");
   const termsAccepted = getChecked("#termsAccepted");
+  const roleNames = {
+    owner: "Property owner",
+    agent: "Real estate agent / property manager",
+    agency: "Agency / organisation representative",
+    other: "Other authorised person"
+  };
 
   return {
-    customerName: getValue("#customerName"),
-    email: getValue("#email"),
-    phone: normaliseAustralianMobile(getValue("#phone")),
+    customerName, email, phone,
+    bookingRoleCode,
+    bookingRole: roleNames[bookingRoleCode] || "",
+    agencyName,
+    bookingRelationship: bookingRoleCode === "other" ? getValue("#bookingRelationship") : "",
     propertyAddress: getValue("#propertyAddress"),
     propertyAddressSelected: getValue("#propertyAddressSelected") === "true",
     propertyPlaceId: getValue("#propertyPlaceId"),
-
     isPropertyOwner: isOwner,
-    authorisedToBook: getChecked("#authorisedToBook"),
-    clientType: isOwner ? "Property owner" : "Authorised representative",
+    authorisedToBook: isOwner || getChecked("#authorisedToBook"),
+    clientType: roleNames[bookingRoleCode] || "",
+    poolOwnerStatus,
+    poolOwnerName: isOwner ? customerName : poolOwnerStatus === "different" ? getValue("#poolOwnerName") : "",
+    poolOwnerEmail: isOwner ? email : poolOwnerStatus === "different" ? getValue("#poolOwnerEmail") : "",
+    ownerDetailsPending: poolOwnerStatus === "pending",
     inspectionReason: getValue("#inspectionReason"),
     poolType: getValue("#poolType"),
-    existingCertificateStatus: getValue("#existingCertificateStatus"),
-    poolRegisteredStatus: getValue("#poolRegisteredStatus"),
+    existingCertificateStatus: getValue("#existingCertificateStatus") || "Unsure",
+    poolRegisteredStatus: getValue("#poolRegisteredStatus") || "Unsure",
 
     preferredDate: dateKey,
     preferredDateDisplay: selectedDateDisplay(dateKey),
@@ -152,11 +182,18 @@ function collectBookingPayload() {
     preferredTimeEnd: slot.end,
     preferredTime: slot.label,
 
-    willBeHomeForInspection: getChecked("#willBeHomeForInspection"),
-    accessPermissionIfNotHome: getChecked("#accessPermissionIfNotHome"),
+    accessSameAsBooking,
+    accessContactName: accessSameAsBooking ? customerName : getValue("#accessContactName"),
+    accessContactPhone: accessSameAsBooking ? phone : getValue("#accessContactPhone"),
+    accessContactEmail: accessSameAsBooking ? email : getValue("#accessContactEmail"),
+    accessContactAgency: accessSameAsBooking ? agencyName : getValue("#accessContactAgency"),
+    accessMethod,
+    keyCollectionLocation: accessMethod === "keys" ? getValue("#keyCollectionLocation") : "",
+    willBeHomeForInspection: accessMethod === "on_site",
+    accessPermissionIfNotHome: accessMethod === "on_site" || getChecked("#accessPermissionIfNotHome"),
     animalsOnProperty: getChecked("#animalsOnProperty"),
-    animalsOffLeash: getChecked("#animalsOffLeash"),
-    animalsWillBeSecured: getChecked("#animalsWillBeSecured"),
+    animalsOffLeash: false,
+    animalsWillBeSecured: getChecked("#animalsOnProperty") && getChecked("#animalsWillBeSecured"),
     accessInstructions: getValue("#accessInstructions"),
 
     hasPoolExemption: getChecked("#hasPoolExemption"),
@@ -170,33 +207,21 @@ function collectBookingPayload() {
 }
 
 function privateCustomerUpdate(booking) {
+  const keys = [
+    "customerName", "email", "phone", "bookingRoleCode", "bookingRole",
+    "agencyName", "bookingRelationship", "propertyAddress", "propertyAddressSelected",
+    "propertyPlaceId", "isPropertyOwner", "authorisedToBook", "clientType",
+    "poolOwnerStatus", "poolOwnerName", "poolOwnerEmail", "ownerDetailsPending",
+    "inspectionReason", "poolType", "existingCertificateStatus", "poolRegisteredStatus",
+    "accessSameAsBooking", "accessContactName", "accessContactPhone",
+    "accessContactEmail", "accessContactAgency", "accessMethod", "keyCollectionLocation",
+    "willBeHomeForInspection", "accessPermissionIfNotHome", "animalsOnProperty",
+    "animalsOffLeash", "animalsWillBeSecured", "accessInstructions", "hasPoolExemption",
+    "minorRepairsContactAccepted", "nonComplianceAcknowledged",
+    "informationAccuracyConfirmed", "notes", "termsAccepted", "privacyAccepted"
+  ];
   return {
-    customerName: booking.customerName,
-    email: booking.email,
-    phone: booking.phone,
-    propertyAddress: booking.propertyAddress,
-    propertyAddressSelected: booking.propertyAddressSelected,
-    propertyPlaceId: booking.propertyPlaceId,
-    isPropertyOwner: booking.isPropertyOwner,
-    authorisedToBook: booking.authorisedToBook,
-    clientType: booking.clientType,
-    inspectionReason: booking.inspectionReason,
-    poolType: booking.poolType,
-    existingCertificateStatus: booking.existingCertificateStatus,
-    poolRegisteredStatus: booking.poolRegisteredStatus,
-    willBeHomeForInspection: booking.willBeHomeForInspection,
-    accessPermissionIfNotHome: booking.accessPermissionIfNotHome,
-    animalsOnProperty: booking.animalsOnProperty,
-    animalsOffLeash: booking.animalsOffLeash,
-    animalsWillBeSecured: booking.animalsWillBeSecured,
-    accessInstructions: booking.accessInstructions,
-    hasPoolExemption: booking.hasPoolExemption,
-    minorRepairsContactAccepted: booking.minorRepairsContactAccepted,
-    nonComplianceAcknowledged: booking.nonComplianceAcknowledged,
-    informationAccuracyConfirmed: booking.informationAccuracyConfirmed,
-    notes: booking.notes,
-    termsAccepted: booking.termsAccepted,
-    privacyAccepted: booking.privacyAccepted,
+    ...Object.fromEntries(keys.map((key) => [key, booking[key]])),
     privateInviteProof: privateInviteToken,
     privateInviteSubmittedAt: serverTimestamp(),
     updatedAt: serverTimestamp()
