@@ -655,6 +655,7 @@ async function sendCustomerUpdateEmail(event, bookingId, booking = {}, transport
   await event.data.after.ref.set({
     customerNotificationSentAt: admin.firestore.FieldValue.serverTimestamp(),
     customerNotificationSentType: booking.customerNotificationType || null,
+    customerNotificationSentId: booking.customerNotificationId || null,
     customerNotificationTemplateVersion: ADMIN_UPDATE_TEMPLATE_VERSION,
     customerNotificationError: null,
     updatedAt: admin.firestore.FieldValue.serverTimestamp()
@@ -697,6 +698,15 @@ exports.bookingNotificationEmail = onDocumentUpdated({
   }
 
   if (hasAdminNotification) {
-    await sendCustomerUpdateEmail(event, bookingId, booking, transporter);
+    try {
+      await sendCustomerUpdateEmail(event, bookingId, booking, transporter);
+    } catch (error) {
+      logger.error("Admin notification email failed", { bookingId, message: error.message });
+      await event.data.after.ref.set({
+        customerNotificationError: String(error.message || "Email unavailable").slice(0, 180),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      throw error;
+    }
   }
 });

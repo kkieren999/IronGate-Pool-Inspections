@@ -162,6 +162,7 @@ async function createCalendarEvent(calendar, calendarId, bookingId, booking, ref
     googleCalendarEventCreatedAt: admin.firestore.FieldValue.serverTimestamp(),
     googleCalendarEventUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
     googleCalendarEventDeletedAt: null,
+    calendarSyncStatus: "synced", calendarSyncError: null,
     updatedAt: admin.firestore.FieldValue.serverTimestamp()
   }, { merge: true });
 
@@ -186,6 +187,7 @@ async function updateCalendarEvent(calendar, calendarId, bookingId, booking, ref
   await ref.set({
     googleCalendarEventLink: updated.data.htmlLink || booking.googleCalendarEventLink || null,
     googleCalendarEventUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    calendarSyncStatus: "synced", calendarSyncError: null,
     updatedAt: admin.firestore.FieldValue.serverTimestamp()
   }, { merge: true });
 
@@ -209,6 +211,7 @@ async function deleteCalendarEvent(calendar, calendarId, bookingId, booking, ref
     googleCalendarEventId: null,
     googleCalendarEventLink: null,
     googleCalendarEventDeletedAt: admin.firestore.FieldValue.serverTimestamp(),
+    calendarSyncStatus: "synced", calendarSyncError: null,
     googleCalendarEventUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
     updatedAt: admin.firestore.FieldValue.serverTimestamp()
   }, { merge: true });
@@ -236,14 +239,16 @@ exports.createCalendarEventAfterPayment = onDocumentUpdated({
     return;
   }
 
-  const calendar = await getCalendarClient();
   const ref = event.data.after.ref;
+  try {
+  const calendar = await getCalendarClient();
 
   if (isCancelledBooking(booking)) {
     if (booking.googleCalendarEventId) {
       await deleteCalendarEvent(calendar, calendarId, bookingId, booking, ref);
     } else {
       logger.info("Calendar deletion skipped because cancelled booking had no event", { bookingId });
+      await ref.set({ calendarSyncStatus: "not_linked", calendarSyncError: null }, { merge: true });
     }
     return;
   }
@@ -272,4 +277,12 @@ exports.createCalendarEventAfterPayment = onDocumentUpdated({
     bookingId,
     calendarEventId: booking.googleCalendarEventId || null
   });
+  } catch (error) {
+    logger.error("Booking calendar sync failed", { bookingId, message: error.message });
+    await ref.set({
+      calendarSyncStatus: "failed", calendarSyncError: String(error.message || "Calendar unavailable").slice(0, 180),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+    throw error;
+  }
 });

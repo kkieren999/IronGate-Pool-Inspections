@@ -16,8 +16,8 @@ jobs:
         with:
           node-version: "22"
       - name: Verify source
-        run: node --test tests/site.test.mjs
+        run: node --test tests/*.test.mjs
       - name: Build static artifact
         run: node scripts/build-site.mjs
       - name: Verify publish output
-        run: SITE_ROOT=public node --test tests/site.test.mjs
+        run: SITE_ROOT=public node --test tests/*.test.mjs
