@@ -33,14 +33,17 @@ function cleanReleased(slot, reopen) {
   if (slot.privateInvite === true && Object.prototype.hasOwnProperty.call(slot, "privateInviteOriginal")) {
     return slot.privateInviteOriginal === null ? null : { ...slot.privateInviteOriginal };
   }
-  if (slot.adminCreatedBuffer === true) return null;
+  if (slot.adminCreatedBuffer === true || slot.bookingCreatedBuffer === true) return null;
+  // Older buffer records lack origin metadata. Never expose an unverified
+  // synthetic buffer as a new public appointment; leave it closed for review.
+  const safeReopen = reopen && (slot.bufferSlot !== true || slot.bookingCreatedBuffer === false);
   const copy = { ...slot };
   for (const key of ["bookingId", "bookedByBookingId", "customerName", "propertyAddress",
     "paymentStatus", "reservedAt", "bufferForSlot", "bufferSlot", "privateInvite",
-    "privateInviteToken", "privateInviteOriginal", "adminCreatedBuffer"]) delete copy[key];
+    "privateInviteToken", "privateInviteOriginal", "adminCreatedBuffer", "bookingCreatedBuffer"]) delete copy[key];
   return {
-    ...copy, available: reopen, booked: false, locked: false, reserved: false,
-    reservationStatus: reopen ? "admin_released" : "admin_closed"
+    ...copy, available: safeReopen, booked: false, locked: false, reserved: false,
+    reservationStatus: safeReopen ? "admin_released" : "admin_closed"
   };
 }
 function releaseBooking(raw, bookingId, selectedId, reopen) {

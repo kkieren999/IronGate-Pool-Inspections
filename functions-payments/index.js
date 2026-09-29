@@ -130,13 +130,20 @@ function confirmedSlot(existingSlot = {}, selectedId, bookingId, booking = {}, c
 }
 
 function releasedSlot(existingSlot = {}, releasedAt) {
+  if (existingSlot.privateInvite === true &&
+      Object.prototype.hasOwnProperty.call(existingSlot, "privateInviteOriginal")) {
+    return existingSlot.privateInviteOriginal === null ? null : { ...existingSlot.privateInviteOriginal };
+  }
+  if (existingSlot.bookingCreatedBuffer === true) return null;
+  const isUnmarkedBuffer = existingSlot.bufferSlot === true &&
+    existingSlot.bookingCreatedBuffer !== false;
   return {
     ...existingSlot,
-    available: true,
+    available: !isUnmarkedBuffer,
     booked: false,
     locked: false,
     reserved: false,
-    reservationStatus: "released",
+    reservationStatus: isUnmarkedBuffer ? "legacy_buffer_review" : "released",
     bookingId: null,
     bookedByBookingId: null,
     customerName: "",
@@ -233,12 +240,13 @@ async function releaseAvailabilityReservation(bookingId, booking = {}) {
     let changed = false;
 
     if (Array.isArray(current)) {
-      slots = current.map((slot) => {
+      slots = current.flatMap((slot) => {
         const id = comparableSlotId(slot);
-        if (!slotBelongsToBooking(slot, bookingId)) return slot;
-        if (id !== selectedId && slot.bufferForSlot !== selectedId) return slot;
+        if (!slotBelongsToBooking(slot, bookingId)) return [slot];
+        if (id !== selectedId && slot.bufferForSlot !== selectedId) return [slot];
         changed = true;
-        return releasedSlot(slot, releasedAt);
+        const restored = releasedSlot(slot, releasedAt);
+        return restored ? [restored] : [];
       });
     } else {
       const existingSlots = current && typeof current === "object" ? current : {};
@@ -247,7 +255,9 @@ async function releaseAvailabilityReservation(bookingId, booking = {}) {
       Object.entries(existingSlots).forEach(([id, slot]) => {
         if (!slotBelongsToBooking(slot, bookingId)) return;
         if (id !== selectedId && slot.bufferForSlot !== selectedId) return;
-        slots[id] = releasedSlot(slot, releasedAt);
+        const restored = releasedSlot(slot, releasedAt);
+        if (restored) slots[id] = restored;
+        else delete slots[id];
         changed = true;
       });
     }
