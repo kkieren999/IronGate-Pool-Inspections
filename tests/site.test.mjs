@@ -130,3 +130,12 @@ test("all frontend and backend JavaScript parses on Node 22", () => {
     }
   }
 });
+
+test("licence number is correct in source, without a runtime patch shim", () => {
+  assert.ok(!existsSync(resolve(site, "js/site-licence.js")));
+  assert.ok(!siteRead("js/booking-stripe.js").includes("site-licence.js"));
+  assert.ok(siteRead("booking/index.html").includes("PS15616387"));
+  for (const p of files(site).filter((p) => p.endsWith(".html"))) {
+    assert.ok(!/PSI\s*000000/i.test(readFileSync(p, "utf8")), relative(site, p) + " has placeholder licence");
+  }
+});

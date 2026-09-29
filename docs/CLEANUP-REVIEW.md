@@ -4,7 +4,7 @@ Source cleanup is not a live Firebase runtime inventory.
 
 ## Removed from published website
 
-Unused standalone admin-availability.js and admin-bookings.js (current admin console is now js/admin-console.js), the alternate booking-direct-checkout.js, unused retry-payment.js, stale nested firestore.rules, old hero_image.png, duplicate docs/CNAME, and setup notes describing pre-Stripe builds. Git history retains source if an intentionally dormant feature must be restored. All existing clean routes and .html redirect stubs are retained.
+The licence replacement shim site-licence.js (the actual number is now written in booking HTML), unused standalone admin-availability.js and admin-bookings.js (current admin console is now js/admin-console.js), the alternate booking-direct-checkout.js, unused retry-payment.js, stale nested firestore.rules, old hero_image.png, duplicate docs/CNAME, and setup notes describing pre-Stripe builds. Git history retains source if an intentionally dormant feature must be restored. All existing clean routes and .html redirect stubs are retained.
 
 ## Retired source
 

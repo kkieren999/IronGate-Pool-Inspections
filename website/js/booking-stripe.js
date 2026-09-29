@@ -1,4 +1,3 @@
-import "./site-licence.js";
 import "./booking-customer-type.js";
 import { app, db } from "./firebase-config.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";

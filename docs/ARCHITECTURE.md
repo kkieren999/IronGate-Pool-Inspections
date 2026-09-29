@@ -9,7 +9,7 @@ Pages publishes website/ as its root. Clean-route directories and historical .ht
 - js/admin-console.js: current availability and partner manager, extracted from inline HTML.
 - js/admin-private-booking.js: live private same-day invitations, explicitly imported by admin-console.js.
 - js/firebase-config.js: shared Firebase app/Firestore without admin-specific autoload.
-- js/booking-customer-type.js and js/site-licence.js: active presentation helpers.
+- js/booking-customer-type.js: active presentation helper. Licence number is now in page source, not patched at deploy or runtime.
 - js/script.js and js/homeowner-checklist.js: shared site UI/checklist.
 
 ## Backend and dependency boundaries
