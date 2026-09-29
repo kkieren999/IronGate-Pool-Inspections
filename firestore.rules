@@ -232,6 +232,11 @@ service cloud.firestore {
       allow update: if isAdmin() || validPrivateInvitePublicUpdate(inviteId);
     }
 
+    match /refundOperations/{refundId} {
+      allow read: if isAdmin();
+      allow write: if false; // The financial ledger is server-owned.
+    }
+
     match /adminActivity/{activityId} {
       allow read: if isAdmin();
       allow write: if false; // Immutable audit events come only from authenticated server functions.
