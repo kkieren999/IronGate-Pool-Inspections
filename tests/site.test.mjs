@@ -254,3 +254,19 @@ test("address autocomplete requests Geoapify, selects a suggestion, and unlocks 
   assert.equal(laterSection.hidden, false);
   assert.equal(continueButton.hidden, false, "checkout should unlock only after pool-register confirmation");
 });
+
+test("admin booking tabs retain availability and limit customer data to authenticated reads", () => {
+  const page = siteRead("admin/index.html");
+  const main = siteRead("js/admin-console.js");
+  const dashboard = siteRead("js/admin-booking-dashboard.js");
+  for (const tab of ["overview", "bookings", "availability", "payments", "partners", "systems"]) {
+    assert.ok(page.includes('id="panel-' + tab + '"'), tab);
+    assert.ok(page.includes('data-tab="' + tab + '"'), tab);
+  }
+  assert.ok(main.includes('import "./admin-booking-dashboard.js"'));
+  assert.ok(dashboard.includes('onAuthStateChanged(auth'));
+  assert.ok(dashboard.includes('orderBy("createdAt", "desc")'));
+  assert.ok(dashboard.includes('limit(150)'));
+  assert.ok(!dashboard.includes("updateDoc(") && !dashboard.includes("deleteDoc("));
+  assert.ok(page.includes('id="day-form"') && page.includes('id="partner-form"'));
+});

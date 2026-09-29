@@ -4,7 +4,7 @@
   <base href="/" />
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>IronGate Admin Console | Availability & Agency Partners</title>
+  <title>IronGate Admin Console | Bookings & Operations</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -106,6 +106,29 @@
     .system-tile span { color: var(--muted); display: block; margin-top: 6px; font-weight: 800; }
     @media (max-width: 1050px) { .work-area, .partner-grid { grid-template-columns: 1fr; } .quick-times { grid-template-columns: repeat(4, minmax(0, 1fr)); } .console-menu, .system-grid { grid-template-columns: 1fr; } }
     @media (max-width: 900px) { .admin-hero-clean, .clean-card-heading, .time-add-row, .bulk-row, .partner-form-grid { grid-template-columns: 1fr; display: grid; } .admin-hero-actions { justify-content: flex-start; } .month-controls { justify-content: space-between; } .calendar-weekdays, .admin-calendar-grid { gap: 6px; } .calendar-empty { min-height: 62px; } .calendar-day { min-height: 74px; padding: 8px; border-radius: 14px; } .day-number { width: 30px; height: 30px; font-size: .95rem; } .day-status { font-size: .64rem; padding: 0 6px; } .quick-times, .bulk-days { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+    .ops-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .ops-metric { border:1px solid #dce9f4; border-radius:17px; padding:17px; background:#f7fbff; }
+    .ops-metric strong { display:block; font-size:1.7rem; color:var(--navy); }
+    .ops-metric span { color:var(--muted); font-weight:800; }
+    .booking-toolbar { display:grid; grid-template-columns:minmax(180px,2fr) minmax(150px,1fr) auto; align-items:end; gap:10px; margin:18px 0; }
+    .booking-toolbar label { display:grid; gap:7px; font-weight:800; color:var(--navy); }
+    .booking-toolbar input,.booking-toolbar select { width:100%; min-height:45px; padding:10px 12px; border:1px solid #d7e1ec; border-radius:12px; font:inherit; background:#fff; }
+    .booking-workspace { display:grid; grid-template-columns:minmax(250px,1fr) minmax(320px,1.25fr); gap:18px; }
+    .booking-results { display:grid; align-content:start; gap:9px; max-height:690px; overflow:auto; padding:2px; }
+    .booking-row { border:1px solid #dce9f4; border-radius:14px; padding:13px 14px; background:#fff; cursor:pointer; text-align:left; display:grid; gap:5px; color:var(--navy); }
+    .booking-row[aria-pressed="true"] { border-color:var(--blue); background:#eef9ff; }
+    .booking-row strong { overflow-wrap:anywhere; }
+    .booking-row span { font-size:.87rem; color:var(--muted); font-weight:700; overflow-wrap:anywhere; }
+    .booking-detail { min-width:0; border:1px solid #dce9f4; background:#f9fcff; border-radius:18px; padding:18px; }
+    .booking-detail h3 { margin:0 0 12px; }
+    .booking-detail dl { margin:0; display:grid; grid-template-columns:minmax(110px,.6fr) minmax(0,1fr); gap:9px 14px; }
+    .booking-detail dt { font-weight:800; color:var(--muted); }
+    .booking-detail dd { margin:0; overflow-wrap:anywhere; white-space:pre-wrap; color:var(--navy); }
+    .booking-status { display:inline-block; padding:4px 9px; border-radius:999px; background:#eaf8ff; color:#075985; font-size:.78rem; font-weight:900; }
+    .booking-readonly-note { padding:12px; border-radius:12px; background:#fff7e9; border:1px solid #f0d9aa; color:#814c0b; font-weight:700; }
+    @media(max-width:1080px) { .ops-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } .booking-workspace {grid-template-columns:1fr;} }
+    @media(max-width:700px) { .booking-toolbar {grid-template-columns:1fr;} .ops-metrics {grid-template-columns:1fr 1fr;} .booking-detail dl {grid-template-columns:1fr;} }
   </style>
   <!-- IRONGATE SEO START -->
   <link rel="canonical" href="https://irongatepool.com.au/admin/" />
@@ -114,12 +137,12 @@
   <meta property="og:locale" content="en_AU" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="IronGate Pool Inspections" />
-  <meta property="og:title" content="IronGate Admin Console | Availability & Agency Partners" />
+  <meta property="og:title" content="IronGate Admin Console | Bookings & Operations" />
   <meta property="og:description" content="Admin Console for IronGate Pool Inspections." />
   <meta property="og:url" content="https://irongatepool.com.au/admin/" />
   <meta property="og:image" content="https://irongatepool.com.au/assets/hero_image_v2.png" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="IronGate Admin Console | Availability & Agency Partners" />
+  <meta name="twitter:title" content="IronGate Admin Console | Bookings & Operations" />
   <meta name="twitter:description" content="Admin Console for IronGate Pool Inspections." />
   <meta name="twitter:image" content="https://irongatepool.com.au/assets/hero_image_v2.png" />
   <!-- IRONGATE SEO END -->
@@ -147,7 +170,7 @@
           <div>
             <p class="section-kicker">Admin Console</p>
             <h1>IronGate Operations</h1>
-            <p>Manage booking availability, approved agency partners, invoice accounts and the automated systems that support paid bookings.</p>
+            <p>Manage your inspections, booking calendar, payments and agency partners from one place.</p>
           </div>
           <div>
             <div class="admin-status" id="status-pill">Checking sign in…</div>
@@ -171,21 +194,53 @@
 
         <section id="console" hidden>
           <nav class="console-menu" aria-label="Admin console sections" role="tablist">
-            <button class="console-tab" type="button" id="tab-availability" data-tab="availability" role="tab" aria-selected="true" aria-controls="panel-availability">
-              <strong>Availability Calendar</strong>
-              <span>Create dates and 1-hour public booking times.</span>
-            </button>
-            <button class="console-tab" type="button" id="tab-partners" data-tab="partners" role="tab" aria-selected="false" aria-controls="panel-partners">
-              <strong>Agency Partners</strong>
-              <span>Manage approved agency invoice accounts and partner codes.</span>
-            </button>
-            <button class="console-tab" type="button" id="tab-systems" data-tab="systems" role="tab" aria-selected="false" aria-controls="panel-systems">
-              <strong>Automation Status</strong>
-              <span>Understand what happens after payment or invoice approval.</span>
-            </button>
+            <button class="console-tab" type="button" id="tab-overview" data-tab="overview" role="tab" aria-selected="true" aria-controls="panel-overview"><strong>Overview</strong><span>Today's work and booking priorities.</span></button>
+            <button class="console-tab" type="button" id="tab-bookings" data-tab="bookings" role="tab" aria-selected="false" aria-controls="panel-bookings"><strong>Bookings</strong><span>Find appointments and review booking form details.</span></button>
+            <button class="console-tab" type="button" id="tab-availability" data-tab="availability" role="tab" aria-selected="false" aria-controls="panel-availability"><strong>Calendar &amp; availability</strong><span>Manage time slots and private invitations.</span></button>
+            <button class="console-tab" type="button" id="tab-payments" data-tab="payments" role="tab" aria-selected="false" aria-controls="panel-payments"><strong>Payments &amp; refunds</strong><span>View payment states. Refund controls follow in a separate PR.</span></button>
+            <button class="console-tab" type="button" id="tab-partners" data-tab="partners" role="tab" aria-selected="false" aria-controls="panel-partners"><strong>Customers &amp; agencies</strong><span>Manage existing agency partners.</span></button>
+            <button class="console-tab" type="button" id="tab-systems" data-tab="systems" role="tab" aria-selected="false" aria-controls="panel-systems"><strong>Settings &amp; activity</strong><span>Automation reference and deployment checks.</span></button>
           </nav>
 
-          <div class="admin-panel" id="panel-availability" role="tabpanel" aria-labelledby="tab-availability">
+          <div class="admin-panel" id="panel-overview" role="tabpanel" aria-labelledby="tab-overview">
+            <section class="admin-card">
+              <p class="section-kicker">Operations</p><h2>Booking overview</h2>
+              <p class="muted-help">A snapshot of the latest 150 bookings. Use Bookings for individual details.</p>
+              <div class="ops-metrics" style="margin-top:16px">
+                <div class="ops-metric"><strong id="ops-today">—</strong><span>Today's appointments</span></div>
+                <div class="ops-metric"><strong id="ops-upcoming">—</strong><span>Upcoming confirmed</span></div>
+                <div class="ops-metric"><strong id="ops-pending">—</strong><span>Pending payment</span></div>
+                <div class="ops-metric"><strong id="ops-cancelled">—</strong><span>Cancelled</span></div>
+              </div>
+              <p class="form-note" id="overview-message" role="status" aria-live="polite"></p>
+            </section>
+          </div>
+
+          <div class="admin-panel" id="panel-bookings" role="tabpanel" aria-labelledby="tab-bookings" hidden>
+            <section class="admin-card">
+              <div class="clean-card-heading"><div><p class="section-kicker">Booking management</p><h2>Recent bookings</h2>
+                <p class="muted-help">Read-only details for the most recent 150 bookings. Move, cancellation and refund actions will be added in subsequent PRs.</p></div></div>
+              <div class="booking-toolbar">
+                <label>Search bookings<input id="booking-search" type="search" placeholder="Name, property, email, reference" autocomplete="off" /></label>
+                <label>Filter status<select id="booking-status-filter"><option value="all">All statuses</option><option value="confirmed">Confirmed</option><option value="pending">Awaiting payment</option><option value="cancelled">Cancelled</option><option value="completed">Completed</option></select></label>
+                <button class="btn soft-btn" id="reload-bookings" type="button">Refresh</button>
+              </div>
+              <p class="form-note" id="bookings-message" role="status" aria-live="polite"></p>
+              <div class="booking-workspace">
+                <div id="booking-list" class="booking-results" aria-label="Recent bookings"></div>
+                <section id="booking-detail" class="booking-detail" aria-label="Selected booking"><p class="muted-help">Select a booking to see its details.</p></section>
+              </div>
+            </section>
+          </div>
+
+          <div class="admin-panel" id="panel-payments" role="tabpanel" aria-labelledby="tab-payments" hidden>
+            <section class="admin-card"><p class="section-kicker">Finance</p><h2>Payments &amp; refunds</h2>
+              <p class="booking-readonly-note">Payment status is read-only in this PR. Refunds will require a protected server action and confirmation; they will never be issued by editing a Firestore field.</p>
+              <p class="muted-help" id="payments-overview">Select a booking under Bookings to review its payment details.</p>
+            </section>
+          </div>
+
+          <div class="admin-panel" id="panel-availability" role="tabpanel" aria-labelledby="tab-availability" hidden>
             <section class="admin-card">
               <div class="clean-card-heading">
                 <div>
