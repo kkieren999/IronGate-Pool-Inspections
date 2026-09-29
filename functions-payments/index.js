@@ -453,8 +453,19 @@ async function markCheckoutSessionPaid(session) {
       return null;
     }
     const cancelled = booking.status === "cancelled" || booking.inspectionStatus === "cancelled";
+    let slotConflict = false;
+    if (checkoutComplete && !cancelled) {
+      const date = booking.preferredDate, selectedId = booking.preferredTimeSlot;
+      const availability = date && selectedId
+        ? await tx.get(db.collection("availability").doc(date)) : null;
+      const slots = availability?.exists ? (availability.data() || {}).slots : null;
+      const selected = Array.isArray(slots) ?
+        slots.find((item) => comparableSlotId(item) === selectedId) : slots?.[selectedId];
+      slotConflict = !slotBelongsToBooking(selected, bookingId);
+    }
     tx.set(bookingRef, {
-      status: cancelled ? "cancelled" : (checkoutComplete ? "confirmed" : "payment_processing"),
+      status: cancelled ? "cancelled" : slotConflict ? "payment_exception" :
+        (checkoutComplete ? "confirmed" : "payment_processing"),
       paymentStatus,
       stripePaymentStatus: session.payment_status || "unknown",
       paymentMethod: "stripe_checkout",
@@ -469,16 +480,19 @@ async function markCheckoutSessionPaid(session) {
       discountApplied: discount > 0,
       noCostCheckout: session.payment_status === "no_payment_required" || session.amount_total === 0,
       availabilityReservationStatus: cancelled ? booking.availabilityReservationStatus || "released" :
-        (checkoutComplete ? "confirmed" : "payment_processing"),
+        slotConflict ? "conflict" : (checkoutComplete ? "confirmed" : "payment_processing"),
+      availabilityLocked: cancelled || slotConflict ? false : booking.availabilityLocked === true,
       availabilityLockStatus: cancelled ? booking.availabilityLockStatus || "cancelled" :
-        (checkoutComplete ? "confirmed" : "payment_processing"),
-      availabilityLockError: cancelled ? booking.availabilityLockError || null : null,
+        slotConflict ? "conflict" : (checkoutComplete ? "confirmed" : "payment_processing"),
+      availabilityLockError: slotConflict ?
+        "Payment completed but the original time is no longer held. Contact customer and allocate manually." :
+        cancelled ? booking.availabilityLockError || null : null,
       paidAt: checkoutComplete ? admin.firestore.FieldValue.serverTimestamp() : null,
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
-    return { booking, cancelled };
+    return { booking, cancelled, slotConflict };
   });
-  if (outcome && checkoutComplete && !outcome.cancelled) {
+  if (outcome && checkoutComplete && !outcome.cancelled && !outcome.slotConflict) {
     await confirmAvailabilityReservation(bookingId, outcome.booking, paymentStatus);
   }
   logger.info("Stripe booking payment event handled", {
