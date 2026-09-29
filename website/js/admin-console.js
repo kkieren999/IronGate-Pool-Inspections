@@ -593,7 +593,11 @@ import { app, db } from "./firebase-config.js";
     }
 
     function setActiveTab(tabName) {
-      document.querySelectorAll("[data-tab]").forEach((button) => button.setAttribute("aria-selected", String(button.dataset.tab === tabName)));
+      document.querySelectorAll("[data-tab]").forEach((button) => {
+        const active = button.dataset.tab === tabName;
+        button.setAttribute("aria-selected", String(active));
+        button.tabIndex = active ? 0 : -1;
+      });
       document.querySelectorAll("[role='tabpanel']").forEach((panel) => { panel.hidden = panel.id !== `panel-${tabName}`; });
       if (tabName === "partners") loadAgencyPartners();
       window.dispatchEvent(new CustomEvent("irongate:admin-tab", { detail: { tab: tabName } }));
@@ -760,6 +764,18 @@ import { app, db } from "./firebase-config.js";
     });
 
     document.querySelectorAll("[data-tab]").forEach((button) => button.addEventListener("click", () => setActiveTab(button.dataset.tab)));
+    const tabButtons = [...document.querySelectorAll(".console-tab[data-tab]")];
+    tabButtons.forEach((button, index) => button.addEventListener("keydown", (event) => {
+      let target = index;
+      if (event.key === "ArrowRight") target = (index + 1) % tabButtons.length;
+      else if (event.key === "ArrowLeft") target = (index - 1 + tabButtons.length) % tabButtons.length;
+      else if (event.key === "Home") target = 0;
+      else if (event.key === "End") target = tabButtons.length - 1;
+      else return;
+      event.preventDefault();
+      setActiveTab(tabButtons[target].dataset.tab);
+      tabButtons[target].focus();
+    }));
     dateInput.addEventListener("change", () => {
       if (dateInput.value) calendarMonth = startOfMonth(parseDateKey(dateInput.value));
       loadMonthAvailability();
@@ -813,6 +829,7 @@ import { app, db } from "./firebase-config.js";
       signout.hidden = !isAdmin;
       statusPill.textContent = isAdmin ? "Signed in" : (user ? "Wrong admin email" : "Not signed in");
       if (isAdmin) {
+        setActiveTab("overview");
         if (!dateInput.value) {
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
