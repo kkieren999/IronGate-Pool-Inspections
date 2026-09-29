@@ -74,11 +74,6 @@ if (priceNotice) {
   priceNotice.textContent = `Pool Safety Inspection & Certificate — ${inspectionPriceDisplay}`;
 }
 
-function getValue(selector) {
-  const element = document.querySelector(selector);
-  return element ? element.value.trim() : "";
-}
-
 function showMessage(text, type = "") {
   if (!message) return;
   message.textContent = text;
