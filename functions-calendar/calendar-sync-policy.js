@@ -8,6 +8,7 @@ const CALENDAR_RELEVANT_FIELDS = [
   "status", "inspectionStatus", "paymentStatus"
 ];
 function confirmed(b = {}) {
+  if (["cancelled", "payment_exception", "payment_expired"].includes(b.status)) return false;
   return ["confirmed", "completed", "certificate_issued"].includes(b.status) ||
     CONFIRMED_PAYMENT_STATUSES.has(b.paymentStatus);
 }
