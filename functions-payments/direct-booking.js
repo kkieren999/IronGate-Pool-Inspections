@@ -236,7 +236,7 @@ function buildReservedSlot(existingSlot = {}, selectedId, bookingId, booking = {
   };
 }
 
-function buildBufferSlot(existingSlot = {}, bufferId, selectedId, bookingId, booking = {}, reservedAt) {
+function buildBufferSlot(existingSlot = {}, bufferId, selectedId, bookingId, booking = {}, reservedAt, synthetic = false) {
   const start = existingSlot.start || booking.preferredTimeEnd || String(bufferId).replace("_", ":");
   const end = existingSlot.end || addOneHour(start);
 
@@ -253,6 +253,8 @@ function buildBufferSlot(existingSlot = {}, bufferId, selectedId, bookingId, boo
     reservationStatus: "pending_checkout_buffer",
     bufferSlot: true,
     bufferForSlot: selectedId,
+    // Preserve whether this buffer was invented solely for this checkout.
+    bookingCreatedBuffer: synthetic || existingSlot.bookingCreatedBuffer === true,
     bookingId,
     bookedByBookingId: bookingId,
     customerName: booking.customerName || "",
@@ -289,7 +291,7 @@ function reserveSelectedSlot(currentSlots, selectedId, bookingId, booking, reser
       });
 
       if (!bufferFound) {
-        withBuffer.push(buildBufferSlot({}, bufferId, selectedId, bookingId, booking, reservedAt));
+        withBuffer.push(buildBufferSlot({}, bufferId, selectedId, bookingId, booking, reservedAt, true));
       }
 
       return withBuffer;
@@ -312,7 +314,7 @@ function reserveSelectedSlot(currentSlots, selectedId, bookingId, booking, reser
     ...slots,
     [selectedId]: buildReservedSlot(existing, selectedId, bookingId, booking, reservedAt),
     ...(bufferId ? {
-      [bufferId]: buildBufferSlot(bufferSlot || {}, bufferId, selectedId, bookingId, booking, reservedAt)
+      [bufferId]: buildBufferSlot(bufferSlot || {}, bufferId, selectedId, bookingId, booking, reservedAt, !bufferSlot)
     } : {})
   };
 }

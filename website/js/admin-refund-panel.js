@@ -5,6 +5,7 @@ import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/
 const ADMIN_EMAIL = "irongate.pool.bne@gmail.com";
 const auth = getAuth(app), $ = (id) => document.querySelector(id);
 const refundBooking = httpsCallable(getFunctions(app, "us-central1"), "adminRefundBooking", { timeout: 90000 });
+const reconcileBookingRefunds = httpsCallable(getFunctions(app, "us-central1"), "adminReconcileBookingRefunds", { timeout: 90000 });
 const money = (cents) => new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(Number(cents || 0) / 100);
 let authorised = false, bookingId = "", booking = null, selection = 0, working = false;
 const remaining = () => Math.max(0, Number(booking?.stripeAmountTotal || 0) -
@@ -33,6 +34,34 @@ function display() {
     " · Estimated remaining: " + money(remaining()) +
     " · State: " + (booking.refundStatus || "Not requested");
   host.appendChild(summary);
+  if (booking.paymentStatus === "paid" && booking.stripePaymentIntentId) {
+    const refresh = document.createElement("button");
+    refresh.type = "button";
+    refresh.className = "btn soft-btn";
+    refresh.textContent = "Refresh refund status from Stripe";
+    refresh.addEventListener("click", async () => {
+      if (working) return;
+      const selected = bookingId;
+      working = true; refresh.disabled = true;
+      refresh.textContent = "Checking Stripe…";
+      try {
+        const result = await reconcileBookingRefunds({ bookingId: selected });
+        await selectBooking(selected);
+        const notice = document.createElement("p");
+        notice.className = "form-note";
+        notice.dataset.type = "success";
+        notice.textContent = "Stripe checked: " + (result.data?.refundStatus || "updated") +
+          ". Refunded: " + money(result.data?.refundedCents) +
+          ". Pending: " + money(result.data?.pendingCents) + ".";
+        $("#refund-management-host")?.prepend(notice);
+        await loadQueue();
+      } catch (error) {
+        console.error("Stripe reconciliation failed", error);
+        refresh.textContent = "Could not refresh Stripe. Retry after checking the payment in Stripe Dashboard.";
+      } finally { working = false; refresh.disabled = false; }
+    });
+    host.appendChild(refresh);
+  }
   if (booking.paymentStatus !== "paid" || !booking.stripePaymentIntentId) {
     const p = document.createElement("p");
     p.textContent = "Only completed Stripe payments can be refunded here; agency invoices and free checkouts are excluded.";

@@ -3,30 +3,13 @@ const logger = require("firebase-functions/logger");
 const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const { google } = require("googleapis");
+const { createHash } = require("node:crypto");
 
 admin.initializeApp();
 
 const GOOGLE_CALENDAR_ID = defineSecret("GOOGLE_CALENDAR_ID");
 const TIME_ZONE = "Australia/Brisbane";
-const CONFIRMED_PAYMENT_STATUSES = new Set(["paid", "agency_invoice"]);
-const CALENDAR_RELEVANT_FIELDS = [
-  "preferredDate",
-  "preferredTimeStart",
-  "preferredTimeEnd",
-  "preferredTimeLabel",
-  "preferredTime",
-  "customerName",
-  "phone",
-  "email",
-  "propertyAddress",
-  "inspectionReason",
-  "poolType",
-  "accessInstructions",
-  "notes",
-  "status",
-  "inspectionStatus",
-  "paymentStatus"
-];
+const { planCalendarAction } = require("./calendar-sync-policy");
 
 function field(data, key, fallback = "") {
   const value = data?.[key];
@@ -34,24 +17,6 @@ function field(data, key, fallback = "") {
   return String(value);
 }
 
-function hasJustBecomeConfirmed(before = {}, after = {}) {
-  return !CONFIRMED_PAYMENT_STATUSES.has(before.paymentStatus) && CONFIRMED_PAYMENT_STATUSES.has(after.paymentStatus);
-}
-
-function isConfirmedBooking(data = {}) {
-  return data.status === "confirmed"
-    || data.status === "completed"
-    || data.status === "certificate_issued"
-    || CONFIRMED_PAYMENT_STATUSES.has(data.paymentStatus);
-}
-
-function isCancelledBooking(data = {}) {
-  return data.status === "cancelled" || data.inspectionStatus === "cancelled";
-}
-
-function hasCalendarRelevantChange(before = {}, after = {}) {
-  return CALENDAR_RELEVANT_FIELDS.some((key) => String(before[key] ?? "") !== String(after[key] ?? ""));
-}
 
 function toIsoDateTime(dateKey, timeValue) {
   const time = String(timeValue || "09:00").slice(0, 5);
@@ -149,20 +114,39 @@ async function getCalendarClient() {
 
 async function createCalendarEvent(calendar, calendarId, bookingId, booking, ref) {
   const requestBody = buildCalendarEvent(bookingId, booking);
+  // A stable, Calendar-compatible ID makes a retry after an insert/Firestore
+  // failure reuse the existing event instead of creating a duplicate.
+  const eventId = "ig" + createHash("sha256").update(bookingId).digest("hex").slice(0, 48);
   if (!requestBody) {
     logger.warn("Calendar event skipped because event time is missing", { bookingId });
     return;
   }
 
-  const created = await calendar.events.insert({ calendarId, requestBody });
+  let created;
+  try {
+    created = await calendar.events.insert({ calendarId, requestBody: { ...requestBody, id: eventId } });
+  } catch (error) {
+    if (Number(error.code || error.response?.status) !== 409) throw error;
+    // Another invocation may have inserted the same booking event already.
+    created = await calendar.events.patch({ calendarId, eventId, requestBody });
+  }
+
+  const latest = (await ref.get()).data() || {};
+  if (latest.status === "cancelled" || latest.inspectionStatus === "cancelled") {
+    try { await calendar.events.delete({ calendarId, eventId }); }
+    catch (error) { if (Number(error.code || error.response?.status) !== 404) throw error; }
+    await ref.set({ calendarSyncStatus: "synced", calendarSyncError: null }, { merge: true });
+    return;
+  }
 
   await ref.set({
-    googleCalendarEventId: created.data.id || null,
+    googleCalendarEventId: created.data.id || eventId,
     googleCalendarEventLink: created.data.htmlLink || null,
     googleCalendarEventCreatedAt: admin.firestore.FieldValue.serverTimestamp(),
     googleCalendarEventUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
     googleCalendarEventDeletedAt: null,
-    calendarSyncStatus: "synced", calendarSyncError: null,
+    calendarSyncStatus: latest.lastAdminActionId === booking.lastAdminActionId ? "synced" : "pending",
+    calendarSyncError: null,
     updatedAt: admin.firestore.FieldValue.serverTimestamp()
   }, { merge: true });
 
@@ -232,57 +216,62 @@ exports.createCalendarEventAfterPayment = onDocumentUpdated({
   const bookingId = event.params.bookingId;
   const before = event.data?.before?.data() || {};
   const booking = event.data?.after?.data() || {};
-  const calendarId = GOOGLE_CALENDAR_ID.value();
+  const ref = event.data.after.ref;
+  const action = planCalendarAction(before, booking);
+  if (action === "skip") return;
 
-  if (!calendarId) {
-    logger.warn("Calendar event skipped because calendar ID is missing", { bookingId });
+  if (action === "not_linked") {
+    await ref.set({ calendarSyncStatus: "not_linked", calendarSyncError: null }, { merge: true });
     return;
   }
 
-  const ref = event.data.after.ref;
-  try {
-  const calendar = await getCalendarClient();
-
-  if (isCancelledBooking(booking)) {
-    if (booking.googleCalendarEventId) {
-      await deleteCalendarEvent(calendar, calendarId, bookingId, booking, ref);
-    } else {
-      logger.info("Calendar deletion skipped because cancelled booking had no event", { bookingId });
-      await ref.set({ calendarSyncStatus: "not_linked", calendarSyncError: null }, { merge: true });
+  const calendarId = GOOGLE_CALENDAR_ID.value();
+  if (!calendarId) {
+    logger.error("Calendar sync missing calendar ID", { bookingId, action });
+    if (booking.calendarSyncStatus !== "failed") {
+      await ref.set({ calendarSyncStatus: "failed",
+        calendarSyncError: "GOOGLE_CALENDAR_ID is not configured." }, { merge: true });
     }
     return;
   }
 
-  if (!isConfirmedBooking(booking)) {
-    logger.info("Calendar event skipped because booking is not confirmed", {
-      bookingId,
-      beforePaymentStatus: before.paymentStatus || null,
-      afterPaymentStatus: booking.paymentStatus || null,
-      status: booking.status || null
-    });
-    return;
-  }
-
-  if (!booking.googleCalendarEventId) {
-    await createCalendarEvent(calendar, calendarId, bookingId, booking, ref);
-    return;
-  }
-
-  if (hasJustBecomeConfirmed(before, booking) || hasCalendarRelevantChange(before, booking)) {
-    await updateCalendarEvent(calendar, calendarId, bookingId, booking, ref);
-    return;
-  }
-
-  logger.info("Calendar event skipped because no calendar-relevant fields changed", {
-    bookingId,
-    calendarEventId: booking.googleCalendarEventId || null
-  });
+  try {
+    const calendar = await getCalendarClient();
+    if (action === "delete") {
+      await deleteCalendarEvent(calendar, calendarId, bookingId, booking, ref);
+    } else if (action === "create") {
+      // Recheck before creating an external event: an older trigger may run
+      // after the customer has already cancelled their appointment.
+      const latest = await ref.get();
+      const current = latest.data() || {};
+      if (["cancelled", "payment_exception", "payment_expired"].includes(current.status) ||
+          current.inspectionStatus === "cancelled") return;
+      if (current.googleCalendarEventId) {
+        await updateCalendarEvent(calendar, calendarId, bookingId, current, ref);
+      } else {
+        await createCalendarEvent(calendar, calendarId, bookingId, current, ref);
+      }
+    } else if (action === "update") {
+      const latest = await ref.get();
+      const current = latest.data() || {};
+      if (["cancelled", "payment_exception", "payment_expired"].includes(current.status) ||
+          current.inspectionStatus === "cancelled") return;
+      await updateCalendarEvent(calendar, calendarId, bookingId, current, ref);
+    }
   } catch (error) {
-    logger.error("Booking calendar sync failed", { bookingId, message: error.message });
-    await ref.set({
-      calendarSyncStatus: "failed", calendarSyncError: String(error.message || "Calendar unavailable").slice(0, 180),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+    logger.error("Booking calendar sync failed", { bookingId, action, message: error.message });
+    // Never overwrite the status of a newer successful operation with a stale
+    // error from an earlier trigger invocation.
+    const latest = await ref.get();
+    const current = latest.data() || {};
+    if (current.calendarSyncStatus === "pending" &&
+        current.lastAdminActionId === booking.lastAdminActionId) {
+      await ref.set({
+        calendarSyncStatus: "failed",
+        calendarSyncError: String(error.message || "Calendar unavailable").slice(0, 180),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+    }
     throw error;
   }
 });
