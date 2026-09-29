@@ -26,6 +26,21 @@ service cloud.firestore {
         "isPropertyOwner",
         "authorisedToBook",
         "clientType",
+        "bookingRoleCode",
+        "bookingRole",
+        "agencyName",
+        "bookingRelationship",
+        "poolOwnerStatus",
+        "poolOwnerName",
+        "poolOwnerEmail",
+        "ownerDetailsPending",
+        "accessSameAsBooking",
+        "accessContactName",
+        "accessContactPhone",
+        "accessContactEmail",
+        "accessContactAgency",
+        "accessMethod",
+        "keyCollectionLocation",
         "inspectionReason",
         "poolType",
         "existingCertificateStatus",
@@ -100,7 +115,7 @@ service cloud.firestore {
         && request.resource.data.email is string
         && request.resource.data.email.size() <= 180
         && request.resource.data.phone is string
-        && request.resource.data.phone.matches('^(04[0-9]{8}|\\+614[0-9]{8})$')
+        && request.resource.data.phone.matches('^(04[0-9]{8}|0[2378][0-9]{8}|\\+614[0-9]{8}|\\+61[2378][0-9]{8})$')
         && request.resource.data.propertyAddress is string
         && request.resource.data.propertyAddress.size() >= 8
         && request.resource.data.propertyAddress.size() <= 400
@@ -140,6 +155,21 @@ service cloud.firestore {
         "isPropertyOwner",
         "authorisedToBook",
         "clientType",
+        "bookingRoleCode",
+        "bookingRole",
+        "agencyName",
+        "bookingRelationship",
+        "poolOwnerStatus",
+        "poolOwnerName",
+        "poolOwnerEmail",
+        "ownerDetailsPending",
+        "accessSameAsBooking",
+        "accessContactName",
+        "accessContactPhone",
+        "accessContactEmail",
+        "accessContactAgency",
+        "accessMethod",
+        "keyCollectionLocation",
         "inspectionReason",
         "poolType",
         "existingCertificateStatus",
@@ -187,11 +217,27 @@ service cloud.firestore {
         && request.resource.data.email is string
         && request.resource.data.email.size() <= 180
         && request.resource.data.phone is string
-        && request.resource.data.phone.matches('^(04[0-9]{8}|\\+614[0-9]{8})$')
+        && request.resource.data.phone.matches('^(04[0-9]{8}|0[2378][0-9]{8}|\\+614[0-9]{8}|\\+61[2378][0-9]{8})$')
         && request.resource.data.propertyAddress is string
         && request.resource.data.propertyAddress.size() >= 8
         && request.resource.data.propertyAddress.size() <= 400
         && request.resource.data.propertyAddressSelected == true
+        && request.resource.data.bookingRoleCode in ["owner", "agent", "agency", "other"]
+        && request.resource.data.poolOwnerStatus in ["self", "different", "pending"]
+        && request.resource.data.isPropertyOwner == (request.resource.data.bookingRoleCode == "owner")
+        && (request.resource.data.isPropertyOwner == true || request.resource.data.authorisedToBook == true)
+        && ((request.resource.data.bookingRoleCode != "agent" && request.resource.data.bookingRoleCode != "agency")
+          || (request.resource.data.agencyName is string && request.resource.data.agencyName.size() >= 2))
+        && (request.resource.data.poolOwnerStatus != "different"
+          || (request.resource.data.poolOwnerName is string && request.resource.data.poolOwnerName.size() >= 2))
+        && (request.resource.data.poolOwnerStatus != "pending" || request.resource.data.ownerDetailsPending == true)
+        && (request.resource.data.accessSameAsBooking == true ||
+          (request.resource.data.accessContactName is string && request.resource.data.accessContactName.size() >= 2
+            && request.resource.data.accessContactPhone is string && request.resource.data.accessContactPhone.size() >= 6))
+        && request.resource.data.accessMethod in ["on_site", "keys", "lockbox", "other"]
+        && (request.resource.data.accessMethod != "keys"
+          || (request.resource.data.keyCollectionLocation is string && request.resource.data.keyCollectionLocation.size() >= 2))
+        && (request.resource.data.accessMethod == "on_site" || request.resource.data.accessPermissionIfNotHome == true)
         && (request.resource.data.isPropertyOwner == true || request.resource.data.authorisedToBook == true)
         && request.resource.data.nonComplianceAcknowledged == true
         && request.resource.data.informationAccuracyConfirmed == true

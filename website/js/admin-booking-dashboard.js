@@ -82,11 +82,28 @@ function renderDetails() {
     ["Existing certificate", b.existingCertificateStatus], ["Pool exemption", b.hasPoolExemption === true ? "Yes" : "No"],
     ["Exemption file uploaded", b.exemptionFileUploaded === true ? "Yes" : "No"]
   ]);
-  detailSection(panel, "Customer & property access", [
-    ["Name", b.customerName], ["Email", b.email], ["Phone", b.phone],
-    ["Customer type", b.clientType || b.bookingRole], ["Property owner", b.isPropertyOwner === true ? "Yes" : "No"],
-    ["Authorised to book", b.authorisedToBook === true ? "Yes" : "No"],
-    ["Home at inspection", b.willBeHomeForInspection === true ? "Yes" : "No"],
+  detailSection(panel, "Booking contact", [
+    ["Name", b.customerName], ["Role", b.bookingRole || b.clientType],
+    ["Company / agency", b.agencyName], ["Relationship", b.bookingRelationship],
+    ["Email", b.email], ["Phone", b.phone],
+    ["Authorised to book", b.authorisedToBook === true ? "Yes" : "No"]
+  ]);
+  detailSection(panel, "Pool owner and documents", [
+    ["Pool owner status", b.poolOwnerStatus || (b.isPropertyOwner ? "Booking contact is owner" : "Not recorded")],
+    ["Pool owner name", b.poolOwnerName || (b.isPropertyOwner ? b.customerName : "")],
+    ["Pool owner email", b.poolOwnerEmail],
+    ["Owner details follow-up", b.ownerDetailsPending === true ?
+      "REQUIRED before inspection / compliance documents" : "No outstanding owner details recorded"],
+    ["Document delivery", "Confirm the owner / authorised delivery recipient before issuing compliance paperwork."]
+  ]);
+  detailSection(panel, "Property access", [
+    ["Same as booking contact", b.accessSameAsBooking === true ? "Yes" : "No"],
+    ["Access contact", b.accessContactName || (b.accessSameAsBooking ? b.customerName : "")],
+    ["Access phone", b.accessContactPhone || (b.accessSameAsBooking ? b.phone : "")],
+    ["Access email", b.accessContactEmail || (b.accessSameAsBooking ? b.email : "")],
+    ["Access agency", b.accessContactAgency],
+    ["Access method", b.accessMethod], ["Key collection", b.keyCollectionLocation],
+    ["Someone onsite", b.willBeHomeForInspection === true ? "Yes" : "No"],
     ["Access permission", b.accessPermissionIfNotHome === true ? "Yes" : "No"],
     ["Animals", b.animalsOnProperty === true ? "Yes" : "No"],
     ["Animals secured", b.animalsWillBeSecured === true ? "Yes" : "No"],
@@ -116,7 +133,8 @@ function filteredBookings() {
       (filter === "pending" && (status.includes("pending") || pay.includes("checkout") || pay === "payment_processing")) ||
       (filter === "cancelled" && status === "cancelled") ||
       (filter === "completed" && (status === "completed" || status === "certificate_issued"));
-    return matches && [id, data.customerName, data.email, data.propertyAddress, data.preferredDate]
+    return matches && [id, data.customerName, data.email, data.agencyName,
+      data.poolOwnerName, data.accessContactName, data.propertyAddress, data.preferredDate]
       .some((part) => String(part || "").toLowerCase().includes(search));
   });
 }
