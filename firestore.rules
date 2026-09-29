@@ -115,7 +115,7 @@ service cloud.firestore {
         && request.resource.data.email is string
         && request.resource.data.email.size() <= 180
         && request.resource.data.phone is string
-        && request.resource.data.phone.matches('^(04[0-9]{8}|\\+614[0-9]{8})$')
+        && request.resource.data.phone.matches('^(04[0-9]{8}|0[2378][0-9]{8}|\\+614[0-9]{8}|\\+61[2378][0-9]{8}))
         && request.resource.data.propertyAddress is string
         && request.resource.data.propertyAddress.size() >= 8
         && request.resource.data.propertyAddress.size() <= 400
@@ -218,6 +218,278 @@ service cloud.firestore {
         && request.resource.data.email.size() <= 180
         && request.resource.data.phone is string
         && request.resource.data.phone.matches('^(04[0-9]{8}|\\+614[0-9]{8})$')
+        && request.resource.data.propertyAddress is string
+        && request.resource.data.propertyAddress.size() >= 8
+        && request.resource.data.propertyAddress.size() <= 400
+        && request.resource.data.propertyAddressSelected == true
+        && request.resource.data.bookingRoleCode in ["owner", "agent", "agency", "other"]
+        && request.resource.data.poolOwnerStatus in ["self", "different", "pending"]
+        && request.resource.data.isPropertyOwner == (request.resource.data.bookingRoleCode == "owner")
+        && (request.resource.data.isPropertyOwner == true || request.resource.data.authorisedToBook == true)
+        && (request.resource.data.bookingRoleCode != "agent" && request.resource.data.bookingRoleCode != "agency"
+          || (request.resource.data.agencyName is string && request.resource.data.agencyName.size() >= 2))
+        && (request.resource.data.poolOwnerStatus != "different"
+          || (request.resource.data.poolOwnerName is string && request.resource.data.poolOwnerName.size() >= 2))
+        && (request.resource.data.poolOwnerStatus != "pending" || request.resource.data.ownerDetailsPending == true)
+        && (request.resource.data.accessSameAsBooking == true ||
+          (request.resource.data.accessContactName is string && request.resource.data.accessContactName.size() >= 2
+            && request.resource.data.accessContactPhone is string && request.resource.data.accessContactPhone.size() >= 6))
+        && request.resource.data.accessMethod in ["on_site", "keys", "lockbox", "other"]
+        && (request.resource.data.accessMethod != "keys"
+          || (request.resource.data.keyCollectionLocation is string && request.resource.data.keyCollectionLocation.size() >= 2))
+        && (request.resource.data.accessMethod == "on_site" || request.resource.data.accessPermissionIfNotHome == true)
+        && (request.resource.data.isPropertyOwner == true || request.resource.data.authorisedToBook == true)
+        && request.resource.data.nonComplianceAcknowledged == true
+        && request.resource.data.informationAccuracyConfirmed == true
+        && request.resource.data.termsAccepted == true
+        && request.resource.data.privacyAccepted == true
+        && (request.resource.data.animalsOffLeash != true || request.resource.data.animalsWillBeSecured == true);
+    }
+
+    function validPrivateInvitePublicUpdate(inviteId) {
+      return resource.data.status == "active"
+        && resource.data.expiresAt > request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status",
+          "submittedAt",
+          "submittedEmail"
+        ])
+        && request.resource.data.status == "submitted"
+        && request.resource.data.submittedAt == request.time
+        && request.resource.data.submittedEmail is string
+        && request.resource.data.submittedEmail.size() <= 180;
+    }
+
+    match /availability/{dateId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /bookings/{bookingId} {
+      allow create: if isAdmin() || validPublicBookingCreate();
+      allow read, delete: if isAdmin();
+      allow update: if isAdmin() || validPrivateInviteBookingUpdate(bookingId);
+    }
+
+    match /privateBookingInvites/{inviteId} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || validPrivateInvitePublicUpdate(inviteId);
+    }
+
+    match /refundNotifications/{noticeId} {
+      allow read: if isAdmin();
+      allow write: if false; // One immutable server-side notification record per Stripe refund.
+    }
+
+    match /refundOperations/{refundId} {
+      allow read: if isAdmin();
+      allow write: if false; // The financial ledger is server-owned.
+    }
+
+    match /adminActivity/{activityId} {
+      allow read: if isAdmin();
+      allow write: if false; // Immutable audit events come only from authenticated server functions.
+    }
+
+    match /agencyPartners/{partnerId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+)
+        && request.resource.data.propertyAddress is string
+        && request.resource.data.propertyAddress.size() >= 8
+        && request.resource.data.propertyAddress.size() <= 400
+        && request.resource.data.propertyAddressSelected == true
+        && request.resource.data.preferredDate is string
+        && request.resource.data.preferredDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.preferredTimeSlot is string
+        && request.resource.data.preferredTimeSlot.size() >= 4
+        && request.resource.data.preferredTimeSlot.size() <= 20
+        && request.resource.data.preferredTimeStart is string
+        && request.resource.data.preferredTimeStart.matches('^[0-2][0-9]:[0-5][0-9]$')
+        && request.resource.data.preferredTimeEnd is string
+        && request.resource.data.preferredTimeEnd.matches('^[0-2][0-9]:[0-5][0-9]$')
+        && request.resource.data.serviceName == "Pool Safety Inspection & Certificate"
+        && request.resource.data.priceCents == 14900
+        && request.resource.data.priceDisplay == "$149"
+        && request.resource.data.currency == "aud"
+        && request.resource.data.status == "pending_payment"
+        && request.resource.data.paymentStatus == "unpaid"
+        && request.resource.data.stripeSessionId == null
+        && request.resource.data.stripePaymentIntentId == null
+        && request.resource.data.paidAt == null
+        && request.resource.data.termsAccepted == true
+        && request.resource.data.privacyAccepted == true
+        && request.resource.data.source == "website_booking_form"
+        && request.resource.data.createdAt == request.time;
+    }
+
+    function privateInviteBookingChangedFieldsAllowed() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+        "customerName",
+        "email",
+        "phone",
+        "propertyAddress",
+        "propertyAddressSelected",
+        "propertyPlaceId",
+        "isPropertyOwner",
+        "authorisedToBook",
+        "clientType",
+        "bookingRoleCode",
+        "bookingRole",
+        "agencyName",
+        "bookingRelationship",
+        "poolOwnerStatus",
+        "poolOwnerName",
+        "poolOwnerEmail",
+        "ownerDetailsPending",
+        "accessSameAsBooking",
+        "accessContactName",
+        "accessContactPhone",
+        "accessContactEmail",
+        "accessContactAgency",
+        "accessMethod",
+        "keyCollectionLocation",
+        "inspectionReason",
+        "poolType",
+        "existingCertificateStatus",
+        "poolRegisteredStatus",
+        "willBeHomeForInspection",
+        "accessPermissionIfNotHome",
+        "animalsOnProperty",
+        "animalsOffLeash",
+        "animalsWillBeSecured",
+        "accessInstructions",
+        "hasPoolExemption",
+        "minorRepairsContactAccepted",
+        "nonComplianceAcknowledged",
+        "informationAccuracyConfirmed",
+        "notes",
+        "termsAccepted",
+        "privacyAccepted",
+        "privateInviteProof",
+        "privateInviteSubmittedAt",
+        "updatedAt"
+      ]);
+    }
+
+    function validPrivateInviteBookingUpdate(bookingId) {
+      let invite = get(/databases/$(database)/documents/privateBookingInvites/$(resource.data.privateInviteToken)).data;
+      return resource.data.privateInviteToken is string
+        && resource.data.privateInviteToken.size() >= 32
+        && resource.data.source == "private_booking_invite"
+        && resource.data.status == "private_invite_pending"
+        && resource.data.paymentStatus == "not_started"
+        && privateInviteBookingChangedFieldsAllowed()
+        && invite.bookingId == bookingId
+        && invite.status == "active"
+        && invite.expiresAt > request.time
+        && invite.date == resource.data.preferredDate
+        && invite.slotId == resource.data.preferredTimeSlot
+        && invite.start == resource.data.preferredTimeStart
+        && invite.end == resource.data.preferredTimeEnd
+        && request.resource.data.privateInviteProof == resource.data.privateInviteToken
+        && request.resource.data.privateInviteSubmittedAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.customerName is string
+        && request.resource.data.customerName.size() >= 2
+        && request.resource.data.customerName.size() <= 140
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 180
+        && request.resource.data.phone is string
+        && request.resource.data.phone.matches('^(04[0-9]{8}|0[2378][0-9]{8}|\\+614[0-9]{8}|\\+61[2378][0-9]{8}))
+        && request.resource.data.propertyAddress is string
+        && request.resource.data.propertyAddress.size() >= 8
+        && request.resource.data.propertyAddress.size() <= 400
+        && request.resource.data.propertyAddressSelected == true
+        && request.resource.data.bookingRoleCode in ["owner", "agent", "agency", "other"]
+        && request.resource.data.poolOwnerStatus in ["self", "different", "pending"]
+        && request.resource.data.isPropertyOwner == (request.resource.data.bookingRoleCode == "owner")
+        && (request.resource.data.isPropertyOwner == true || request.resource.data.authorisedToBook == true)
+        && (request.resource.data.bookingRoleCode != "agent" && request.resource.data.bookingRoleCode != "agency"
+          || (request.resource.data.agencyName is string && request.resource.data.agencyName.size() >= 2))
+        && (request.resource.data.poolOwnerStatus != "different"
+          || (request.resource.data.poolOwnerName is string && request.resource.data.poolOwnerName.size() >= 2))
+        && (request.resource.data.poolOwnerStatus != "pending" || request.resource.data.ownerDetailsPending == true)
+        && (request.resource.data.accessSameAsBooking == true ||
+          (request.resource.data.accessContactName is string && request.resource.data.accessContactName.size() >= 2
+            && request.resource.data.accessContactPhone is string && request.resource.data.accessContactPhone.size() >= 6))
+        && request.resource.data.accessMethod in ["on_site", "keys", "lockbox", "other"]
+        && (request.resource.data.accessMethod != "keys"
+          || (request.resource.data.keyCollectionLocation is string && request.resource.data.keyCollectionLocation.size() >= 2))
+        && (request.resource.data.accessMethod == "on_site" || request.resource.data.accessPermissionIfNotHome == true)
+        && (request.resource.data.isPropertyOwner == true || request.resource.data.authorisedToBook == true)
+        && request.resource.data.nonComplianceAcknowledged == true
+        && request.resource.data.informationAccuracyConfirmed == true
+        && request.resource.data.termsAccepted == true
+        && request.resource.data.privacyAccepted == true
+        && (request.resource.data.animalsOffLeash != true || request.resource.data.animalsWillBeSecured == true);
+    }
+
+    function validPrivateInvitePublicUpdate(inviteId) {
+      return resource.data.status == "active"
+        && resource.data.expiresAt > request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          "status",
+          "submittedAt",
+          "submittedEmail"
+        ])
+        && request.resource.data.status == "submitted"
+        && request.resource.data.submittedAt == request.time
+        && request.resource.data.submittedEmail is string
+        && request.resource.data.submittedEmail.size() <= 180;
+    }
+
+    match /availability/{dateId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /bookings/{bookingId} {
+      allow create: if isAdmin() || validPublicBookingCreate();
+      allow read, delete: if isAdmin();
+      allow update: if isAdmin() || validPrivateInviteBookingUpdate(bookingId);
+    }
+
+    match /privateBookingInvites/{inviteId} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || validPrivateInvitePublicUpdate(inviteId);
+    }
+
+    match /refundNotifications/{noticeId} {
+      allow read: if isAdmin();
+      allow write: if false; // One immutable server-side notification record per Stripe refund.
+    }
+
+    match /refundOperations/{refundId} {
+      allow read: if isAdmin();
+      allow write: if false; // The financial ledger is server-owned.
+    }
+
+    match /adminActivity/{activityId} {
+      allow read: if isAdmin();
+      allow write: if false; // Immutable audit events come only from authenticated server functions.
+    }
+
+    match /agencyPartners/{partnerId} {
+      allow read, create, update, delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+)
         && request.resource.data.propertyAddress is string
         && request.resource.data.propertyAddress.size() >= 8
         && request.resource.data.propertyAddress.size() <= 400
