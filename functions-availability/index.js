@@ -14,6 +14,7 @@ function getComparableId(item = {}) {
 }
 
 function isConfirmedBooking(data = {}) {
+  if (["cancelled", "payment_exception", "payment_expired"].includes(data.status)) return false;
   return data.status === "confirmed" || CONFIRMED_PAYMENT_STATUSES.has(data.paymentStatus);
 }
 
