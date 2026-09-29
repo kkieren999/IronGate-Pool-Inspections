@@ -3,6 +3,7 @@ const logger = require("firebase-functions/logger");
 const { onDocumentUpdated } = require("firebase-functions/v2/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const { google } = require("googleapis");
+const { createHash } = require("node:crypto");
 
 admin.initializeApp();
 
@@ -113,20 +114,39 @@ async function getCalendarClient() {
 
 async function createCalendarEvent(calendar, calendarId, bookingId, booking, ref) {
   const requestBody = buildCalendarEvent(bookingId, booking);
+  // A stable, Calendar-compatible ID makes a retry after an insert/Firestore
+  // failure reuse the existing event instead of creating a duplicate.
+  const eventId = "ig" + createHash("sha256").update(bookingId).digest("hex").slice(0, 48);
   if (!requestBody) {
     logger.warn("Calendar event skipped because event time is missing", { bookingId });
     return;
   }
 
-  const created = await calendar.events.insert({ calendarId, requestBody });
+  let created;
+  try {
+    created = await calendar.events.insert({ calendarId, requestBody: { ...requestBody, id: eventId } });
+  } catch (error) {
+    if (Number(error.code || error.response?.status) !== 409) throw error;
+    // Another invocation may have inserted the same booking event already.
+    created = await calendar.events.patch({ calendarId, eventId, requestBody });
+  }
+
+  const latest = (await ref.get()).data() || {};
+  if (latest.status === "cancelled" || latest.inspectionStatus === "cancelled") {
+    try { await calendar.events.delete({ calendarId, eventId }); }
+    catch (error) { if (Number(error.code || error.response?.status) !== 404) throw error; }
+    await ref.set({ calendarSyncStatus: "synced", calendarSyncError: null }, { merge: true });
+    return;
+  }
 
   await ref.set({
-    googleCalendarEventId: created.data.id || null,
+    googleCalendarEventId: created.data.id || eventId,
     googleCalendarEventLink: created.data.htmlLink || null,
     googleCalendarEventCreatedAt: admin.firestore.FieldValue.serverTimestamp(),
     googleCalendarEventUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
     googleCalendarEventDeletedAt: null,
-    calendarSyncStatus: "synced", calendarSyncError: null,
+    calendarSyncStatus: latest.lastAdminActionId === booking.lastAdminActionId ? "synced" : "pending",
+    calendarSyncError: null,
     updatedAt: admin.firestore.FieldValue.serverTimestamp()
   }, { merge: true });
 
