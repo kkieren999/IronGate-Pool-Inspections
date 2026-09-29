@@ -146,13 +146,18 @@ function renderList() {
 }
 function renderOverview() {
   const today = todayBrisbane();
-  const eligible = records.filter(({ data }) => !TERMINAL.has(String(data.status || "").toLowerCase()));
+  const eligible = records.filter(({ data }) => data.status === "confirmed" &&
+    !TERMINAL.has(String(data.inspectionStatus || "").toLowerCase()));
   value("#ops-today", eligible.filter(({ data }) => data.preferredDate === today).length);
   value("#ops-upcoming", eligible.filter(({ data }) =>
     String(data.preferredDate || "") > today && ["paid", "agency_invoice"].includes(data.paymentStatus)).length);
   value("#ops-pending", eligible.filter(({ data }) =>
     ["pending_payment", "payment_processing"].includes(data.status) || data.paymentStatus === "checkout_created").length);
   value("#ops-cancelled", records.filter(({ data }) => data.status === "cancelled").length);
+  const exceptions = records.filter(({ data }) => data.status === "payment_exception" ||
+    data.availabilityLockStatus === "conflict");
+  value("#ops-attention", exceptions.length + " paid booking(s) need manual availability review. " +
+    (exceptions.length ? "Open Bookings and check Availability issue." : ""));
   value("#overview-message", "Showing the latest " + records.length + " bookings; totals are not all-time figures.");
   value("#payments-overview", records.filter(({ data }) => data.paymentStatus === "paid").length +
     " paid bookings in the latest " + records.length + " records. Open a booking for payment details.");
