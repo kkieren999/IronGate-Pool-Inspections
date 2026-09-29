@@ -24,6 +24,7 @@ test("calendar updates on a move, skips a refund-only update, and does not resur
   assert.equal(planCalendarAction(booking, { ...booking, calendarSyncStatus: "pending" }), "update");
   assert.equal(planCalendarAction(booking, { ...booking, status: "cancelled", calendarSyncStatus: "pending" }), "delete");
   assert.equal(planCalendarAction({}, { status: "pending_payment", paymentStatus: "checkout_created" }), "skip");
+  assert.equal(planCalendarAction({}, { status: "payment_exception", paymentStatus: "paid" }), "skip");
   assert.equal(planCalendarAction({}, { status: "confirmed", paymentStatus: "paid", calendarSyncStatus: "pending" }), "create");
 });
 
