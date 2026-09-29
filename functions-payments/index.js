@@ -446,6 +446,8 @@ async function markCheckoutSessionPaid(session) {
       return null;
     }
     const booking = snapshot.data() || {};
+    // A delayed unpaid event must never downgrade a payment already confirmed.
+    if (booking.paymentStatus === "paid" && !checkoutComplete) return null;
     if (booking.stripeCheckoutSessionId && booking.stripeCheckoutSessionId !== session.id) {
       logger.warn("Stripe event belongs to an older checkout session", { bookingId, sessionId: session.id });
       return null;
