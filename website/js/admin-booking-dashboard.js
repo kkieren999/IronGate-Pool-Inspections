@@ -75,6 +75,7 @@ function renderDetails() {
   panel.appendChild(actionHost);
   detailSection(panel, "Appointment", [
     ["Status", bookingStatus(b)], ["Inspection status", b.inspectionStatus],
+    ["Availability lock", b.availabilityLockStatus], ["Availability issue", b.availabilityLockError],
     ["Date", b.preferredDateDisplay || b.preferredDate], ["Time", b.preferredTimeLabel || b.preferredTime],
     ["Property", b.propertyAddress], ["Pool type", b.poolType],
     ["Reason", b.inspectionReason], ["Pool registered", b.poolRegisteredStatus],
