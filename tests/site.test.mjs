@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { runInNewContext } from "node:vm";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -138,4 +139,118 @@ test("licence number is correct in source, without a runtime patch shim", () => 
   for (const p of files(site).filter((p) => p.endsWith(".html"))) {
     assert.ok(!/PSI\s*000000/i.test(readFileSync(p, "utf8")), relative(site, p) + " has placeholder licence");
   }
+});
+
+test("address autocomplete requests Geoapify, selects a suggestion, and unlocks the pool-register-confirmed form", async () => {
+  // Run the actual browser module against a minimal DOM. The calendar's Firebase
+  // network request is unrelated to this test and is the only startup call skipped.
+  const source = siteRead("js/booking.js");
+  assert.match(source, /^loadAvailabilityForMonth\(\);$/m);
+  const runtimeSource = source.replace(/^loadAvailabilityForMonth\(\);$/m, "");
+
+  function element() {
+    const listeners = new Map();
+    const item = {
+      value: "", hidden: false, disabled: false, checked: false, dataset: {},
+      children: [], textContent: "", _html: "",
+      classList: { toggle() {}, add() {} },
+      addEventListener(type, listener) { listeners.set(type, listener); },
+      dispatch(type) { return listeners.get(type)?.(); },
+      appendChild(child) { this.children.push(child); },
+      contains(node) { return this === node; },
+      setAttribute() {}, insertAdjacentElement(_where, node) { this.nextElementSibling = node; },
+      querySelector(selector) {
+        if (!this._html.includes('id="' + selector.slice(1) + '"')) return null;
+        this._dynamic ||= new Map();
+        if (!this._dynamic.has(selector)) this._dynamic.set(selector, element());
+        return this._dynamic.get(selector);
+      },
+      querySelectorAll() { return []; },
+      set innerHTML(value) { this._html = value; this._dynamic = new Map(); this.children = []; },
+      get innerHTML() { return this._html; }
+    };
+    return item;
+  }
+
+  const nodes = new Map();
+  const byId = (id) => {
+    if (!nodes.has(id)) nodes.set(id, element());
+    return nodes.get(id);
+  };
+  const propertyFields = element(), contactSection = element();
+  const propertySection = element(), laterSection = element();
+  const form = byId("#booking-form");
+  const continueButton = byId("#booking-submit");
+  propertySection.querySelectorAll = () => [propertyFields];
+  form.querySelectorAll = (selector) => selector === ".form-section"
+    ? [contactSection, propertySection, laterSection] : [];
+  form.querySelector = (selector) => selector === '[aria-labelledby="property-details-heading"]'
+    ? propertySection : null;
+  const scheduled = [];
+  const calls = [];
+  const document = {
+    querySelector(selector) { return selector === "#pool-register-styles" ? null : byId(selector); },
+    createElement() { return element(); },
+    addEventListener() {},
+    head: { appendChild() {} }
+  };
+  const suggestion = {
+    formatted: "10 Example Street, Paddington QLD 4064, Australia",
+    address_line1: "10 Example Street", housenumber: "10", street: "Example",
+    suburb: "Paddington", postcode: "4064", place_id: "example-place", country: "Australia"
+  };
+  const registerRecord = {
+    _id: 1, "Street Number": "10", "Street Name": "EXAMPLE",
+    "Street Type": "STREET", Suburb: "PADDINGTON", "Post Code": "4064",
+    "Number of Pools": "1"
+  };
+  const context = {
+    document, URLSearchParams, console,
+    window: {
+      clearTimeout() {},
+      setTimeout(callback) { scheduled.push(callback); return scheduled.length; }
+    },
+    async fetch(url) {
+      calls.push(String(url));
+      if (String(url).includes("api.geoapify.com")) {
+        return { ok: true, async json() { return { results: [suggestion] }; } };
+      }
+      if (String(url).includes("data.qld.gov.au")) {
+        return { ok: true, async json() { return { success: true, result: { records: [registerRecord] } }; } };
+      }
+      throw Error("Unexpected external request: " + url);
+    }
+  };
+
+  assert.doesNotThrow(() => runInNewContext(runtimeSource, context, { filename: "booking.js" }));
+  assert.equal(propertyFields.hidden, true, "later property fields should initially be gated");
+  assert.equal(laterSection.hidden, true, "later sections should initially be gated");
+  assert.equal(continueButton.hidden, true, "checkout should initially be gated");
+
+  const address = byId("#propertyAddress");
+  address.value = "10 Example Street Paddington";
+  assert.doesNotThrow(() => address.dispatch("input"), "typing must not throw before scheduling autocomplete");
+  assert.equal(scheduled.length, 1, "typing schedules a lookup");
+  await scheduled.pop()();
+  assert.ok(calls.some((url) => url.includes("api.geoapify.com/v1/geocode/autocomplete")));
+  assert.equal(byId("#address-suggestions").hidden, false, "suggestions should become visible");
+  const option = byId("#address-suggestions").children[0];
+  assert.equal(option.textContent, suggestion.formatted);
+  option.dispatch("click");
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(address.value, suggestion.formatted);
+  assert.equal(byId("#propertyAddressSelected").value, "true");
+  assert.equal(byId("#propertyPlaceId").value, suggestion.place_id);
+  assert.ok(calls.some((url) => url.includes("data.qld.gov.au/api/3/action/datastore_search")));
+  const poolPanel = byId("#address-status").nextElementSibling;
+  assert.equal(poolPanel.dataset.status, "registered", "register details should appear after selection");
+
+  const confirmation = poolPanel.querySelector("#poolRegisterLooksRight");
+  assert.ok(confirmation, "registered pool must ask for customer confirmation");
+  confirmation.checked = true;
+  confirmation.dispatch("change");
+  assert.equal(propertyFields.hidden, false);
+  assert.equal(laterSection.hidden, false);
+  assert.equal(continueButton.hidden, false, "checkout should unlock only after pool-register confirmation");
 });

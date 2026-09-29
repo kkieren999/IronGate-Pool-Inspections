@@ -1,3 +1,6 @@
+// Shared booking form elements are also used when gating later steps after pool-register checks.
+const form = document.querySelector("#booking-form");
+const submitButton = document.querySelector("#booking-submit");
 const message = document.querySelector("#booking-message");
 const priceNotice = document.querySelector("#booking-price-notice");
 const calendarGrid = document.querySelector("#calendar-grid");
