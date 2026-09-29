@@ -335,7 +335,6 @@ async function handlePrivateBookingCheckout(booking) {
 
 async function handleBackendBookingSubmit(event) {
   event.preventDefault();
-  event.stopImmediatePropagation();
 
   if (redirectStarted) return;
   setMessage("");
@@ -381,16 +380,7 @@ async function handleBackendBookingSubmit(event) {
 setCustomerFacingCopy();
 
 if (form) {
-  form.addEventListener("submit", handleBackendBookingSubmit, { capture: true });
-}
-
-if (submitButton) {
-  const buttonObserver = new MutationObserver(() => {
-    if (!submitButton.disabled && submitButton.textContent.trim() === "Save Booking Test") {
-      submitButton.textContent = "Continue to Secure Payment";
-    }
-  });
-  buttonObserver.observe(submitButton, { childList: true, characterData: true, subtree: true });
+  form.addEventListener("submit", handleBackendBookingSubmit);
 }
 
 if (privateInviteToken) {
