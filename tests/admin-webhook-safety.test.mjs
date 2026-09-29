@@ -93,3 +93,21 @@ test("delayed unpaid or mismatched Checkout events cannot replace an existing pa
   await getWebhookFns(absent).markCheckoutSessionPaid(session);
   assert.equal(absent.store.size, 0, "Webhook may not manufacture an orphan booking");
 });
+
+test("paid checkout without its held slot is flagged, not silently confirmed", async () => {
+  const db = fakeDb({
+    ["bookings/" + id]: { status: "pending_payment", paymentStatus: "checkout_created",
+      stripeCheckoutSessionId: sid, preferredDate: "2099-05-02", preferredTimeSlot: "09_00" },
+    "availability/2099-05-02": { slots: {
+      "09_00": { id: "09_00", bookingId: "another_booking", booked: true }
+    } }
+  });
+  const handlers = getWebhookFns(db);
+  await handlers.markCheckoutSessionPaid(session);
+  const booking = db.store.get("bookings/" + id);
+  assert.equal(booking.status, "payment_exception");
+  assert.equal(booking.paymentStatus, "paid", "money still needs accounting");
+  assert.equal(booking.availabilityLockStatus, "conflict");
+  assert.match(booking.availabilityLockError, /original time is no longer held/);
+  assert.equal(db.confirmCount, 0, "must never lock another customer's slot");
+});
