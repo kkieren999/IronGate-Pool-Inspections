@@ -138,6 +138,68 @@ test("backend rejects missing role authority, owner identity, access and animal 
     assert.throws(() => assertValidBooking(payload), pattern);
   }
 });
+test("frontend constructs the full agency booking payload for the existing Stripe checkout", () => {
+  const source = read("website/js/booking-stripe.js");
+  const first = source.indexOf("function validateBookingPayload(payload) {");
+  const last = source.indexOf("\nfunction inviteExpired(", first);
+  assert.ok(first > 0 && last > first);
+  const values = {
+    "#bookingRole": "agency", "#agencyName": "Willow Brown",
+    "#customerName": "Ken Example", "#email": "ken@example.com", "#phone": "0412345678",
+    "#propertyAddress": "20 Example Court, Carindale QLD 4152",
+    "#propertyAddressSelected": "true", "#propertyPlaceId": "testplace",
+    "#poolOwnerStatus": "pending", "#accessContactName": "Sam Example",
+    "#accessContactPhone": "07 3397 4280", "#accessContactEmail": "sam@example.com",
+    "#accessContactAgency": "Harcourts", "#accessMethod": "keys",
+    "#keyCollectionLocation": "15 Example Rd, Coorparoo",
+    "#inspectionReason": "Renting or leasing the property", "#poolType": "Swimming pool",
+    "#preferredDate": "2099-05-08", "#preferredTimeSlot": "09_00"
+  };
+  const checked = new Set([
+    "#authorisedToBook", "#accessPermissionIfNotHome", "#nonComplianceAcknowledged",
+    "#informationAccuracyConfirmed", "#termsAccepted"
+  ]);
+  const context = {
+    privateInvite: null,
+    privateInviteToken: "token-test",
+    getValue(selector) { return values[selector] || ""; },
+    getChecked(selector) { return checked.has(selector); },
+    normaliseAustralianMobile: (value) => value,
+    selectedSlotDetails: () => ({ id: "09_00", start: "09:00", end: "10:00", label: "9 am - 10 am" }),
+    selectedDateDisplay: () => "Friday 8 May",
+    isTodayOrPastDateKey: () => false,
+    serverTimestamp: () => "timestamp"
+  };
+  const funcs = runInNewContext(source.slice(first, last) +
+    "\n({ validateBookingPayload, collectBookingPayload, privateCustomerUpdate });", context);
+  const payload = funcs.collectBookingPayload();
+  assert.equal(funcs.validateBookingPayload(payload), "");
+  assert.equal(payload.bookingRoleCode, "agency");
+  assert.equal(payload.agencyName, "Willow Brown");
+  assert.equal(payload.poolOwnerStatus, "pending");
+  assert.equal(payload.ownerDetailsPending, true);
+  assert.equal(payload.accessContactName, "Sam Example");
+  assert.equal(payload.accessMethod, "keys");
+  assert.equal(payload.keyCollectionLocation, "15 Example Rd, Coorparoo");
+  const privateUpdate = funcs.privateCustomerUpdate(payload);
+  for (const field of ["bookingRoleCode", "agencyName", "poolOwnerStatus",
+    "ownerDetailsPending", "accessContactName", "accessMethod", "keyCollectionLocation"]) {
+    assert.equal(privateUpdate[field], payload[field], "private invitation field: " + field);
+  }
+  checked.delete("#authorisedToBook");
+  const unapproved = funcs.collectBookingPayload();
+  assert.match(funcs.validateBookingPayload(unapproved), /authorised/i);
+});
+test("backend accepts Australian mobile and landline for agents, with rules matching", () => {
+  const { assertValidBooking } = backend();
+  for (const phone of ["0412345678", "+61412345678", "07 3397 4280", "+61 7 3397 4280"]) {
+    assert.doesNotThrow(() => assertValidBooking({ ...exampleBooking(), phone }), phone);
+  }
+  const rules = read("firestore.rules");
+  assert.equal((rules.match(/function validPrivateInviteBookingUpdate/g) || []).length, 1);
+  assert.equal((rules.match(/request\.resource\.data\.phone\.matches/g) || []).length, 2);
+  assert.ok(rules.includes("0[2378][0-9]{8}"));
+});
 test("public and private checkout capture the same booking role and access fields", () => {
   const html = read("website/booking/index.html");
   const stripe = read("website/js/booking-stripe.js");
