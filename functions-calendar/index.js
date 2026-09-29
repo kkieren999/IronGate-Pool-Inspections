@@ -244,7 +244,8 @@ exports.createCalendarEventAfterPayment = onDocumentUpdated({
       // after the customer has already cancelled their appointment.
       const latest = await ref.get();
       const current = latest.data() || {};
-      if (current.status === "cancelled" || current.inspectionStatus === "cancelled") return;
+      if (["cancelled", "payment_exception", "payment_expired"].includes(current.status) ||
+          current.inspectionStatus === "cancelled") return;
       if (current.googleCalendarEventId) {
         await updateCalendarEvent(calendar, calendarId, bookingId, current, ref);
       } else {
@@ -253,7 +254,8 @@ exports.createCalendarEventAfterPayment = onDocumentUpdated({
     } else if (action === "update") {
       const latest = await ref.get();
       const current = latest.data() || {};
-      if (current.status === "cancelled" || current.inspectionStatus === "cancelled") return;
+      if (["cancelled", "payment_exception", "payment_expired"].includes(current.status) ||
+          current.inspectionStatus === "cancelled") return;
       await updateCalendarEvent(calendar, calendarId, bookingId, current, ref);
     }
   } catch (error) {
