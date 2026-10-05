@@ -3,6 +3,7 @@ const logger = require("firebase-functions/logger");
 const { HttpsError, onCall, onRequest } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const Stripe = require("stripe");
+const QRCode = require("qrcode");
 const { createBookingAndCheckoutSession: createDirectBookingAndCheckoutSession } = require("./direct-booking");
 
 admin.initializeApp();
