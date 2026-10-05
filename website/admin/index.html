@@ -247,10 +247,11 @@
               <div class="ops-metrics" style="margin:16px 0;">
                 <div class="ops-metric"><strong id="finance-stripe-paid">—</strong><span>Stripe paid</span></div>
                 <div class="ops-metric"><strong id="finance-invoice-required">—</strong><span>Invoices to generate</span></div>
-                <div class="ops-metric"><strong id="finance-invoice-issued">—</strong><span>Invoices issued</span></div>
+                <div class="ops-metric"><strong id="finance-invoice-issued">—</strong><span>Awaiting Stripe payment</span></div>
+                <div class="ops-metric"><strong id="finance-invoice-paid">—</strong><span>Invoice paid via Stripe</span></div>
               </div>
               <p class="muted-help" id="payments-overview">Select a booking under Bookings to review its payment details.</p>
-              <p class="muted-help">Use the Bookings tab to generate an invoice for an INVOICE100 booking. Refund controls below remain limited to real Stripe payments.</p>
+              <p class="muted-help">Use the Bookings tab to generate an invoice with a customer-specific Stripe QR code. Invoice payments are Stripe-only; bank-transfer details are not shown.</p>
               <div class="booking-workspace"><div id="refund-queue" class="booking-results" aria-label="Paid bookings"></div><div id="refund-management-host" class="booking-detail">Select a paid booking to review refund options.</div></div>
             </section>
           </div>
@@ -478,6 +479,6 @@
     </section>
   </main>
 
-  <script type="module" src="/js/admin-console.js?v=20261005invoice1"></script>
+  <script type="module" src="/js/admin-console.js?v=20261005invoice2"></script>
 </body>
 </html>

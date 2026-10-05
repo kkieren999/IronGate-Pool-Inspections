@@ -3,6 +3,7 @@ const logger = require("firebase-functions/logger");
 const { HttpsError, onCall, onRequest } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const Stripe = require("stripe");
+const QRCode = require("qrcode");
 const { createBookingAndCheckoutSession: createDirectBookingAndCheckoutSession } = require("./direct-booking");
 
 admin.initializeApp();
@@ -595,6 +596,119 @@ async function markCheckoutSessionPaid(session, stripeClient = null) {
   });
 }
 
+function isInvoicePaymentSession(session = {}) {
+  return String(session.metadata?.paymentPurpose || "").toLowerCase() === "invoice_payment";
+}
+
+async function markInvoicePaymentPaid(session, stripeClient = null) {
+  const bookingId = session.metadata?.bookingId || session.client_reference_id;
+  const invoiceNumber = String(session.metadata?.invoiceNumber || "").trim();
+  if (!bookingId) {
+    logger.warn("Invoice Stripe payment completed without bookingId", { sessionId: session.id });
+    return;
+  }
+  if (session.payment_status !== "paid") {
+    logger.info("Invoice Checkout Session completed without paid status; awaiting payment success", {
+      bookingId, sessionId: session.id, paymentStatus: session.payment_status || "unknown"
+    });
+    return;
+  }
+
+  const bookingRef = db.collection("bookings").doc(bookingId);
+  const amountPaid = Number.isSafeInteger(session.amount_total) ? session.amount_total : 0;
+  const paymentIntentId = typeof session.payment_intent === "string" ?
+    session.payment_intent : session.payment_intent?.id || null;
+  const paymentLinkId = typeof session.payment_link === "string" ?
+    session.payment_link : session.payment_link?.id || null;
+
+  const outcome = await db.runTransaction(async (tx) => {
+    const snapshot = await tx.get(bookingRef);
+    if (!snapshot.exists) {
+      logger.warn("Invoice payment booking not found", { bookingId, sessionId: session.id });
+      return null;
+    }
+    const booking = snapshot.data() || {};
+    if (booking.invoiceRequired !== true ||
+        normalisePromotionCode(booking.stripePromotionCode) !== INVOICE_PROMO_CODE) {
+      logger.warn("Invoice payment event does not belong to an INVOICE100 booking", {
+        bookingId, sessionId: session.id
+      });
+      return null;
+    }
+    if (booking.invoiceNumber && invoiceNumber && booking.invoiceNumber !== invoiceNumber) {
+      logger.warn("Invoice payment invoice number mismatch", {
+        bookingId, sessionId: session.id, expected: booking.invoiceNumber, received: invoiceNumber
+      });
+      return null;
+    }
+
+    const expectedAmount = Number.isSafeInteger(booking.invoiceAmountCents) && booking.invoiceAmountCents > 0 ?
+      booking.invoiceAmountCents : INSPECTION_PRICE_CENTS;
+    if (amountPaid !== expectedAmount) {
+      tx.set(bookingRef, {
+        invoicePaymentStatus: "amount_mismatch",
+        billingStatus: "invoice_payment_exception",
+        invoicePaymentLastSessionId: session.id,
+        invoicePaymentLastAmountCents: amountPaid,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      return { applied: false, paymentLinkId };
+    }
+
+    if (booking.invoiceStatus === "paid" &&
+        booking.stripeInvoicePaymentSessionId === session.id) {
+      return { applied: false, alreadyPaid: true, paymentLinkId };
+    }
+
+    const stamp = admin.firestore.FieldValue.serverTimestamp();
+    tx.set(bookingRef, {
+      invoiceStatus: "paid",
+      invoicePaymentStatus: "paid",
+      billingMethod: "invoice_stripe",
+      billingStatus: "invoice_paid_stripe",
+      invoicePaidAt: stamp,
+      invoicePaidAmountCents: amountPaid,
+      stripeCashReceivedCents: amountPaid,
+      stripeInvoicePaymentSessionId: session.id,
+      stripeInvoicePaymentIntentId: paymentIntentId,
+      stripeInvoicePaymentLinkId: paymentLinkId || booking.stripeInvoicePaymentLinkId || null,
+      stripeInvoicePaymentCustomerId: typeof session.customer === "string" ?
+        session.customer : session.customer?.id || null,
+      stripeInvoicePaymentAmountCents: amountPaid,
+      stripeInvoicePaymentCurrency: session.currency || CURRENCY,
+      stripePaymentIntentId: paymentIntentId || booking.stripePaymentIntentId || null,
+      paymentReceivedAt: stamp,
+      updatedAt: stamp
+    }, { merge: true });
+
+    tx.set(db.collection("adminActivity").doc(bookingId + "_invoice_paid_" + session.id), {
+      bookingId,
+      action: "invoice_paid_stripe",
+      invoiceNumber: booking.invoiceNumber || invoiceNumber || null,
+      amountCents: amountPaid,
+      stripeCheckoutSessionId: session.id,
+      stripePaymentIntentId: paymentIntentId,
+      createdAt: stamp
+    }, { merge: true });
+
+    return { applied: true, paymentLinkId };
+  });
+
+  if (outcome?.paymentLinkId && stripeClient?.paymentLinks?.update) {
+    try {
+      await stripeClient.paymentLinks.update(outcome.paymentLinkId, { active: false });
+    } catch (error) {
+      logger.warn("Invoice payment link could not be deactivated after payment", {
+        bookingId, paymentLinkId: outcome.paymentLinkId, message: error.message
+      });
+    }
+  }
+
+  logger.info("Stripe invoice payment event handled", {
+    bookingId, sessionId: session.id, amountPaid, applied: Boolean(outcome?.applied)
+  });
+}
+
 async function markCheckoutSessionExpired(session) {
   const bookingId = session.metadata?.bookingId || session.client_reference_id;
   if (!bookingId) return;
@@ -690,14 +804,20 @@ exports.stripeWebhook = onRequest(
         event.type === "checkout.session.completed" ||
         event.type === "checkout.session.async_payment_succeeded"
       ) {
-        await markCheckoutSessionPaid(event.data.object, stripe);
+        if (isInvoicePaymentSession(event.data.object)) {
+          await markInvoicePaymentPaid(event.data.object, stripe);
+        } else {
+          await markCheckoutSessionPaid(event.data.object, stripe);
+        }
       }
 
       if (
         event.type === "checkout.session.expired" ||
         event.type === "checkout.session.async_payment_failed"
       ) {
-        await markCheckoutSessionExpired(event.data.object);
+        if (!isInvoicePaymentSession(event.data.object)) {
+          await markCheckoutSessionExpired(event.data.object);
+        }
       }
 
       if (["refund.created", "refund.updated", "refund.failed"].includes(event.type)) {
@@ -822,7 +942,7 @@ async function adminIssueBookingInvoice(request) {
         invoiceAmountCents: amountCents,
         billingMethod: "invoice",
         billingStatus: "invoice_issued",
-        invoiceBankDetailsVersion: "sample-v1",
+        invoicePaymentMethod: "stripe_only",
         updatedAt: stamp,
         updatedBy: actor.email
       });
@@ -849,6 +969,133 @@ async function adminIssueBookingInvoice(request) {
   });
 }
 
+async function invoiceQrSvg(url) {
+  return QRCode.toString(url, {
+    type: "svg",
+    errorCorrectionLevel: "M",
+    margin: 1,
+    width: 220
+  });
+}
+
+async function adminPrepareInvoiceStripePayment(request, stripe) {
+  const actor = await requireAdmin(request);
+  const bookingId = validAdminBookingId(request.data?.bookingId);
+  const bookingRef = db.collection("bookings").doc(bookingId);
+  const snapshot = await bookingRef.get();
+  if (!snapshot.exists) throw new HttpsError("not-found", "Booking not found.");
+  const booking = snapshot.data() || {};
+  const promo = normalisePromotionCode(booking.stripePromotionCode);
+
+  if (booking.invoiceRequired !== true || promo !== INVOICE_PROMO_CODE || !booking.invoiceNumber) {
+    throw new HttpsError("failed-precondition", "Issue the INVOICE100 invoice before creating its Stripe payment QR.");
+  }
+
+  if (booking.invoiceStatus === "paid") {
+    return {
+      bookingId,
+      invoiceNumber: booking.invoiceNumber,
+      invoiceStatus: "paid",
+      billingStatus: booking.billingStatus || "invoice_paid_stripe",
+      invoicePaidAmountCents: booking.invoicePaidAmountCents || booking.invoiceAmountCents || INSPECTION_PRICE_CENTS
+    };
+  }
+
+  const amountCents = Number.isSafeInteger(booking.invoiceAmountCents) && booking.invoiceAmountCents > 0 ?
+    booking.invoiceAmountCents : INSPECTION_PRICE_CENTS;
+
+  let paymentLink = null;
+  const existingLinkId = String(booking.stripeInvoicePaymentLinkId || "").trim();
+  if (/^plink_[a-zA-Z0-9_]+$/.test(existingLinkId)) {
+    try {
+      const existing = await stripe.paymentLinks.retrieve(existingLinkId);
+      if (existing?.active && existing?.url) paymentLink = existing;
+    } catch (error) {
+      logger.warn("Could not reuse existing Stripe invoice payment link", {
+        bookingId, paymentLinkId: existingLinkId, message: error.message
+      });
+    }
+  }
+
+  if (!paymentLink) {
+    paymentLink = await stripe.paymentLinks.create({
+      line_items: [{
+        quantity: 1,
+        price_data: {
+          currency: CURRENCY,
+          unit_amount: amountCents,
+          product_data: {
+            name: SERVICE_NAME,
+            description: `Invoice ${booking.invoiceNumber} — ${booking.propertyAddress || "Pool safety inspection"}`
+          }
+        }
+      }],
+      allow_promotion_codes: false,
+      billing_address_collection: "auto",
+      customer_creation: "if_required",
+      payment_method_types: ["card"],
+      restrictions: {
+        completed_sessions: { limit: 1 }
+      },
+      after_completion: {
+        type: "hosted_confirmation",
+        hosted_confirmation: {
+          custom_message: "Thank you. Your invoice payment has been received by Iron Gate Pool Inspections."
+        }
+      },
+      metadata: {
+        bookingId,
+        invoiceNumber: booking.invoiceNumber,
+        paymentPurpose: "invoice_payment",
+        originalPromotionCode: INVOICE_PROMO_CODE
+      },
+      payment_intent_data: {
+        description: `${SERVICE_NAME} — ${booking.invoiceNumber}`,
+        metadata: {
+          bookingId,
+          invoiceNumber: booking.invoiceNumber,
+          paymentPurpose: "invoice_payment",
+          originalPromotionCode: INVOICE_PROMO_CODE
+        }
+      }
+    });
+
+    await bookingRef.set({
+      stripeInvoicePaymentLinkId: paymentLink.id,
+      stripeInvoicePaymentUrl: paymentLink.url,
+      invoicePaymentStatus: "awaiting_payment",
+      invoicePaymentMethod: "stripe_only",
+      invoicePaymentLinkCreatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedBy: actor.email
+    }, { merge: true });
+
+    await db.collection("adminActivity").doc(bookingId + "_invoice_payment_link").set({
+      bookingId,
+      action: "invoice_stripe_payment_link_created",
+      actorUid: actor.uid,
+      actorEmail: actor.email,
+      invoiceNumber: booking.invoiceNumber,
+      amountCents,
+      stripePaymentLinkId: paymentLink.id,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }
+
+  const qrSvg = await invoiceQrSvg(paymentLink.url);
+  return {
+    bookingId,
+    invoiceNumber: booking.invoiceNumber,
+    invoiceStatus: booking.invoiceStatus || "issued",
+    billingStatus: booking.billingStatus || "invoice_issued",
+    invoiceAmountCents: amountCents,
+    stripeInvoicePaymentLinkId: paymentLink.id,
+    stripeInvoicePaymentUrl: paymentLink.url,
+    invoicePaymentStatus: booking.invoicePaymentStatus || "awaiting_payment",
+    invoicePaymentQrSvg: qrSvg
+  };
+}
+
 exports.adminReconcileBookingBilling = onCall({
   region: "us-central1", timeoutSeconds: 30, memory: "256MiB",
   invoker: "public", secrets: [STRIPE_SECRET_KEY]
@@ -857,6 +1104,11 @@ exports.adminReconcileBookingBilling = onCall({
 exports.adminIssueBookingInvoice = onCall({
   region: "us-central1", timeoutSeconds: 30, memory: "256MiB", invoker: "public"
 }, async (request) => adminIssueBookingInvoice(request));
+
+exports.adminPrepareInvoiceStripePayment = onCall({
+  region: "us-central1", timeoutSeconds: 30, memory: "256MiB",
+  invoker: "public", secrets: [STRIPE_SECRET_KEY]
+}, async (request) => adminPrepareInvoiceStripePayment(request, getStripe()));
 
 exports.adminMoveBooking = onCall({
   region: "us-central1", timeoutSeconds: 30, memory: "256MiB", invoker: "public"

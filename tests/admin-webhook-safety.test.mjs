@@ -20,7 +20,7 @@ function getWebhookFns(db) {
       { ...slot, bookingId: null, bookedByBookingId: null, booked: false, available: true },
     confirmAvailabilityReservation: async () => { db.confirmCount += 1; }
   };
-  return runInNewContext(code + "\n({ markCheckoutSessionPaid, markCheckoutSessionExpired });", context);
+  return runInNewContext(code + "\n({ markCheckoutSessionPaid, markInvoicePaymentPaid, markCheckoutSessionExpired, isInvoicePaymentSession });", context);
 }
 function fakeDb(seed) {
   const store = new Map(Object.entries(seed));
@@ -157,4 +157,85 @@ test("normal paid checkout remains Stripe-paid and is not marked invoice-require
   assert.equal(booking.billingMethod, "stripe");
   assert.equal(booking.billingStatus, "paid_stripe");
   assert.equal(booking.stripeCashReceivedCents, 14900);
+});
+
+
+test("Stripe invoice payment settles the INVOICE100 invoice without changing booking availability", async () => {
+  const paymentLinkId = "plink_invoice_123";
+  const invoiceSession = {
+    id: "cs_invoice_pay_123",
+    client_reference_id: id,
+    payment_status: "paid",
+    amount_total: 14900,
+    currency: "aud",
+    payment_intent: "pi_invoice_pay_123",
+    payment_link: paymentLinkId,
+    metadata: {
+      bookingId: id,
+      invoiceNumber: "IG-2099-ABC12345",
+      paymentPurpose: "invoice_payment"
+    }
+  };
+  const db = fakeDb({
+    ["bookings/" + id]: {
+      status: "confirmed",
+      paymentStatus: "paid",
+      stripePromotionCode: "INVOICE100",
+      invoiceRequired: true,
+      invoiceNumber: "IG-2099-ABC12345",
+      invoiceStatus: "issued",
+      invoiceAmountCents: 14900,
+      stripeCashReceivedCents: 0,
+      preferredDate: "2099-05-02",
+      preferredTimeSlot: "09_00"
+    },
+    "availability/2099-05-02": { slots: {
+      "09_00": { id: "09_00", bookingId: id, booked: true }
+    } }
+  });
+  const deactivated = [];
+  const stripe = { paymentLinks: { async update(linkId, patch) { deactivated.push([linkId, patch]); } } };
+  const handlers = getWebhookFns(db);
+  assert.equal(handlers.isInvoicePaymentSession(invoiceSession), true);
+  await handlers.markInvoicePaymentPaid(invoiceSession, stripe);
+  const booking = db.store.get("bookings/" + id);
+  assert.equal(booking.status, "confirmed");
+  assert.equal(booking.paymentStatus, "paid");
+  assert.equal(booking.invoiceStatus, "paid");
+  assert.equal(booking.billingStatus, "invoice_paid_stripe");
+  assert.equal(booking.billingMethod, "invoice_stripe");
+  assert.equal(booking.stripeCashReceivedCents, 14900);
+  assert.equal(booking.stripeInvoicePaymentIntentId, "pi_invoice_pay_123");
+  assert.equal(booking.stripeInvoicePaymentLinkId, paymentLinkId);
+  assert.equal(db.confirmCount, 0, "invoice settlement must not re-run booking slot confirmation");
+  assert.equal(deactivated.length, 1);
+  assert.equal(deactivated[0][0], paymentLinkId);
+  assert.equal(deactivated[0][1].active, false);
+  assert.equal(db.store.get("availability/2099-05-02").slots["09_00"].booked, true);
+});
+
+test("Stripe invoice payment with the wrong amount is not marked paid", async () => {
+  const db = fakeDb({
+    ["bookings/" + id]: {
+      status: "confirmed",
+      paymentStatus: "paid",
+      stripePromotionCode: "INVOICE100",
+      invoiceRequired: true,
+      invoiceNumber: "IG-2099-ABC12345",
+      invoiceStatus: "issued",
+      invoiceAmountCents: 14900
+    }
+  });
+  const handlers = getWebhookFns(db);
+  await handlers.markInvoicePaymentPaid({
+    id: "cs_invoice_wrong_amount",
+    payment_status: "paid",
+    amount_total: 9900,
+    currency: "aud",
+    metadata: { bookingId: id, invoiceNumber: "IG-2099-ABC12345", paymentPurpose: "invoice_payment" }
+  }, { paymentLinks: { async update() {} } });
+  const booking = db.store.get("bookings/" + id);
+  assert.equal(booking.invoiceStatus, "issued");
+  assert.equal(booking.invoicePaymentStatus, "amount_mismatch");
+  assert.equal(booking.billingStatus, "invoice_payment_exception");
 });
