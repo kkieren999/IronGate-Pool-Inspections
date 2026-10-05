@@ -208,7 +208,9 @@ test("Stripe invoice payment settles the INVOICE100 invoice without changing boo
   assert.equal(booking.stripeInvoicePaymentIntentId, "pi_invoice_pay_123");
   assert.equal(booking.stripeInvoicePaymentLinkId, paymentLinkId);
   assert.equal(db.confirmCount, 0, "invoice settlement must not re-run booking slot confirmation");
-  assert.equal(deactivated.length, 1);\n  assert.equal(deactivated[0][0], paymentLinkId);\n  assert.equal(deactivated[0][1].active, false);
+  assert.equal(deactivated.length, 1);
+  assert.equal(deactivated[0][0], paymentLinkId);
+  assert.equal(deactivated[0][1].active, false);
   assert.equal(db.store.get("availability/2099-05-02").slots["09_00"].booked, true);
 });
 
