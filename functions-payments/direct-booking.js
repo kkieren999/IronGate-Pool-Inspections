@@ -16,6 +16,7 @@ const BOOKING_ALLOWED_FIELDS = [
   "poolOwnerStatus",
   "poolOwnerName",
   "poolOwnerEmail",
+  "poolOwnerPhone",
   "ownerDetailsPending",
   "accessSameAsBooking",
   "accessContactName",
@@ -182,18 +183,21 @@ function assertValidBooking(booking) {
     throw codedError("invalid-argument", "Please describe your relationship to the property.");
   }
   const ownerStatus = asString(booking.poolOwnerStatus);
-  if (!["self", "different", "pending"].includes(ownerStatus) ||
-      (isOwner && ownerStatus !== "self") || (!isOwner && ownerStatus === "self")) {
-    throw codedError("invalid-argument", "Choose a valid pool owner status.");
+  if (!["self", "different"].includes(ownerStatus) ||
+      (isOwner && ownerStatus !== "self") || (!isOwner && ownerStatus !== "different")) {
+    throw codedError("invalid-argument", "Choose valid pool owner details.");
   }
-  if (ownerStatus === "different" && !asString(booking.poolOwnerName)) {
-    throw codedError("invalid-argument", "Pool owner's name is required when their details are known.");
+  if (!asString(booking.poolOwnerName)) {
+    throw codedError("invalid-argument", "Pool owner's name is required.");
   }
-  if (ownerStatus === "pending" && booking.ownerDetailsPending !== true) {
-    throw codedError("invalid-argument", "Outstanding owner details must be recorded.");
+  if (!/^\S+@\S+\.\S+$/.test(asString(booking.poolOwnerEmail))) {
+    throw codedError("invalid-argument", "A valid pool owner email is required.");
   }
-  if (booking.poolOwnerEmail && !/^\S+@\S+\.\S+$/.test(asString(booking.poolOwnerEmail))) {
-    throw codedError("invalid-argument", "Invalid pool owner email.");
+  if (!/^(?:04\d{8}|0[2378]\d{8}|\+614\d{8}|\+61[2378]\d{8})$/.test(cleanPhone(booking.poolOwnerPhone))) {
+    throw codedError("invalid-argument", "A valid Australian pool owner contact phone is required.");
+  }
+  if (booking.ownerDetailsPending === true) {
+    throw codedError("invalid-argument", "Pool owner details must be supplied before booking.");
   }
   if (booking.accessSameAsBooking !== true &&
       (!asString(booking.accessContactName) || !/^[+0-9()\s-]{6,22}$/.test(asString(booking.accessContactPhone)))) {
@@ -212,7 +216,7 @@ function assertValidBooking(booking) {
   }
   const limits = {
     customerName: 140, email: 180, agencyName: 140, bookingRelationship: 140,
-    poolOwnerName: 180, poolOwnerEmail: 180, accessContactName: 140,
+    poolOwnerName: 180, poolOwnerEmail: 180, poolOwnerPhone: 22, accessContactName: 140,
     accessContactPhone: 22, accessContactEmail: 180, accessContactAgency: 140,
     keyCollectionLocation: 400, accessInstructions: 1500, notes: 1500
   };
@@ -244,18 +248,21 @@ function publicBookingData(rawBooking = {}, config = {}) {
   booking.bookingRole = booking.clientType;
   for (const key of [
     "agencyName", "bookingRelationship", "poolOwnerName", "poolOwnerEmail",
-    "accessContactName", "accessContactPhone", "accessContactEmail",
+    "accessContactName", "accessContactEmail",
     "accessContactAgency", "keyCollectionLocation"
   ]) booking[key] = asString(booking[key]);
   booking.poolOwnerEmail = booking.poolOwnerEmail.toLowerCase();
+  booking.poolOwnerPhone = cleanPhone(booking.poolOwnerPhone);
+  booking.accessContactPhone = asString(booking.accessContactPhone);
   booking.accessContactEmail = booking.accessContactEmail.toLowerCase();
   booking.poolOwnerStatus = asString(booking.poolOwnerStatus);
   booking.accessMethod = asString(booking.accessMethod);
-  booking.ownerDetailsPending = booking.poolOwnerStatus === "pending";
+  booking.ownerDetailsPending = false;
   booking.accessSameAsBooking = asBoolean(booking.accessSameAsBooking);
   if (booking.bookingRoleCode === "owner") {
     booking.poolOwnerName = booking.customerName;
     booking.poolOwnerEmail = booking.email;
+    booking.poolOwnerPhone = booking.phone;
   }
   if (booking.accessSameAsBooking) {
     booking.accessContactName = booking.customerName;
