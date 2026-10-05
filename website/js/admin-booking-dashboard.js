@@ -10,6 +10,7 @@ const auth = getAuth(app);
 const functions = getFunctions(app, "us-central1");
 const reconcileBookingBilling = httpsCallable(functions, "adminReconcileBookingBilling");
 const issueBookingInvoice = httpsCallable(functions, "adminIssueBookingInvoice");
+const prepareInvoiceStripePayment = httpsCallable(functions, "adminPrepareInvoiceStripePayment");
 const $ = (selector) => document.querySelector(selector);
 const todayBrisbane = () => {
   const parts = new Intl.DateTimeFormat("en-AU", {
@@ -54,9 +55,15 @@ function stripeCashReceived(booking = {}) {
 function isStripePaidBooking(booking = {}) {
   return !isInvoiceBooking(booking) && booking.paymentStatus === "paid" && stripeCashReceived(booking) > 0;
 }
+function isInvoicePaidBooking(booking = {}) {
+  return isInvoiceBooking(booking) && booking.invoiceStatus === "paid" && stripeCashReceived(booking) > 0;
+}
 function billingLabel(booking = {}) {
   if (isInvoiceBooking(booking)) {
-    if (booking.invoiceStatus === "issued") return "INVOICE ISSUED — " + INVOICE_PROMO_CODE;
+    if (booking.invoiceStatus === "paid") {
+      return "INVOICE PAID — " + safeAmount(stripeCashReceived(booking)) + " RECEIVED VIA STRIPE";
+    }
+    if (booking.invoiceStatus === "issued") return "INVOICE ISSUED — AWAITING STRIPE PAYMENT";
     return "INVOICE REQUIRED — " + INVOICE_PROMO_CODE;
   }
   if (isStripePaidBooking(booking)) return "PAID — " + safeAmount(stripeCashReceived(booking)) + " RECEIVED";
@@ -75,6 +82,10 @@ function displayInvoiceDate(value) {
     day: "numeric", month: "long", year: "numeric", timeZone: "Australia/Brisbane"
   }).format(new Date(Date.UTC(year, month - 1, day, 12)));
 }
+function safeQrSvg(value) {
+  const svg = String(value || "").trim();
+  return /^<svg\b[^>]*>[\s\S]*<\/svg>$/.test(svg) ? svg : "";
+}
 function invoiceHtml(record) {
   const b = record.data || {};
   const amount = Number(b.invoiceAmountCents || b.stripeAmountSubtotal || b.priceCents || 14900);
@@ -82,11 +93,20 @@ function invoiceHtml(record) {
   const invoiceNumber = b.invoiceNumber || "Pending";
   const issueDate = b.invoiceIssuedDate || "";
   const dueDate = b.invoiceDueDate || "";
+  const paid = b.invoiceStatus === "paid";
+  const paymentUrl = String(b.stripeInvoicePaymentUrl || "");
+  const qrSvg = safeQrSvg(b.invoicePaymentQrSvg);
+  const paymentBlock = paid
+    ? '<section class="stripe-pay paid"><div class="paid-mark">PAID</div><h3>Payment received through Stripe</h3><p><strong>' + escapeHtml(safeAmount(b.invoicePaidAmountCents || amount)) + '</strong> has been received securely through Stripe.</p>' +
+      (b.stripeInvoicePaymentIntentId ? '<p class="small">Stripe reference: ' + escapeHtml(b.stripeInvoicePaymentIntentId) + '</p>' : '') + '</section>'
+    : '<section class="stripe-pay"><div class="qr">' + qrSvg + '</div><div class="stripe-copy"><h3>Pay securely with Stripe</h3><p>Scan the QR code with your phone, or use the secure Stripe payment button below.</p>' +
+      (paymentUrl ? '<a class="pay-btn" href="' + escapeHtml(paymentUrl) + '" target="_blank" rel="noopener">Pay ' + escapeHtml(safeAmount(amount)) + ' securely with Stripe</a>' : '<p><strong>Stripe payment link unavailable.</strong></p>') +
+      '<p class="small">This payment link is for this invoice only. Promotion codes are disabled.</p></div></section>';
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Invoice ${escapeHtml(invoiceNumber)} | Iron Gate Pool Inspections</title>
 <style>
-@page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;color:#12263a;background:#eef4f8}.toolbar{position:sticky;top:0;display:flex;gap:10px;justify-content:center;padding:12px;background:#08294f}.toolbar button{border:0;border-radius:9px;padding:11px 16px;font-weight:800;cursor:pointer}.print{background:#fff;color:#08294f}.close{background:#dceaf3;color:#08294f}.invoice{width:210mm;min-height:297mm;margin:18px auto;background:#fff;padding:17mm;box-shadow:0 8px 30px rgba(0,0,0,.12)}.top{display:flex;justify-content:space-between;gap:30px;border-bottom:3px solid #0b3867;padding-bottom:20px}.brand h1{margin:0;color:#08294f;font-size:27px}.brand p{margin:6px 0;color:#607789}.title{text-align:right}.title h2{margin:0;font-size:34px;color:#0b3867}.title div{margin-top:6px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin:28px 0}.box h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#647789;margin:0 0 8px}.box p{margin:4px 0;line-height:1.45}.line{width:100%;border-collapse:collapse;margin:24px 0}.line th,.line td{padding:13px 10px;border-bottom:1px solid #dbe5eb;text-align:left}.line th:last-child,.line td:last-child{text-align:right}.total{display:flex;justify-content:flex-end}.totalbox{width:280px}.totalrow{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #dbe5eb}.due{font-size:20px;font-weight:900;color:#08294f}.bank{margin-top:32px;padding:18px;border-radius:12px;background:#f3f8fb}.bank h3{margin:0 0 10px;color:#08294f}.sample{margin-top:10px;padding:10px;border:1px solid #e0ad52;background:#fff8e7;color:#7a4d00;font-weight:700}.footer{margin-top:34px;padding-top:14px;border-top:1px solid #dbe5eb;color:#607789;font-size:12px}@media(max-width:800px){.invoice{width:auto;min-height:0;margin:0;padding:24px}.top,.grid{grid-template-columns:1fr;display:grid}.title{text-align:left}}@media print{body{background:#fff}.toolbar{display:none}.invoice{width:auto;min-height:0;margin:0;box-shadow:none;padding:0}.sample{border-color:#999}}
+@page{size:A4;margin:14mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;margin:0;color:#12263a;background:#eef4f8}.toolbar{position:sticky;top:0;display:flex;gap:10px;justify-content:center;padding:12px;background:#08294f}.toolbar button{border:0;border-radius:9px;padding:11px 16px;font-weight:800;cursor:pointer}.print{background:#fff;color:#08294f}.close{background:#dceaf3;color:#08294f}.invoice{width:210mm;min-height:297mm;margin:18px auto;background:#fff;padding:17mm;box-shadow:0 8px 30px rgba(0,0,0,.12)}.top{display:flex;justify-content:space-between;gap:30px;border-bottom:3px solid #0b3867;padding-bottom:20px}.brand h1{margin:0;color:#08294f;font-size:27px}.brand p{margin:6px 0;color:#607789}.title{text-align:right}.title h2{margin:0;font-size:34px;color:#0b3867}.title div{margin-top:6px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin:28px 0}.box h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#647789;margin:0 0 8px}.box p{margin:4px 0;line-height:1.45}.line{width:100%;border-collapse:collapse;margin:24px 0}.line th,.line td{padding:13px 10px;border-bottom:1px solid #dbe5eb;text-align:left}.line th:last-child,.line td:last-child{text-align:right}.total{display:flex;justify-content:flex-end}.totalbox{width:300px}.totalrow{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #dbe5eb}.due{font-size:20px;font-weight:900;color:#08294f}.stripe-pay{margin-top:32px;padding:18px;border-radius:14px;background:#f3f8fb;display:grid;grid-template-columns:180px 1fr;gap:24px;align-items:center;border:1px solid #d9e6ee}.stripe-pay.paid{display:block;text-align:center;background:#eefaf2;border-color:#b8dfc2}.stripe-pay h3{margin:0 0 8px;color:#08294f}.qr{display:flex;align-items:center;justify-content:center;background:#fff;border-radius:10px;padding:10px}.qr svg{display:block;width:160px;height:160px}.pay-btn{display:inline-block;margin:8px 0;padding:12px 16px;border-radius:9px;background:#635bff;color:#fff;text-decoration:none;font-weight:900}.small{font-size:12px;color:#607789;line-height:1.45}.paid-mark{display:inline-block;margin-bottom:8px;padding:7px 14px;border-radius:999px;background:#14753a;color:#fff;font-weight:900;letter-spacing:.08em}.footer{margin-top:34px;padding-top:14px;border-top:1px solid #dbe5eb;color:#607789;font-size:12px}@media(max-width:800px){.invoice{width:auto;min-height:0;margin:0;padding:24px}.top,.grid,.stripe-pay{grid-template-columns:1fr;display:grid}.title{text-align:left}.qr{justify-self:start}}@media print{body{background:#fff}.toolbar{display:none}.invoice{width:auto;min-height:0;margin:0;box-shadow:none;padding:0}.pay-btn{border:1px solid #635bff}}
 </style></head><body>
 <div class="toolbar"><button class="print" onclick="window.print()">Print / Save PDF</button><button class="close" onclick="window.close()">Close</button></div>
 <main class="invoice">
@@ -95,9 +115,9 @@ function invoiceHtml(record) {
 <section class="grid"><div class="box"><h3>Bill to</h3><p><strong>${escapeHtml(customer)}</strong></p><p>${escapeHtml(b.customerName || "")}</p><p>${escapeHtml(b.email || "")}</p></div>
 <div class="box"><h3>Inspection</h3><p><strong>${escapeHtml(b.propertyAddress || "")}</strong></p><p>${escapeHtml(b.preferredDateDisplay || b.preferredDate || "")}</p><p>Booking reference: ${escapeHtml(record.id)}</p></div></section>
 <table class="line"><thead><tr><th>Description</th><th>Amount</th></tr></thead><tbody><tr><td>Pool Safety Inspection &amp; Certificate</td><td>${escapeHtml(safeAmount(amount))}</td></tr></tbody></table>
-<div class="total"><div class="totalbox"><div class="totalrow due"><span>Amount due</span><span>${escapeHtml(safeAmount(amount))}</span></div></div></div>
-<section class="bank"><h3>Payment details</h3><p><strong>Account name:</strong> Iron Gate Pool Inspections</p><p><strong>BSB:</strong> 000-000</p><p><strong>Account number:</strong> 00000000</p><p><strong>Reference:</strong> ${escapeHtml(invoiceNumber)}</p><div class="sample">Sample banking details only — replace these details before sending invoices to clients.</div></section>
-<p class="footer">This document is an Invoice, not a Tax Invoice. Payment received outside Stripe should be reconciled separately in your accounting records.</p>
+<div class="total"><div class="totalbox">${paid ? '<div class="totalrow"><span>Amount paid</span><strong>' + escapeHtml(safeAmount(amount)) + '</strong></div><div class="totalrow due"><span>Balance due</span><span>$0.00</span></div>' : '<div class="totalrow due"><span>Amount due</span><span>' + escapeHtml(safeAmount(amount)) + '</span></div>'}</div></div>
+${paymentBlock}
+<p class="footer">Payment is accepted securely through Stripe only. This document is an Invoice, not a Tax Invoice.</p>
 </main></body></html>`;
 }
 function renderInvoiceWindow(win, record) {
@@ -113,22 +133,26 @@ async function createOrOpenInvoice(record) {
     value("#bookings-message", "Your browser blocked the invoice window. Allow pop-ups for this site and try again.");
     return;
   }
-  win.document.write("<p style='font:16px Arial;padding:24px'>Preparing invoice…</p>");
+  win.document.write("<p style='font:16px Arial;padding:24px'>Preparing Stripe invoice…</p>");
   try {
     if (!record.data.invoiceNumber) {
       const response = await issueBookingInvoice({ bookingId: record.id });
       Object.assign(record.data, response.data || {});
       record.data.invoiceStatus = record.data.invoiceStatus || "issued";
       record.data.billingStatus = record.data.billingStatus || "invoice_issued";
-      renderOverview();
-      renderList();
-      if (activeBookingId === record.id) renderDetails();
     }
+    if (record.data.invoiceStatus !== "paid") {
+      const payment = await prepareInvoiceStripePayment({ bookingId: record.id });
+      Object.assign(record.data, payment.data || {});
+    }
+    renderOverview();
+    renderList();
+    if (activeBookingId === record.id) renderDetails();
     renderInvoiceWindow(win, record);
   } catch (error) {
-    console.error("Could not generate invoice", error);
+    console.error("Could not generate Stripe invoice", error);
     win.close();
-    value("#bookings-message", error?.message || "Could not generate invoice.");
+    value("#bookings-message", error?.message || "Could not generate Stripe invoice.");
   }
 }
 function renderBillingActions(container, record) {
@@ -136,21 +160,26 @@ function renderBillingActions(container, record) {
   const box = document.createElement("div");
   box.className = "billing-admin-box";
   const badge = document.createElement("strong");
-  badge.className = "billing-badge " + (isInvoiceBooking(b) ? "is-invoice" : isStripePaidBooking(b) ? "is-paid" : "");
+  badge.className = "billing-badge " + (isInvoicePaidBooking(b) ? "is-paid" : isInvoiceBooking(b) ? "is-invoice" : isStripePaidBooking(b) ? "is-paid" : "");
   badge.textContent = billingLabel(b);
   box.appendChild(badge);
 
   if (isInvoiceBooking(b)) {
     const note = document.createElement("p");
     note.className = "muted-help";
-    note.textContent = b.invoiceStatus === "issued"
-      ? "Invoice " + (b.invoiceNumber || "") + " is ready to view or print."
-      : "Stripe collected $0.00 using INVOICE100. Generate an invoice for the original inspection amount.";
+    if (b.invoiceStatus === "paid") {
+      note.textContent = "Invoice " + (b.invoiceNumber || "") + " has been paid through Stripe.";
+    } else if (b.invoiceStatus === "issued") {
+      note.textContent = "Invoice " + (b.invoiceNumber || "") + " is awaiting Stripe payment. Its printable invoice includes a secure payment QR code.";
+    } else {
+      note.textContent = "Stripe collected $0.00 using INVOICE100. Generate the invoice to create its secure Stripe payment QR code.";
+    }
     box.appendChild(note);
     const button = document.createElement("button");
     button.type = "button";
     button.className = "btn btn-primary";
-    button.textContent = b.invoiceStatus === "issued" ? "View / Print Invoice" : "Generate Invoice";
+    button.textContent = b.invoiceStatus === "paid" ? "View / Print Paid Invoice" :
+      b.invoiceStatus === "issued" ? "View / Print Invoice + QR" : "Generate Invoice + Stripe QR";
     button.addEventListener("click", () => createOrOpenInvoice(record));
     box.appendChild(button);
   }
@@ -255,9 +284,12 @@ function renderDetails() {
     ["Promotion code", b.stripePromotionCode || (b.discountApplied ? "Discount code not yet reconciled" : "None")],
     ["Stripe cash received", safeAmount(stripeCashReceived(b))],
     ["Refunded", safeAmount(b.stripeAmountRefunded ?? 0)],
-    ["Invoice amount due", isInvoiceBooking(b) ? safeAmount(b.invoiceAmountCents ?? b.stripeAmountSubtotal ?? b.priceCents) : "N/A"],
+    ["Invoice amount due", isInvoiceBooking(b) ? (b.invoiceStatus === "paid" ? "$0.00" : safeAmount(b.invoiceAmountCents ?? b.stripeAmountSubtotal ?? b.priceCents)) : "N/A"],
     ["Invoice number", b.invoiceNumber],
     ["Invoice status", b.invoiceStatus],
+    ["Invoice payment status", b.invoicePaymentStatus],
+    ["Invoice Stripe payment link", b.stripeInvoicePaymentUrl ? "Ready" : "Not created"],
+    ["Invoice Stripe PaymentIntent", b.stripeInvoicePaymentIntentId],
     ["Stripe PaymentIntent", b.stripePaymentIntentId],
     ["Calendar event", b.googleCalendarEventId ? "Linked" : "Not linked"],
     ["Calendar sync", b.calendarSyncStatus || "Not recorded"],
@@ -326,15 +358,18 @@ function renderOverview() {
   value("#ops-attention", exceptions.length + " paid booking(s) need manual availability review. " +
     (exceptions.length ? "Open Bookings and check Availability issue." : ""));
   const stripePaid = records.filter(({ data }) => isStripePaidBooking(data));
-  const invoiceRequired = records.filter(({ data }) => isInvoiceBooking(data) && data.invoiceStatus !== "issued");
+  const invoiceRequired = records.filter(({ data }) => isInvoiceBooking(data) && !data.invoiceNumber);
   const invoiceIssued = records.filter(({ data }) => isInvoiceBooking(data) && data.invoiceStatus === "issued");
+  const invoicePaid = records.filter(({ data }) => isInvoicePaidBooking(data));
   value("#overview-message", "Showing the latest " + records.length + " bookings; totals are not all-time figures.");
   value("#finance-stripe-paid", stripePaid.length);
   value("#finance-invoice-required", invoiceRequired.length);
   value("#finance-invoice-issued", invoiceIssued.length);
-  value("#payments-overview", stripePaid.length + " Stripe-paid booking(s), " +
-    invoiceRequired.length + " invoice(s) to generate, and " + invoiceIssued.length +
-    " issued invoice(s) in the latest " + records.length + " records.");
+  value("#finance-invoice-paid", invoicePaid.length);
+  value("#payments-overview", stripePaid.length + " direct Stripe-paid booking(s), " +
+    invoiceRequired.length + " invoice(s) to generate, " + invoiceIssued.length +
+    " invoice(s) awaiting Stripe payment, and " + invoicePaid.length +
+    " invoice(s) paid via Stripe in the latest " + records.length + " records.");
 }
 async function loadBookings() {
   if (!authorized) return;
