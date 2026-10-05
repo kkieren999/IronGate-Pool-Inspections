@@ -135,7 +135,7 @@
     .booking-actions summary { font-weight:900; color:var(--navy); cursor:pointer; }
     .booking-actions form { margin-top:15px; }
     .booking-actions .toggle-line { justify-content:flex-start; }
-    .booking-activity-entry { padding:12px; margin:8px 0; border-radius:11px; background:#f7fbff; border:1px solid #dce9f4; overflow-wrap:anywhere; }
+    .booking-activity-entry { padding:12px; margin:8px 0; border-radius:11px; background:#f7fbff; border:1px solid #dce9f4; overflow-wrap:anywhere; }\n    .billing-admin-box { margin-top:18px; padding-top:16px; border-top:1px solid #dce9f4; display:grid; gap:10px; justify-items:start; }\n    .billing-badge { display:inline-flex; align-items:center; min-height:32px; padding:6px 11px; border-radius:999px; background:#eef3f7; color:#425466; font-size:.78rem; font-weight:900; letter-spacing:.02em; }\n    .billing-badge.is-paid { background:#eafaf0; color:#0f7a3b; }\n    .billing-badge.is-invoice { background:#fff3df; color:#9a5b00; }
   </style>
   <!-- IRONGATE SEO START -->
   <link rel="canonical" href="https://irongatepool.com.au/admin/" />
@@ -230,7 +230,7 @@
                 <p class="muted-help">Review the latest 150 bookings. Move and cancel confirmed appointments here; full and partial refunds are in Payments & refunds.</p></div></div>
               <div class="booking-toolbar">
                 <label>Search bookings<input id="booking-search" type="search" placeholder="Name, property, email, reference" autocomplete="off" /></label>
-                <label>Filter status<select id="booking-status-filter"><option value="all">All statuses</option><option value="confirmed">Confirmed</option><option value="pending">Awaiting payment</option><option value="cancelled">Cancelled</option><option value="completed">Completed</option></select></label>
+                <label>Filter status<select id="booking-status-filter"><option value="all">All statuses</option><option value="confirmed">Confirmed</option><option value="paid">Stripe paid</option><option value="invoice">Invoice / INVOICE100</option><option value="pending">Awaiting payment</option><option value="cancelled">Cancelled</option><option value="completed">Completed</option></select></label>
                 <button class="btn soft-btn" id="reload-bookings" type="button">Refresh</button>
               </div>
               <p class="form-note" id="bookings-message" role="status" aria-live="polite"></p>
@@ -242,10 +242,15 @@
           </div>
 
           <div class="admin-panel" id="panel-payments" role="tabpanel" aria-labelledby="tab-payments" hidden>
-            <section class="admin-card"><p class="section-kicker">Finance</p><h2>Payments &amp; refunds</h2>
-              <p class="booking-readonly-note">Full and partial refunds require an explicit amount, reason and confirmation. Appointment cancellation is separate from issuing a refund.</p>
+            <section class="admin-card"><p class="section-kicker">Finance</p><h2>Payments, invoices &amp; refunds</h2>
+              <p class="booking-readonly-note">Stripe money received and INVOICE100 bookings are tracked separately. A 100% INVOICE100 checkout confirms the booking but does not mean cash was received.</p>
+              <div class="ops-metrics" style="margin:16px 0;">
+                <div class="ops-metric"><strong id="finance-stripe-paid">—</strong><span>Stripe paid</span></div>
+                <div class="ops-metric"><strong id="finance-invoice-required">—</strong><span>Invoices to generate</span></div>
+                <div class="ops-metric"><strong id="finance-invoice-issued">—</strong><span>Invoices issued</span></div>
+              </div>
               <p class="muted-help" id="payments-overview">Select a booking under Bookings to review its payment details.</p>
-              <p class="muted-help">Select a recent paid booking below or select a booking first and then open this tab. The backend verifies all amounts directly with Stripe.</p>
+              <p class="muted-help">Use the Bookings tab to generate an invoice for an INVOICE100 booking. Refund controls below remain limited to real Stripe payments.</p>
               <div class="booking-workspace"><div id="refund-queue" class="booking-results" aria-label="Paid bookings"></div><div id="refund-management-host" class="booking-detail">Select a paid booking to review refund options.</div></div>
             </section>
           </div>
