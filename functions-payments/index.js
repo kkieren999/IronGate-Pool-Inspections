@@ -10,13 +10,14 @@ admin.initializeApp();
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 const db = admin.firestore();
-const { executeAdminBookingChange } = require("./admin-booking-service");
+const { requireAdmin, executeAdminBookingChange } = require("./admin-booking-service");
 const { adminRefundBooking, adminReconcileBookingRefunds, reconcileRefundEvent } = require("./admin-refunds");
 
 const INSPECTION_PRICE_CENTS = 14900;
 const INSPECTION_PRICE_DISPLAY = "$149";
 const CURRENCY = "aud";
 const SERVICE_NAME = "Pool Safety Inspection & Certificate";
+const INVOICE_PROMO_CODE = "INVOICE100";
 const PUBLIC_ERROR_CODES = new Set(["invalid-argument", "failed-precondition", "not-found"]);
 
 function getStripe() {
@@ -429,7 +430,100 @@ exports.createAgencyInvoiceBooking = onCall(
   }
 );
 
-async function markCheckoutSessionPaid(session) {
+function normalisePromotionCode(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+async function hydratedCheckoutSession(stripe, session = {}) {
+  if (!stripe?.checkout?.sessions?.retrieve || !session?.id) return session || {};
+  try {
+    return await stripe.checkout.sessions.retrieve(session.id, {
+      expand: ["discounts.promotion_code"]
+    });
+  } catch (expandedError) {
+    logger.warn("Could not retrieve expanded Stripe Checkout discount details", {
+      sessionId: session.id,
+      message: expandedError.message
+    });
+    try {
+      return await stripe.checkout.sessions.retrieve(session.id);
+    } catch (plainError) {
+      logger.warn("Could not refresh Stripe Checkout Session; using webhook payload", {
+        sessionId: session.id,
+        message: plainError.message
+      });
+      return session || {};
+    }
+  }
+}
+
+async function promotionCodeFromSession(stripe, session = {}) {
+  const hydrated = await hydratedCheckoutSession(stripe, session);
+  const candidates = [hydrated, session].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const direct = Array.isArray(candidate.discounts) ? candidate.discounts : [];
+    const breakdown = Array.isArray(candidate.total_details?.breakdown?.discounts) ?
+      candidate.total_details.breakdown.discounts.map((entry) => entry?.discount || entry) : [];
+    const discounts = [...direct, ...breakdown];
+    for (const discount of discounts) {
+      const promo = discount?.promotion_code || discount?.promotionCode;
+      if (promo && typeof promo === "object" && promo.code) {
+        return normalisePromotionCode(promo.code);
+      }
+      if (typeof promo === "string" && stripe?.promotionCodes?.retrieve) {
+        try {
+          const promotion = await stripe.promotionCodes.retrieve(promo);
+          if (promotion?.code) return normalisePromotionCode(promotion.code);
+        } catch (error) {
+          logger.warn("Could not retrieve Stripe promotion code", {
+            promotionCodeId: promo,
+            message: error.message
+          });
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function checkoutBillingPatch(session = {}, promotionCode = null, currentBooking = {}) {
+  const subtotal = Number.isSafeInteger(session.amount_subtotal) ? session.amount_subtotal :
+    (Number.isSafeInteger(currentBooking.priceCents) ? currentBooking.priceCents : INSPECTION_PRICE_CENTS);
+  const discount = Number.isSafeInteger(session.total_details?.amount_discount) ?
+    session.total_details.amount_discount : Number(currentBooking.stripeAmountDiscount || 0);
+  const total = Number.isSafeInteger(session.amount_total) ?
+    session.amount_total : Number(currentBooking.stripeAmountTotal || 0);
+  const completed = isCompletedCheckoutSession(session);
+  const noCost = session.payment_status === "no_payment_required" || total === 0;
+  const code = normalisePromotionCode(promotionCode || currentBooking.stripePromotionCode);
+  const invoicePromo = code === INVOICE_PROMO_CODE;
+  const invoiceRequired = completed && invoicePromo && noCost;
+
+  let billingMethod = "stripe";
+  let billingStatus = completed && total > 0 ? "paid_stripe" : "payment_processing";
+  if (invoiceRequired) {
+    billingMethod = "invoice";
+    billingStatus = currentBooking.invoiceStatus === "issued" ? "invoice_issued" : "invoice_required";
+  } else if (completed && noCost) {
+    billingMethod = "no_charge";
+    billingStatus = "no_charge";
+  }
+
+  return {
+    stripePromotionCode: code || null,
+    billingMethod,
+    billingStatus,
+    invoiceRequired,
+    invoiceAmountCents: invoiceRequired ? subtotal : null,
+    stripeCashReceivedCents: completed ? Math.max(0, total) : 0,
+    noCostCheckout: noCost,
+    discountApplied: discount > 0
+  };
+}
+
+async function markCheckoutSessionPaid(session, stripeClient = null) {
   const bookingId = session.metadata?.bookingId || session.client_reference_id;
   if (!bookingId) {
     logger.warn("Stripe checkout session completed without bookingId", { sessionId: session.id });
@@ -439,6 +533,7 @@ async function markCheckoutSessionPaid(session) {
   const discount = session.total_details?.amount_discount || 0;
   const checkoutComplete = isCompletedCheckoutSession(session);
   const paymentStatus = checkoutComplete ? "paid" : session.payment_status || "unknown";
+  const promotionCode = await promotionCodeFromSession(stripeClient, session);
   const outcome = await db.runTransaction(async (tx) => {
     const snapshot = await tx.get(bookingRef);
     if (!snapshot.exists) {
@@ -453,6 +548,7 @@ async function markCheckoutSessionPaid(session) {
       return null;
     }
     const cancelled = booking.status === "cancelled" || booking.inspectionStatus === "cancelled";
+    const billing = checkoutBillingPatch(session, promotionCode, booking);
     let slotConflict = false;
     if (checkoutComplete && !cancelled) {
       const date = booking.preferredDate, selectedId = booking.preferredTimeSlot;
@@ -477,8 +573,7 @@ async function markCheckoutSessionPaid(session) {
       stripeAmountDiscount: discount,
       stripeAmountTotal: session.amount_total ?? null,
       stripeCurrency: session.currency || CURRENCY,
-      discountApplied: discount > 0,
-      noCostCheckout: session.payment_status === "no_payment_required" || session.amount_total === 0,
+      ...billing,
       availabilityReservationStatus: cancelled ? booking.availabilityReservationStatus || "released" :
         slotConflict ? "conflict" : (checkoutComplete ? "confirmed" : "payment_processing"),
       availabilityLocked: cancelled || slotConflict ? false : booking.availabilityLocked === true,
@@ -595,7 +690,7 @@ exports.stripeWebhook = onRequest(
         event.type === "checkout.session.completed" ||
         event.type === "checkout.session.async_payment_succeeded"
       ) {
-        await markCheckoutSessionPaid(event.data.object);
+        await markCheckoutSessionPaid(event.data.object, stripe);
       }
 
       if (
@@ -621,6 +716,147 @@ exports.stripeWebhook = onRequest(
   }
 );
 
+
+function validAdminBookingId(value) {
+  const id = String(value || "").trim();
+  if (!/^[a-zA-Z0-9_-]{16,110}$/.test(id)) {
+    throw new HttpsError("invalid-argument", "Invalid booking ID.");
+  }
+  return id;
+}
+
+async function adminReconcileBookingBilling(request, stripe) {
+  const actor = await requireAdmin(request);
+  const bookingId = validAdminBookingId(request.data?.bookingId);
+  const bookingRef = db.collection("bookings").doc(bookingId);
+  const snapshot = await bookingRef.get();
+  if (!snapshot.exists) throw new HttpsError("not-found", "Booking not found.");
+  const booking = snapshot.data() || {};
+  const sessionId = String(booking.stripeCheckoutSessionId || "").trim();
+  if (!/^cs_[a-zA-Z0-9_]+$/.test(sessionId)) {
+    throw new HttpsError("failed-precondition", "This booking does not have a Stripe Checkout Session to reconcile.");
+  }
+
+  const session = await hydratedCheckoutSession(stripe, { id: sessionId });
+  const promotionCode = await promotionCodeFromSession(stripe, session);
+  const billing = checkoutBillingPatch(session, promotionCode, booking);
+  const patch = {
+    ...billing,
+    stripePaymentStatus: session.payment_status || booking.stripePaymentStatus || "unknown",
+    stripeAmountSubtotal: session.amount_subtotal ?? booking.stripeAmountSubtotal ?? null,
+    stripeAmountDiscount: session.total_details?.amount_discount ?? booking.stripeAmountDiscount ?? 0,
+    stripeAmountTotal: session.amount_total ?? booking.stripeAmountTotal ?? null,
+    stripeCurrency: session.currency || booking.stripeCurrency || CURRENCY,
+    billingReconciledAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+  };
+  await bookingRef.set(patch, { merge: true });
+  logger.info("Admin reconciled booking billing details", {
+    bookingId,
+    actor: actor.email,
+    promotionCode: billing.stripePromotionCode,
+    billingStatus: billing.billingStatus
+  });
+  return {
+    bookingId,
+    stripePromotionCode: billing.stripePromotionCode,
+    billingMethod: billing.billingMethod,
+    billingStatus: billing.billingStatus,
+    invoiceRequired: billing.invoiceRequired,
+    invoiceAmountCents: billing.invoiceAmountCents,
+    stripeCashReceivedCents: billing.stripeCashReceivedCents,
+    stripeAmountDiscount: patch.stripeAmountDiscount,
+    stripeAmountTotal: patch.stripeAmountTotal
+  };
+}
+
+function brisbaneDateKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-AU", {
+    timeZone: "Australia/Brisbane", year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(date).reduce((map, part) => {
+    map[part.type] = part.value;
+    return map;
+  }, {});
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function addDaysDateKey(dateKey, days) {
+  const [year, month, day] = String(dateKey).split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + days, 12));
+  return date.toISOString().slice(0, 10);
+}
+
+async function adminIssueBookingInvoice(request) {
+  const actor = await requireAdmin(request);
+  const bookingId = validAdminBookingId(request.data?.bookingId);
+  const bookingRef = db.collection("bookings").doc(bookingId);
+  const issuedDate = brisbaneDateKey();
+  const dueDate = addDaysDateKey(issuedDate, 7);
+  const stamp = admin.firestore.FieldValue.serverTimestamp();
+
+  return db.runTransaction(async (tx) => {
+    const snapshot = await tx.get(bookingRef);
+    if (!snapshot.exists) throw new HttpsError("not-found", "Booking not found.");
+    const booking = snapshot.data() || {};
+    const promo = normalisePromotionCode(booking.stripePromotionCode);
+    if (booking.invoiceRequired !== true || promo !== INVOICE_PROMO_CODE) {
+      throw new HttpsError("failed-precondition", "This booking is not an INVOICE100 invoice booking.");
+    }
+
+    const amountCents = Number.isSafeInteger(booking.invoiceAmountCents) && booking.invoiceAmountCents > 0 ?
+      booking.invoiceAmountCents :
+      (Number.isSafeInteger(booking.stripeAmountSubtotal) && booking.stripeAmountSubtotal > 0 ?
+        booking.stripeAmountSubtotal : INSPECTION_PRICE_CENTS);
+    const invoiceNumber = booking.invoiceNumber ||
+      `IG-${issuedDate.slice(0, 4)}-${bookingId.slice(-8).toUpperCase()}`;
+    const finalIssuedDate = booking.invoiceIssuedDate || issuedDate;
+    const finalDueDate = booking.invoiceDueDate || addDaysDateKey(finalIssuedDate, 7);
+
+    if (!booking.invoiceNumber) {
+      tx.update(bookingRef, {
+        invoiceNumber,
+        invoiceStatus: "issued",
+        invoiceIssuedDate: finalIssuedDate,
+        invoiceDueDate: finalDueDate,
+        invoiceIssuedAt: stamp,
+        invoiceAmountCents: amountCents,
+        billingMethod: "invoice",
+        billingStatus: "invoice_issued",
+        invoiceBankDetailsVersion: "sample-v1",
+        updatedAt: stamp,
+        updatedBy: actor.email
+      });
+      tx.create(db.collection("adminActivity").doc(bookingId + "_invoice_issued"), {
+        bookingId,
+        action: "invoice_issued",
+        actorUid: actor.uid,
+        actorEmail: actor.email,
+        invoiceNumber,
+        amountCents,
+        createdAt: stamp
+      });
+    }
+
+    return {
+      bookingId,
+      invoiceNumber,
+      invoiceStatus: booking.invoiceNumber ? (booking.invoiceStatus || "issued") : "issued",
+      invoiceIssuedDate: finalIssuedDate,
+      invoiceDueDate: finalDueDate,
+      invoiceAmountCents: amountCents,
+      billingStatus: booking.invoiceNumber ? (booking.billingStatus || "invoice_issued") : "invoice_issued"
+    };
+  });
+}
+
+exports.adminReconcileBookingBilling = onCall({
+  region: "us-central1", timeoutSeconds: 30, memory: "256MiB",
+  invoker: "public", secrets: [STRIPE_SECRET_KEY]
+}, async (request) => adminReconcileBookingBilling(request, getStripe()));
+
+exports.adminIssueBookingInvoice = onCall({
+  region: "us-central1", timeoutSeconds: 30, memory: "256MiB", invoker: "public"
+}, async (request) => adminIssueBookingInvoice(request));
 
 exports.adminMoveBooking = onCall({
   region: "us-central1", timeoutSeconds: 30, memory: "256MiB", invoker: "public"

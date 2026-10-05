@@ -1,5 +1,5 @@
 import "./admin-private-booking.js";
-import "./admin-booking-dashboard.js";
+import "./admin-booking-dashboard.js?v=20261005invoice1";
 import "./admin-booking-actions.js";
 import "./admin-refund-panel.js";
 import { app, db } from "./firebase-config.js";

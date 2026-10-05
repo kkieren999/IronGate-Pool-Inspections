@@ -5,14 +5,14 @@ import { runInNewContext } from "node:vm";
 
 const paymentSource = readFileSync(new URL("../functions-payments/index.js", import.meta.url), "utf8");
 function getWebhookFns(db) {
-  const first = paymentSource.indexOf("async function markCheckoutSessionPaid(session) {");
+  const first = paymentSource.indexOf("function normalisePromotionCode(value) {");
   const last = paymentSource.indexOf("\nexports.stripeWebhook = onRequest(", first);
   assert.ok(first > 0 && last > first);
   const code = paymentSource.slice(first, last);
   const admin = { firestore: { Timestamp: { now: () => "NOW" },
     FieldValue: { serverTimestamp: () => "NOW" } } };
   const context = {
-    admin, db, CURRENCY: "aud", logger: { warn() {}, info() {} },
+    admin, db, CURRENCY: "aud", INSPECTION_PRICE_CENTS: 14900, INVOICE_PROMO_CODE: "INVOICE100", logger: { warn() {}, info() {} },
     isCompletedCheckoutSession: (s) => ["paid","no_payment_required"].includes(s.payment_status),
     comparableSlotId: (slot) => slot.id || slot.start?.replace(":", "_"),
     slotBelongsToBooking: (slot, id) => (slot.bookedByBookingId || slot.bookingId) === id,
@@ -110,4 +110,51 @@ test("paid checkout without its held slot is flagged, not silently confirmed", a
   assert.equal(booking.availabilityLockStatus, "conflict");
   assert.match(booking.availabilityLockError, /original time is no longer held/);
   assert.equal(db.confirmCount, 0, "must never lock another customer's slot");
+});
+
+
+test("INVOICE100 no-cost checkout is confirmed but recorded as invoice-required with zero Stripe cash received", async () => {
+  const db = fakeDb({
+    ["bookings/" + id]: { status: "pending_payment", paymentStatus: "checkout_created",
+      stripeCheckoutSessionId: sid, preferredDate: "2099-05-02", preferredTimeSlot: "09_00", priceCents: 14900 },
+    "availability/2099-05-02": { slots: {
+      "09_00": { id: "09_00", bookingId: id, booked: true }
+    } }
+  });
+  const invoiceSession = {
+    ...session,
+    payment_status: "no_payment_required",
+    amount_total: 0,
+    amount_subtotal: 14900,
+    total_details: { amount_discount: 14900 },
+    discounts: [{ promotion_code: { id: "promo_invoice", code: "INVOICE100" } }],
+    payment_intent: null
+  };
+  await getWebhookFns(db).markCheckoutSessionPaid(invoiceSession);
+  const booking = db.store.get("bookings/" + id);
+  assert.equal(booking.status, "confirmed");
+  assert.equal(booking.paymentStatus, "paid", "existing confirmed-booking compatibility is preserved");
+  assert.equal(booking.stripePromotionCode, "INVOICE100");
+  assert.equal(booking.invoiceRequired, true);
+  assert.equal(booking.billingMethod, "invoice");
+  assert.equal(booking.billingStatus, "invoice_required");
+  assert.equal(booking.invoiceAmountCents, 14900);
+  assert.equal(booking.stripeCashReceivedCents, 0);
+  assert.equal(db.confirmCount, 1);
+});
+
+test("normal paid checkout remains Stripe-paid and is not marked invoice-required", async () => {
+  const db = fakeDb({
+    ["bookings/" + id]: { status: "pending_payment", paymentStatus: "checkout_created",
+      stripeCheckoutSessionId: sid, preferredDate: "2099-05-02", preferredTimeSlot: "09_00", priceCents: 14900 },
+    "availability/2099-05-02": { slots: {
+      "09_00": { id: "09_00", bookingId: id, booked: true }
+    } }
+  });
+  await getWebhookFns(db).markCheckoutSessionPaid(session);
+  const booking = db.store.get("bookings/" + id);
+  assert.equal(booking.invoiceRequired, false);
+  assert.equal(booking.billingMethod, "stripe");
+  assert.equal(booking.billingStatus, "paid_stripe");
+  assert.equal(booking.stripeCashReceivedCents, 14900);
 });
