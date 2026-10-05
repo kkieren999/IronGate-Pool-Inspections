@@ -263,10 +263,15 @@ test("admin booking tabs retain availability and limit customer data to authenti
     assert.ok(page.includes('id="panel-' + tab + '"'), tab);
     assert.ok(page.includes('data-tab="' + tab + '"'), tab);
   }
-  assert.ok(main.includes('import "./admin-booking-dashboard.js"'));
+  assert.ok(main.includes('import "./admin-booking-dashboard.js?v=20261005invoice1"'));
   assert.ok(dashboard.includes('onAuthStateChanged(auth'));
   assert.ok(dashboard.includes('orderBy("createdAt", "desc")'));
   assert.ok(dashboard.includes('limit(150)'));
   assert.ok(!dashboard.includes("updateDoc(") && !dashboard.includes("deleteDoc("));
+  assert.ok(dashboard.includes('httpsCallable(functions, "adminReconcileBookingBilling")'));
+  assert.ok(dashboard.includes('httpsCallable(functions, "adminIssueBookingInvoice")'));
+  assert.ok(dashboard.includes("INVOICE100"));
+  assert.ok(page.includes('id="finance-stripe-paid"'));
+  assert.ok(page.includes('id="finance-invoice-required"'));
   assert.ok(page.includes('id="day-form"') && page.includes('id="partner-form"'));
 });
