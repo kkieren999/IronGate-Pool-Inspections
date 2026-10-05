@@ -124,7 +124,7 @@
           <form class="contact-form booking-form booking-form-shell" id="booking-form">
             <section class="form-section" aria-labelledby="contact-details-heading">
               <h2 id="contact-details-heading">Booking contact details</h2>
-              <p class="section-helper">Enter the details of the person arranging the inspection. This may be the owner, a property manager or an agency representative.</p>
+              <p class="section-helper">Enter the details of the person arranging the inspection. If you are booking for someone else, these details stay on the booking for access, keys and inspection coordination.</p>
               <div class="field-grid">
                 <label class="full-width">
                   I am booking as
@@ -202,30 +202,25 @@
               </div>
             </section>
 
-            <section class="form-section" aria-labelledby="pool-owner-heading">
+            <section class="form-section" id="pool-owner-section" aria-labelledby="pool-owner-heading" hidden>
               <h2 id="pool-owner-heading">Pool owner details</h2>
-              <p class="section-helper">The owner may be different from the person organising the job. This helps us prepare and deliver the compliance documents correctly.</p>
-              <p class="field-note" id="owner-self-note" hidden>We'll use your booking contact name as the pool owner.</p>
+              <p class="section-helper">Required when you are booking on behalf of the owner. These details are used as the primary client and invoice details.</p>
+              <input type="hidden" id="poolOwnerStatus" value="" />
               <div class="field-grid">
-                <label class="full-width" id="pool-owner-status-field">
-                  Do you have the pool owner's details?
-                  <select id="poolOwnerStatus" required>
-                    <option value="">Select one</option>
-                    <option value="self" hidden>Same as booking contact</option>
-                    <option value="different">Yes — enter the pool owner's name</option>
-                    <option value="pending">I will provide the details before the inspection</option>
-                  </select>
-                </label>
-                <label class="full-width conditional-fields" id="owner-name-field" hidden>
+                <label class="full-width conditional-fields" id="owner-name-field">
                   Pool owner's full name or body corporate / organisation name
-                  <input type="text" id="poolOwnerName" maxlength="180" />
+                  <input type="text" id="poolOwnerName" maxlength="180" autocomplete="name" />
                 </label>
-                <label class="full-width conditional-fields" id="owner-email-field" hidden>
-                  Pool owner's email <span class="field-note">(if known; for compliance-document delivery)</span>
-                  <input type="email" id="poolOwnerEmail" inputmode="email" maxlength="180" />
+                <label class="conditional-fields" id="owner-email-field">
+                  Pool owner's email address
+                  <input type="email" id="poolOwnerEmail" inputmode="email" maxlength="180" autocomplete="email" placeholder="owner@example.com" />
+                </label>
+                <label class="conditional-fields" id="owner-phone-field">
+                  Pool owner's contact phone
+                  <input type="tel" id="poolOwnerPhone" inputmode="tel" maxlength="20" autocomplete="tel" placeholder="04XX XXX XXX or 07 XXXX XXXX" />
                 </label>
               </div>
-              <p class="field-note conditional-fields" id="owner-pending-note" hidden>We'll follow up for the owner's details and document-delivery arrangement before issuing compliance paperwork.</p>
+              <p class="field-note">The booking contact remains available separately for access, key collection and inspection coordination.</p>
             </section>
 
             <section class="form-section" aria-labelledby="calendar-heading">

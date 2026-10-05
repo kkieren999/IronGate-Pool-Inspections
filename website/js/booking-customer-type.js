@@ -19,15 +19,15 @@ function visible(id, show, controls = []) {
   });
 }
 function syncOwner() {
-  const isOwner = role?.value === "owner";
-  if (isOwner) ownerStatus.value = "self";
-  else if (ownerStatus.value === "self") ownerStatus.value = "";
-  $("#pool-owner-status-field").hidden = isOwner;
-  $("#owner-self-note").hidden = !isOwner;
-  const different = !isOwner && ownerStatus.value === "different";
-  visible("#owner-name-field", different, ["#poolOwnerName"]);
-  visible("#owner-email-field", different);
-  visible("#owner-pending-note", !isOwner && ownerStatus.value === "pending");
+  const selected = role?.value || "";
+  const isOwner = selected === "owner";
+  const needsOwnerDetails = ["agent", "agency", "other"].includes(selected);
+  if (ownerStatus) ownerStatus.value = isOwner ? "self" : needsOwnerDetails ? "different" : "";
+  const ownerSection = $("#pool-owner-section");
+  if (ownerSection) ownerSection.hidden = !needsOwnerDetails;
+  visible("#owner-name-field", needsOwnerDetails, ["#poolOwnerName"]);
+  visible("#owner-email-field", needsOwnerDetails, ["#poolOwnerEmail"]);
+  visible("#owner-phone-field", needsOwnerDetails, ["#poolOwnerPhone"]);
 }
 function syncRole() {
   const selected = role?.value || "";

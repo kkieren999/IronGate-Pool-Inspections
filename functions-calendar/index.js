@@ -60,11 +60,12 @@ function buildDescription(bookingId, booking = {}) {
     `Payment method: ${field(booking, "paymentMethod", "Not provided")}`,
     `Agency: ${field(booking, "agencyName", "Not an agency booking")}`,
     `Agency job reference: ${field(booking, "agencyJobReference", "Not provided")}`,
-    `Customer: ${field(booking, "customerName", "Not provided")}`,
-    `Phone: ${field(booking, "phone", "Not provided")}`,
-    `Email: ${field(booking, "email", "Not provided")}`,
-    `Pool owner: ${field(booking, "poolOwnerName", field(booking, "ownerName", "To be confirmed"))}`,
-    `Owner details pending: ${booking.ownerDetailsPending === true ? "Yes" : "No"}`,
+    `Client / pool owner: ${field(booking, "poolOwnerName", field(booking, "customerName", "Not provided"))}`,
+    `Owner phone: ${field(booking, "poolOwnerPhone", booking.isPropertyOwner ? field(booking, "phone", "Not provided") : "Not provided")}`,
+    `Owner email: ${field(booking, "poolOwnerEmail", booking.isPropertyOwner ? field(booking, "email", "Not provided") : "Not provided")}`,
+    `Booking contact: ${field(booking, "customerName", "Not provided")}`,
+    `Booking contact phone: ${field(booking, "phone", "Not provided")}`,
+    `Booking contact email: ${field(booking, "email", "Not provided")}`,
     `Access contact: ${field(booking, "accessContactName", field(booking, "customerName"))}`,
     `Access phone: ${field(booking, "accessContactPhone", field(booking, "phone"))}`,
     `Access method: ${field(booking, "accessMethod", "Not provided")}`,
@@ -87,7 +88,7 @@ function eventPrefix(booking = {}) {
 }
 
 function buildCalendarEvent(bookingId, booking = {}) {
-  const customerName = field(booking, "customerName", "Client");
+  const customerName = field(booking, "poolOwnerName", field(booking, "customerName", "Client"));
   const propertyAddress = field(booking, "propertyAddress", "Inspection property");
   const eventTimes = getEventTimes(booking);
 

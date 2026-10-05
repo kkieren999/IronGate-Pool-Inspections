@@ -144,8 +144,9 @@ const EDITABLE_BOOKING_FIELDS = Object.freeze({
   propertyAddress: { min: 8, max: 400, required: true },
   agencyName: { max: 180 },
   bookingRelationship: { max: 180 },
-  poolOwnerName: { max: 140 },
+  poolOwnerName: { max: 180 },
   poolOwnerEmail: { max: 180, email: true },
+  poolOwnerPhone: { max: 22 },
   accessContactName: { max: 140 },
   accessContactPhone: { max: 30 },
   accessContactEmail: { max: 180, email: true },
@@ -240,11 +241,17 @@ async function updateAdminBookingDetails(request) {
         changes.accessContactEmail = changes.email;
       }
     }
-    if (Object.prototype.hasOwnProperty.call(changes, "phone") &&
-        booking.accessSameAsBooking === true &&
-        !Object.prototype.hasOwnProperty.call(requested, "accessContactPhone") &&
-        (!booking.accessContactPhone || sameText(booking.accessContactPhone, booking.phone))) {
-      changes.accessContactPhone = changes.phone;
+    if (Object.prototype.hasOwnProperty.call(changes, "phone")) {
+      if (booking.isPropertyOwner === true &&
+          !Object.prototype.hasOwnProperty.call(requested, "poolOwnerPhone") &&
+          (!booking.poolOwnerPhone || sameText(booking.poolOwnerPhone, booking.phone))) {
+        changes.poolOwnerPhone = changes.phone;
+      }
+      if (booking.accessSameAsBooking === true &&
+          !Object.prototype.hasOwnProperty.call(requested, "accessContactPhone") &&
+          (!booking.accessContactPhone || sameText(booking.accessContactPhone, booking.phone))) {
+        changes.accessContactPhone = changes.phone;
+      }
     }
 
     if (Object.prototype.hasOwnProperty.call(changes, "propertyAddress")) {

@@ -383,14 +383,14 @@ function buildOwnerEmail(bookingId, booking = {}) {
     ["Discount", discount],
     ["Stripe session", field(booking, "stripeCheckoutSessionId")],
     ["Stripe payment intent", field(booking, "stripePaymentIntentId")],
-    ["Customer name", customerName],
-    ["Customer email", field(booking, "email")],
-    ["Customer phone", field(booking, "phone")],
-    ["Client type", field(booking, "clientType")],
+    ["Client / pool owner", field(booking, "poolOwnerName", booking.isPropertyOwner ? customerName : "Not provided")],
+    ["Client email", field(booking, "poolOwnerEmail", booking.isPropertyOwner ? field(booking, "email") : "Not provided")],
+    ["Client phone", field(booking, "poolOwnerPhone", booking.isPropertyOwner ? field(booking, "phone") : "Not provided")],
+    ["Booking contact", customerName],
+    ["Booking contact email", field(booking, "email")],
+    ["Booking contact phone", field(booking, "phone")],
+    ["Booking contact role", field(booking, "clientType")],
     ["Agency / organisation", field(booking, "agencyName")],
-    ["Pool owner", field(booking, "poolOwnerName", booking.isPropertyOwner ? customerName : "To be confirmed")],
-    ["Pool owner email", field(booking, "poolOwnerEmail")],
-    ["Owner details outstanding", yesNo(booking.ownerDetailsPending)],
     ["Access contact", field(booking, "accessContactName", customerName)],
     ["Access contact phone", field(booking, "accessContactPhone", field(booking, "phone"))],
     ["Access contact email", field(booking, "accessContactEmail")],
@@ -433,11 +433,12 @@ function buildOwnerEmail(bookingId, booking = {}) {
     <p style="margin:22px 0 0;color:#4a5f78;font-size:14px;line-height:1.55;">Open Firebase Console &gt; Firestore Database &gt; bookings to view the full booking record.</p>
   `;
 
+  const clientName = field(booking, "poolOwnerName", customerName);
   return {
-    subject: `Paid IronGate booking - ${customerName}`,
+    subject: `Paid IronGate booking - ${clientName}`,
     text,
     html: baseEmailHtml({
-      preheader: `Paid booking received for ${customerName}.`,
+      preheader: `Paid booking received for ${clientName}.`,
       title: "Paid booking received",
       badge: "Owner notification",
       body

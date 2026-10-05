@@ -90,7 +90,9 @@ function safeQrSvg(value) {
 function invoiceHtml(record) {
   const b = record.data || {};
   const amount = Number(b.invoiceAmountCents || b.stripeAmountSubtotal || b.priceCents || 14900);
-  const customer = b.agencyName || b.customerName || "Client";
+  const customer = b.poolOwnerName || (b.isPropertyOwner ? b.customerName : "") || b.customerName || "Client";
+  const customerEmail = b.poolOwnerEmail || (b.isPropertyOwner ? b.email : "") || "";
+  const customerPhone = b.poolOwnerPhone || (b.isPropertyOwner ? b.phone : "") || "";
   const invoiceNumber = b.invoiceNumber || "Pending";
   const issueDate = b.invoiceIssuedDate || "";
   const dueDate = b.invoiceDueDate || "";
@@ -113,7 +115,7 @@ function invoiceHtml(record) {
 <main class="invoice">
 <section class="top"><div class="brand"><h1>Iron Gate Pool Inspections</h1><p>Pool Safety Inspection &amp; Certificate</p><p>irongatepool.com.au</p></div>
 <div class="title"><h2>INVOICE</h2><div><strong>${escapeHtml(invoiceNumber)}</strong></div><div>Issued: ${escapeHtml(displayInvoiceDate(issueDate))}</div><div>Due: ${escapeHtml(displayInvoiceDate(dueDate))}</div></div></section>
-<section class="grid"><div class="box"><h3>Bill to</h3><p><strong>${escapeHtml(customer)}</strong></p><p>${escapeHtml(b.customerName || "")}</p><p>${escapeHtml(b.email || "")}</p></div>
+<section class="grid"><div class="box"><h3>Bill to</h3><p><strong>${escapeHtml(customer)}</strong></p><p>${escapeHtml(customerEmail)}</p><p>${escapeHtml(customerPhone)}</p></div>
 <div class="box"><h3>Inspection</h3><p><strong>${escapeHtml(b.propertyAddress || "")}</strong></p><p>${escapeHtml(b.preferredDateDisplay || b.preferredDate || "")}</p><p>Booking reference: ${escapeHtml(record.id)}</p></div></section>
 <table class="line"><thead><tr><th>Description</th><th>Amount</th></tr></thead><tbody><tr><td>Pool Safety Inspection &amp; Certificate</td><td>${escapeHtml(safeAmount(amount))}</td></tr></tbody></table>
 <div class="total"><div class="totalbox">${paid ? '<div class="totalrow"><span>Amount paid</span><strong>' + escapeHtml(safeAmount(amount)) + '</strong></div><div class="totalrow due"><span>Balance due</span><span>$0.00</span></div>' : '<div class="totalrow due"><span>Amount due</span><span>' + escapeHtml(safeAmount(amount)) + '</span></div>'}</div></div>
@@ -229,8 +231,9 @@ const EDITABLE_DETAIL_FIELDS = [
   { key: "agencyName", label: "Company / agency", max: 180 },
   { key: "bookingRelationship", label: "Relationship to property / owner", max: 180 },
   { section: "Property", key: "propertyAddress", label: "Property address", required: true, max: 400 },
-  { section: "Pool owner", key: "poolOwnerName", label: "Pool owner name", max: 140 },
-  { key: "poolOwnerEmail", label: "Pool owner email", type: "email", max: 180 },
+  { section: "Client / pool owner", key: "poolOwnerName", label: "Pool owner name", required: true, max: 180 },
+  { key: "poolOwnerEmail", label: "Pool owner email", type: "email", required: true, max: 180 },
+  { key: "poolOwnerPhone", label: "Pool owner phone", type: "tel", required: true, max: 22 },
   { section: "Property access", key: "accessContactName", label: "Access contact name", max: 140 },
   { key: "accessContactPhone", label: "Access contact phone", type: "tel", max: 30 },
   { key: "accessContactEmail", label: "Access contact email", type: "email", max: 180 },
@@ -244,6 +247,7 @@ function editableValue(booking, key) {
   if (booking[key] !== undefined && booking[key] !== null) return String(booking[key]);
   if (key === "poolOwnerName" && booking.isPropertyOwner === true) return String(booking.customerName || "");
   if (key === "poolOwnerEmail" && booking.isPropertyOwner === true) return String(booking.email || "");
+  if (key === "poolOwnerPhone" && booking.isPropertyOwner === true) return String(booking.phone || "");
   if (booking.accessSameAsBooking === true) {
     if (key === "accessContactName") return String(booking.customerName || "");
     if (key === "accessContactPhone") return String(booking.phone || "");
@@ -356,7 +360,7 @@ function renderDetails() {
   }
   const b = record.data;
   const heading = document.createElement("h3");
-  heading.textContent = b.customerName || "Unnamed customer";
+  heading.textContent = b.poolOwnerName || (b.isPropertyOwner ? b.customerName : "") || b.customerName || "Unnamed client";
   panel.appendChild(heading);
   const ref = document.createElement("p");
   ref.className = "muted-help";
@@ -375,19 +379,17 @@ function renderDetails() {
     ["Existing certificate", b.existingCertificateStatus], ["Pool exemption", b.hasPoolExemption === true ? "Yes" : "No"],
     ["Exemption file uploaded", b.exemptionFileUploaded === true ? "Yes" : "No"]
   ]);
-  detailSection(panel, "Booking contact", [
+  detailSection(panel, "Client / pool owner", [
+    ["Name", b.poolOwnerName || (b.isPropertyOwner ? b.customerName : "")],
+    ["Email", b.poolOwnerEmail || (b.isPropertyOwner ? b.email : "")],
+    ["Phone", b.poolOwnerPhone || (b.isPropertyOwner ? b.phone : "")],
+    ["Used for", "Primary client record, invoices and compliance documents"]
+  ]);
+  detailSection(panel, "Booking / access contact (reference)", [
     ["Name", b.customerName], ["Role", b.bookingRole || b.clientType],
     ["Company / agency", b.agencyName], ["Relationship", b.bookingRelationship],
     ["Email", b.email], ["Phone", b.phone],
     ["Authorised to book", b.authorisedToBook === true ? "Yes" : "No"]
-  ]);
-  detailSection(panel, "Pool owner and documents", [
-    ["Pool owner status", b.poolOwnerStatus || (b.isPropertyOwner ? "Booking contact is owner" : "Not recorded")],
-    ["Pool owner name", b.poolOwnerName || (b.isPropertyOwner ? b.customerName : "")],
-    ["Pool owner email", b.poolOwnerEmail],
-    ["Owner details follow-up", b.ownerDetailsPending === true ?
-      "REQUIRED before inspection / compliance documents" : "No outstanding owner details recorded"],
-    ["Document delivery", "Confirm the owner / authorised delivery recipient before issuing compliance paperwork."]
   ]);
   detailSection(panel, "Property access", [
     ["Same as booking contact", b.accessSameAsBooking === true ? "Yes" : "No"],
@@ -440,8 +442,9 @@ function filteredBookings() {
       (filter === "pending" && (status.includes("pending") || pay.includes("checkout") || pay === "payment_processing")) ||
       (filter === "cancelled" && status === "cancelled") ||
       (filter === "completed" && (status === "completed" || status === "certificate_issued"));
-    return matches && [id, data.customerName, data.email, data.agencyName,
-      data.poolOwnerName, data.accessContactName, data.propertyAddress, data.preferredDate]
+    return matches && [id, data.poolOwnerName, data.poolOwnerEmail, data.poolOwnerPhone,
+      data.customerName, data.email, data.phone, data.agencyName,
+      data.accessContactName, data.propertyAddress, data.preferredDate]
       .some((part) => String(part || "").toLowerCase().includes(search));
   });
 }
@@ -460,7 +463,7 @@ function renderList() {
     button.type = "button"; button.className = "booking-row";
     button.setAttribute("aria-pressed", String(id === activeBookingId));
     const name = document.createElement("strong"), date = document.createElement("span"), location = document.createElement("span"), status = document.createElement("span");
-    name.textContent = data.customerName || "Unnamed customer";
+    name.textContent = data.poolOwnerName || (data.isPropertyOwner ? data.customerName : "") || data.customerName || "Unnamed client";
     date.textContent = (data.preferredDateDisplay || data.preferredDate || "Date pending") + " · " + (data.preferredTimeLabel || data.preferredTime || "Time pending");
     location.textContent = data.propertyAddress || id;
     status.textContent = bookingStatus(data) + " · " + billingLabel(data);

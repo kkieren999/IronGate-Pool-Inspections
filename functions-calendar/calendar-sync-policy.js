@@ -4,7 +4,7 @@ const CONFIRMED_PAYMENT_STATUSES = new Set(["paid", "agency_invoice", "no_paymen
 const CALENDAR_RELEVANT_FIELDS = [
   "preferredDate", "preferredTimeStart", "preferredTimeEnd", "preferredTimeLabel",
   "preferredTime", "customerName", "phone", "email", "propertyAddress",
-  "inspectionReason", "poolType", "poolOwnerName", "ownerDetailsPending",
+  "inspectionReason", "poolType", "poolOwnerName", "poolOwnerEmail", "poolOwnerPhone",
   "agencyName", "accessContactName", "accessContactPhone", "accessMethod",
   "keyCollectionLocation", "accessInstructions", "notes",
   "status", "inspectionStatus", "paymentStatus"

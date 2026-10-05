@@ -33,6 +33,7 @@ service cloud.firestore {
         "poolOwnerStatus",
         "poolOwnerName",
         "poolOwnerEmail",
+        "poolOwnerPhone",
         "ownerDetailsPending",
         "accessSameAsBooking",
         "accessContactName",
@@ -162,6 +163,7 @@ service cloud.firestore {
         "poolOwnerStatus",
         "poolOwnerName",
         "poolOwnerEmail",
+        "poolOwnerPhone",
         "ownerDetailsPending",
         "accessSameAsBooking",
         "accessContactName",
@@ -223,14 +225,20 @@ service cloud.firestore {
         && request.resource.data.propertyAddress.size() <= 400
         && request.resource.data.propertyAddressSelected == true
         && request.resource.data.bookingRoleCode in ["owner", "agent", "agency", "other"]
-        && request.resource.data.poolOwnerStatus in ["self", "different", "pending"]
+        && request.resource.data.poolOwnerStatus in ["self", "different"]
         && request.resource.data.isPropertyOwner == (request.resource.data.bookingRoleCode == "owner")
+        && ((request.resource.data.isPropertyOwner == true && request.resource.data.poolOwnerStatus == "self")
+          || (request.resource.data.isPropertyOwner == false && request.resource.data.poolOwnerStatus == "different"))
         && (request.resource.data.isPropertyOwner == true || request.resource.data.authorisedToBook == true)
         && ((request.resource.data.bookingRoleCode != "agent" && request.resource.data.bookingRoleCode != "agency")
           || (request.resource.data.agencyName is string && request.resource.data.agencyName.size() >= 2))
-        && (request.resource.data.poolOwnerStatus != "different"
-          || (request.resource.data.poolOwnerName is string && request.resource.data.poolOwnerName.size() >= 2))
-        && (request.resource.data.poolOwnerStatus != "pending" || request.resource.data.ownerDetailsPending == true)
+        && request.resource.data.poolOwnerName is string
+        && request.resource.data.poolOwnerName.size() >= 2
+        && request.resource.data.poolOwnerEmail is string
+        && request.resource.data.poolOwnerEmail.matches('^[^@ ]+@[^@ ]+[.][^@ ]+$')
+        && request.resource.data.poolOwnerPhone is string
+        && request.resource.data.poolOwnerPhone.matches('^(04[0-9]{8}|0[2378][0-9]{8}|[+]614[0-9]{8}|[+]61[2378][0-9]{8})$')
+        && request.resource.data.ownerDetailsPending == false
         && (request.resource.data.accessSameAsBooking == true ||
           (request.resource.data.accessContactName is string && request.resource.data.accessContactName.size() >= 2
             && request.resource.data.accessContactPhone is string && request.resource.data.accessContactPhone.size() >= 6))

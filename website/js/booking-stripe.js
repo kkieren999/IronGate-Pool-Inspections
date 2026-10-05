@@ -109,10 +109,12 @@ function validateBookingPayload(payload) {
   if (!payload.preferredTimeSlot) return "Please select an inspection time.";
   if (!payload.preferredTimeStart || !payload.preferredTimeEnd) return "Please reselect the inspection time slot.";
   if (!payload.isPropertyOwner && !payload.authorisedToBook) return "Please confirm you are authorised to arrange the inspection.";
-  if (!["self", "different", "pending"].includes(payload.poolOwnerStatus)) return "Please confirm the pool owner details.";
+  if (!["self", "different"].includes(payload.poolOwnerStatus)) return "Please confirm the pool owner details.";
   if (payload.isPropertyOwner && payload.poolOwnerStatus !== "self") return "Please check the pool owner selection.";
-  if (!payload.isPropertyOwner && payload.poolOwnerStatus === "self") return "Select the pool owner's details.";
-  if (payload.poolOwnerStatus === "different" && !payload.poolOwnerName) return "Please enter the pool owner's full name.";
+  if (!payload.isPropertyOwner && payload.poolOwnerStatus !== "different") return "Please enter the pool owner's details.";
+  if (!payload.poolOwnerName) return "Please enter the pool owner's full name.";
+  if (!payload.poolOwnerEmail) return "Please enter the pool owner's email address.";
+  if (!payload.poolOwnerPhone) return "Please enter the pool owner's contact phone.";
   if (!payload.accessSameAsBooking && (!payload.accessContactName || !payload.accessContactPhone)) return "Please enter the separate property access contact's name and phone.";
   if (!["on_site", "keys", "lockbox", "other"].includes(payload.accessMethod)) return "Please select the access arrangement.";
   if (payload.accessMethod === "keys" && !payload.keyCollectionLocation) return "Please enter where we should collect the keys.";
@@ -167,9 +169,10 @@ function collectBookingPayload() {
     authorisedToBook: isOwner || getChecked("#authorisedToBook"),
     clientType: roleNames[bookingRoleCode] || "",
     poolOwnerStatus,
-    poolOwnerName: isOwner ? customerName : poolOwnerStatus === "different" ? getValue("#poolOwnerName") : "",
-    poolOwnerEmail: isOwner ? email : poolOwnerStatus === "different" ? getValue("#poolOwnerEmail") : "",
-    ownerDetailsPending: poolOwnerStatus === "pending",
+    poolOwnerName: isOwner ? customerName : getValue("#poolOwnerName"),
+    poolOwnerEmail: isOwner ? email : getValue("#poolOwnerEmail"),
+    poolOwnerPhone: isOwner ? phone : normaliseAustralianMobile(getValue("#poolOwnerPhone")),
+    ownerDetailsPending: false,
     inspectionReason: getValue("#inspectionReason"),
     poolType: getValue("#poolType"),
     existingCertificateStatus: getValue("#existingCertificateStatus") || "Unsure",
@@ -212,7 +215,7 @@ function privateCustomerUpdate(booking) {
     "customerName", "email", "phone", "bookingRoleCode", "bookingRole",
     "agencyName", "bookingRelationship", "propertyAddress", "propertyAddressSelected",
     "propertyPlaceId", "isPropertyOwner", "authorisedToBook", "clientType",
-    "poolOwnerStatus", "poolOwnerName", "poolOwnerEmail", "ownerDetailsPending",
+    "poolOwnerStatus", "poolOwnerName", "poolOwnerEmail", "poolOwnerPhone", "ownerDetailsPending",
     "inspectionReason", "poolType", "existingCertificateStatus", "poolRegisteredStatus",
     "accessSameAsBooking", "accessContactName", "accessContactPhone",
     "accessContactEmail", "accessContactAgency", "accessMethod", "keyCollectionLocation",
