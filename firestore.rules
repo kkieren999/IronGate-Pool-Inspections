@@ -235,7 +235,7 @@ service cloud.firestore {
         && request.resource.data.poolOwnerName is string
         && request.resource.data.poolOwnerName.size() >= 2
         && request.resource.data.poolOwnerEmail is string
-        && request.resource.data.poolOwnerEmail.matches('^.+@.+\\..+
+        && request.resource.data.poolOwnerEmail.matches('^[^@ ]+@[^@ ]+[.][^@ ]+
         && (request.resource.data.accessSameAsBooking == true ||
           (request.resource.data.accessContactName is string && request.resource.data.accessContactName.size() >= 2
             && request.resource.data.accessContactPhone is string && request.resource.data.accessContactPhone.size() >= 6))
@@ -309,7 +309,7 @@ service cloud.firestore {
 }
 )
         && request.resource.data.poolOwnerPhone is string
-        && request.resource.data.poolOwnerPhone.matches('^(04[0-9]{8}|0[2378][0-9]{8}|\\+614[0-9]{8}|\\+61[2378][0-9]{8})
+        && request.resource.data.poolOwnerPhone.matches('^(04[0-9]{8}|0[2378][0-9]{8}|[+]614[0-9]{8}|[+]61[2378][0-9]{8})
         && (request.resource.data.accessSameAsBooking == true ||
           (request.resource.data.accessContactName is string && request.resource.data.accessContactName.size() >= 2
             && request.resource.data.accessContactPhone is string && request.resource.data.accessContactPhone.size() >= 6))
