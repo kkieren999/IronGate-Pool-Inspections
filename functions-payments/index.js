@@ -462,9 +462,12 @@ async function promotionCodeFromSession(stripe, session = {}) {
   const candidates = [hydrated, session].filter(Boolean);
 
   for (const candidate of candidates) {
-    const discounts = Array.isArray(candidate.discounts) ? candidate.discounts : [];
+    const direct = Array.isArray(candidate.discounts) ? candidate.discounts : [];
+    const breakdown = Array.isArray(candidate.total_details?.breakdown?.discounts) ?
+      candidate.total_details.breakdown.discounts.map((entry) => entry?.discount || entry) : [];
+    const discounts = [...direct, ...breakdown];
     for (const discount of discounts) {
-      const promo = discount?.promotion_code;
+      const promo = discount?.promotion_code || discount?.promotionCode;
       if (promo && typeof promo === "object" && promo.code) {
         return normalisePromotionCode(promo.code);
       }
@@ -496,7 +499,7 @@ function checkoutBillingPatch(session = {}, promotionCode = null, currentBooking
   const noCost = session.payment_status === "no_payment_required" || total === 0;
   const code = normalisePromotionCode(promotionCode || currentBooking.stripePromotionCode);
   const invoicePromo = code === INVOICE_PROMO_CODE;
-  const invoiceRequired = completed && invoicePromo && noCost && discount > 0;
+  const invoiceRequired = completed && invoicePromo && noCost;
 
   let billingMethod = "stripe";
   let billingStatus = completed && total > 0 ? "paid_stripe" : "payment_processing";
