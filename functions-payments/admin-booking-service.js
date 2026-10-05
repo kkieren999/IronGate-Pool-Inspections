@@ -136,4 +136,155 @@ async function executeAdminBookingChange(request, kind) {
     throw error;
   }
 }
-module.exports = { requireAdmin, executeAdminBookingChange };
+
+const EDITABLE_BOOKING_FIELDS = Object.freeze({
+  customerName: { min: 2, max: 140, required: true },
+  email: { min: 3, max: 180, required: true, email: true },
+  phone: { min: 6, max: 30, required: true },
+  propertyAddress: { min: 8, max: 400, required: true },
+  agencyName: { max: 180 },
+  bookingRelationship: { max: 180 },
+  poolOwnerName: { max: 140 },
+  poolOwnerEmail: { max: 180, email: true },
+  accessContactName: { max: 140 },
+  accessContactPhone: { max: 30 },
+  accessContactEmail: { max: 180, email: true },
+  accessContactAgency: { max: 180 },
+  keyCollectionLocation: { max: 300 },
+  accessInstructions: { max: 1200 },
+  notes: { max: 2000 }
+});
+
+function normaliseEditableDetails(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new HttpsError("invalid-argument", "Booking details are required.");
+  }
+  const keys = Object.keys(raw);
+  if (!keys.length) throw new HttpsError("invalid-argument", "No booking detail changes were supplied.");
+  const unexpected = keys.filter((key) => !Object.prototype.hasOwnProperty.call(EDITABLE_BOOKING_FIELDS, key));
+  if (unexpected.length) {
+    throw new HttpsError("invalid-argument", "One or more booking fields are not editable.");
+  }
+  const output = {};
+  for (const key of keys) {
+    const spec = EDITABLE_BOOKING_FIELDS[key];
+    if (typeof raw[key] !== "string") throw new HttpsError("invalid-argument", key + " must be text.");
+    const value = raw[key].trim();
+    if (spec.required && value.length < (spec.min || 1)) {
+      throw new HttpsError("invalid-argument", key + " is required.");
+    }
+    if (value.length > spec.max) throw new HttpsError("invalid-argument", key + " is too long.");
+    if (spec.email && value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      throw new HttpsError("invalid-argument", key + " must be a valid email address.");
+    }
+    output[key] = value;
+  }
+  return output;
+}
+
+function sameText(a, b) {
+  return String(a ?? "").trim() === String(b ?? "").trim();
+}
+
+async function updateAdminBookingDetails(request) {
+  const actor = await requireAdmin(request);
+  const data = request.data || {};
+  const bookingId = validId(data.bookingId, "booking ID");
+  const actionId = validId(data.actionId || randomUUID(), "action ID");
+  const requested = normaliseEditableDetails(data.details);
+  const bookingRef = db.collection("bookings").doc(bookingId);
+  const auditRef = db.collection("adminActivity").doc(bookingId + "_" + actionId);
+  const stamp = admin.firestore.FieldValue.serverTimestamp();
+
+  return db.runTransaction(async (tx) => {
+    const audit = await tx.get(auditRef);
+    if (audit.exists) {
+      const prior = audit.data() || {};
+      if (prior.bookingId !== bookingId || prior.action !== "details_edit" || prior.actorUid !== actor.uid) {
+        throw new HttpsError("already-exists", "Action ID already used for another operation.");
+      }
+      return { bookingId, actionId, action: "details_edit", alreadyApplied: true, changedFields: prior.changedFields || [] };
+    }
+
+    const snapshot = await tx.get(bookingRef);
+    if (!snapshot.exists) throw new HttpsError("not-found", "Booking not found.");
+    const booking = snapshot.data() || {};
+    const changes = {};
+    for (const [key, value] of Object.entries(requested)) {
+      if (!sameText(booking[key], value)) changes[key] = value;
+    }
+
+    // Keep fields that explicitly represent "same person as booking contact" in sync,
+    // but only when they were not separately edited and still matched the old contact.
+    if (Object.prototype.hasOwnProperty.call(changes, "customerName")) {
+      if (booking.isPropertyOwner === true &&
+          !Object.prototype.hasOwnProperty.call(requested, "poolOwnerName") &&
+          (!booking.poolOwnerName || sameText(booking.poolOwnerName, booking.customerName))) {
+        changes.poolOwnerName = changes.customerName;
+      }
+      if (booking.accessSameAsBooking === true &&
+          !Object.prototype.hasOwnProperty.call(requested, "accessContactName") &&
+          (!booking.accessContactName || sameText(booking.accessContactName, booking.customerName))) {
+        changes.accessContactName = changes.customerName;
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(changes, "email")) {
+      if (booking.isPropertyOwner === true &&
+          !Object.prototype.hasOwnProperty.call(requested, "poolOwnerEmail") &&
+          (!booking.poolOwnerEmail || sameText(booking.poolOwnerEmail, booking.email))) {
+        changes.poolOwnerEmail = changes.email;
+      }
+      if (booking.accessSameAsBooking === true &&
+          !Object.prototype.hasOwnProperty.call(requested, "accessContactEmail") &&
+          (!booking.accessContactEmail || sameText(booking.accessContactEmail, booking.email))) {
+        changes.accessContactEmail = changes.email;
+      }
+    }
+    if (Object.prototype.hasOwnProperty.call(changes, "phone") &&
+        booking.accessSameAsBooking === true &&
+        !Object.prototype.hasOwnProperty.call(requested, "accessContactPhone") &&
+        (!booking.accessContactPhone || sameText(booking.accessContactPhone, booking.phone))) {
+      changes.accessContactPhone = changes.phone;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(changes, "propertyAddress")) {
+      Object.assign(changes, {
+        propertyAddressSelected: true,
+        propertyPlaceId: "",
+        selectedAddress: changes.propertyAddress,
+        poolRegisterStatus: "admin_address_changed",
+        poolRegisterMessage: "Address changed in admin; recheck the Queensland pool register if required.",
+        poolRegisterDetails: null,
+        poolRegisterCheckedAt: null,
+        poolRegisterLooksRight: false,
+        poolRegisterLookupSource: "admin_edit"
+      });
+    }
+
+    const changedFields = Object.keys(changes);
+    if (!changedFields.length) {
+      return { bookingId, actionId, action: "details_edit", alreadyApplied: false, noChanges: true, changedFields: [] };
+    }
+
+    tx.update(bookingRef, {
+      ...changes,
+      lastAdminActionId: actionId,
+      lastAdminActionType: "details_edit",
+      updatedAt: stamp,
+      updatedBy: actor.email
+    });
+    tx.create(auditRef, {
+      bookingId,
+      action: "details_edit",
+      actionId,
+      actorUid: actor.uid,
+      actorEmail: actor.email,
+      changedFields,
+      reason: "Booking details edited in admin",
+      createdAt: stamp
+    });
+    return { bookingId, actionId, action: "details_edit", alreadyApplied: false, changedFields, details: changes };
+  });
+}
+
+module.exports = { requireAdmin, executeAdminBookingChange, updateAdminBookingDetails };
