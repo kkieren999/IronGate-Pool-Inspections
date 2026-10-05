@@ -36,13 +36,16 @@ test("role dropdown reveals only relevant company, relationship and authority fi
   node("#bookingRole").value = "owner";
   node("#bookingRole").dispatch("change");
   assert.equal(node("#poolOwnerStatus").value, "self");
-  assert.equal(node("#pool-owner-status-field").hidden, true);
+  assert.equal(node("#pool-owner-section").hidden, true);
   assert.equal(node("#booking-authority-field").hidden, true);
   assert.equal(node("#agency-name-field").hidden, true);
   node("#bookingRole").value = "agent";
   node("#bookingRole").dispatch("change");
-  assert.equal(node("#poolOwnerStatus").value, "");
-  assert.equal(node("#pool-owner-status-field").hidden, false);
+  assert.equal(node("#poolOwnerStatus").value, "different");
+  assert.equal(node("#pool-owner-section").hidden, false);
+  assert.equal(node("#poolOwnerName").required, true);
+  assert.equal(node("#poolOwnerEmail").required, true);
+  assert.equal(node("#poolOwnerPhone").required, true);
   assert.equal(node("#agency-name-field").hidden, false);
   assert.equal(node("#agencyName").required, true);
   assert.equal(node("#booking-authority-field").hidden, false);
@@ -56,16 +59,15 @@ test("role dropdown reveals only relevant company, relationship and authority fi
   assert.equal(node("#bookingRelationship").required, true);
 });
 
-test("owner and property access selectors make only relevant fields required", () => {
+test("non-owner roles require full pool owner details and property access remains separate", () => {
   const { node } = roleForm();
   node("#bookingRole").value = "agency"; node("#bookingRole").dispatch("change");
-  node("#poolOwnerStatus").value = "different"; node("#poolOwnerStatus").dispatch("change");
   assert.equal(node("#owner-name-field").hidden, false);
+  assert.equal(node("#owner-email-field").hidden, false);
+  assert.equal(node("#owner-phone-field").hidden, false);
   assert.equal(node("#poolOwnerName").required, true);
-  node("#poolOwnerStatus").value = "pending"; node("#poolOwnerStatus").dispatch("change");
-  assert.equal(node("#owner-name-field").hidden, true);
-  assert.equal(node("#owner-pending-note").hidden, false);
-  assert.equal(node("#poolOwnerName").required, false);
+  assert.equal(node("#poolOwnerEmail").required, true);
+  assert.equal(node("#poolOwnerPhone").required, true);
   node("#accessSameAsBooking").checked = false; node("#accessSameAsBooking").dispatch("change");
   assert.equal(node("#access-contact-fields").hidden, false);
   assert.equal(node("#accessContactName").required, true);
@@ -94,7 +96,8 @@ function exampleBooking() {
     customerName: "Ken Example", email: "ken@example.com", phone: "0412345678",
     propertyAddress: "20 Example Court, Carindale QLD 4152", propertyAddressSelected: true,
     isPropertyOwner: false, authorisedToBook: true,
-    poolOwnerStatus: "pending", poolOwnerName: "", poolOwnerEmail: "", ownerDetailsPending: true,
+    poolOwnerStatus: "different", poolOwnerName: "Alex Owner", poolOwnerEmail: "alex@example.com",
+    poolOwnerPhone: "0411222333", ownerDetailsPending: false,
     accessSameAsBooking: false, accessContactName: "Sam Example",
     accessContactPhone: "0733974280", accessContactEmail: "sam@example.com",
     accessContactAgency: "Harcourts", accessMethod: "keys",
@@ -115,8 +118,11 @@ test("backend accepts an authorised agency job without mislabelling it a homeown
   assert.equal(data.customerType, "agency");
   assert.equal(data.bookingRole, "Agency / organisation representative");
   assert.equal(data.agencyName, "Willow Brown");
-  assert.equal(data.ownerDetailsPending, true);
-  assert.equal(data.poolOwnerStatus, "pending");
+  assert.equal(data.ownerDetailsPending, false);
+  assert.equal(data.poolOwnerStatus, "different");
+  assert.equal(data.poolOwnerName, "Alex Owner");
+  assert.equal(data.poolOwnerEmail, "alex@example.com");
+  assert.equal(data.poolOwnerPhone, "0411222333");
   assert.equal(data.accessContactName, "Sam Example");
   assert.equal(data.paymentStatus, "checkout_created");
 });
@@ -127,8 +133,10 @@ test("backend rejects missing role authority, owner identity, access and animal 
     [{ ...good, bookingRoleCode: "" }, /role/],
     [{ ...good, agencyName: "" }, /agency/],
     [{ ...good, authorisedToBook: false }, /authority/],
-    [{ ...good, poolOwnerStatus: "different", ownerDetailsPending: false }, /owner's name/],
-    [{ ...good, ownerDetailsPending: false }, /Outstanding owner/],
+    [{ ...good, poolOwnerName: "" }, /owner's name/i],
+    [{ ...good, poolOwnerEmail: "" }, /owner email/i],
+    [{ ...good, poolOwnerPhone: "" }, /owner contact phone/i],
+    [{ ...good, poolOwnerStatus: "pending", ownerDetailsPending: true }, /owner details/i],
     [{ ...good, accessContactPhone: "" }, /contact/],
     [{ ...good, keyCollectionLocation: "" }, /access arrangements/],
     [{ ...good, accessPermissionIfNotHome: false }, /access arrangements/],
@@ -148,7 +156,9 @@ test("frontend constructs the full agency booking payload for the existing Strip
     "#customerName": "Ken Example", "#email": "ken@example.com", "#phone": "0412345678",
     "#propertyAddress": "20 Example Court, Carindale QLD 4152",
     "#propertyAddressSelected": "true", "#propertyPlaceId": "testplace",
-    "#poolOwnerStatus": "pending", "#accessContactName": "Sam Example",
+    "#poolOwnerStatus": "different", "#poolOwnerName": "Alex Owner",
+    "#poolOwnerEmail": "alex@example.com", "#poolOwnerPhone": "0411222333",
+    "#accessContactName": "Sam Example",
     "#accessContactPhone": "07 3397 4280", "#accessContactEmail": "sam@example.com",
     "#accessContactAgency": "Harcourts", "#accessMethod": "keys",
     "#keyCollectionLocation": "15 Example Rd, Coorparoo",
@@ -176,14 +186,18 @@ test("frontend constructs the full agency booking payload for the existing Strip
   assert.equal(funcs.validateBookingPayload(payload), "");
   assert.equal(payload.bookingRoleCode, "agency");
   assert.equal(payload.agencyName, "Willow Brown");
-  assert.equal(payload.poolOwnerStatus, "pending");
-  assert.equal(payload.ownerDetailsPending, true);
+  assert.equal(payload.poolOwnerStatus, "different");
+  assert.equal(payload.poolOwnerName, "Alex Owner");
+  assert.equal(payload.poolOwnerEmail, "alex@example.com");
+  assert.equal(payload.poolOwnerPhone, "0411222333");
+  assert.equal(payload.ownerDetailsPending, false);
   assert.equal(payload.accessContactName, "Sam Example");
   assert.equal(payload.accessMethod, "keys");
   assert.equal(payload.keyCollectionLocation, "15 Example Rd, Coorparoo");
   const privateUpdate = funcs.privateCustomerUpdate(payload);
   for (const field of ["bookingRoleCode", "agencyName", "poolOwnerStatus",
-    "ownerDetailsPending", "accessContactName", "accessMethod", "keyCollectionLocation"]) {
+    "poolOwnerName", "poolOwnerEmail", "poolOwnerPhone", "ownerDetailsPending",
+    "accessContactName", "accessMethod", "keyCollectionLocation"]) {
     assert.equal(privateUpdate[field], payload[field], "private invitation field: " + field);
   }
   checked.delete("#authorisedToBook");
@@ -206,10 +220,10 @@ test("public and private checkout capture the same booking role and access field
   const rules = read("firestore.rules");
   const backend = read("functions-payments/direct-booking.js");
   for (const id of ["bookingRole", "agencyName", "poolOwnerStatus", "poolOwnerName",
-    "accessContactName", "accessMethod", "keyCollectionLocation"]) {
+    "poolOwnerEmail", "poolOwnerPhone", "accessContactName", "accessMethod", "keyCollectionLocation"]) {
     assert.match(html, new RegExp('id="' + id + '"'));
   }
-  for (const key of ["bookingRoleCode", "ownerDetailsPending", "accessContactAgency", "keyCollectionLocation"]) {
+  for (const key of ["bookingRoleCode", "poolOwnerPhone", "ownerDetailsPending", "accessContactAgency", "keyCollectionLocation"]) {
     assert.ok(stripe.includes(key), "stripe: " + key);
     assert.ok(backend.includes('"' + key + '"'), "backend: " + key);
     assert.ok(rules.includes('"' + key + '"'), "rules: " + key);
