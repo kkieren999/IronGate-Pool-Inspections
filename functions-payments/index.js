@@ -11,7 +11,7 @@ admin.initializeApp();
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 const db = admin.firestore();
-const { requireAdmin, executeAdminBookingChange } = require("./admin-booking-service");
+const { requireAdmin, executeAdminBookingChange, updateAdminBookingDetails } = require("./admin-booking-service");
 const { adminRefundBooking, adminReconcileBookingRefunds, reconcileRefundEvent } = require("./admin-refunds");
 
 const INSPECTION_PRICE_CENTS = 14900;
@@ -1117,6 +1117,10 @@ exports.adminMoveBooking = onCall({
 exports.adminCancelBooking = onCall({
   region: "us-central1", timeoutSeconds: 30, memory: "256MiB", invoker: "public"
 }, async (request) => executeAdminBookingChange(request, "cancel"));
+
+exports.adminUpdateBookingDetails = onCall({
+  region: "us-central1", timeoutSeconds: 30, memory: "256MiB", invoker: "public"
+}, async (request) => updateAdminBookingDetails(request));
 
 
 exports.adminRefundBooking = onCall({

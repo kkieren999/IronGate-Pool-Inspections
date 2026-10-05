@@ -168,4 +168,24 @@ test("backend authorises existing owner account and writes both availability day
   await assert.rejects(service.executeAdminBookingChange({
     ...cancelRequest, data: { ...cancelRequest.data, actionId: "cancel_another_123456789", refundDecision: "automatic" }
   }, "cancel"), /refund decision/);
+  const editRequest = { auth: request.auth, data: {
+    bookingId,
+    actionId: "edit_1234567890123456",
+    details: {
+      customerName: "Updated Customer",
+      email: "updated@example.com",
+      phone: "0412345678",
+      notes: "Corrected from the admin console."
+    }
+  } };
+  const edited = await service.updateAdminBookingDetails(editRequest);
+  assert.equal(edited.action, "details_edit");
+  assert.equal(store.get("bookings/" + bookingId).customerName, "Updated Customer");
+  assert.equal(store.get("bookings/" + bookingId).email, "updated@example.com");
+  assert.equal(store.get("bookings/" + bookingId).paymentStatus, "paid", "detail edits cannot alter payments");
+  assert.ok(store.has("adminActivity/" + bookingId + "_edit_1234567890123456"));
+  await assert.rejects(service.updateAdminBookingDetails({
+    auth: request.auth,
+    data: { bookingId, actionId: "edit_unsafe_123456789", details: { paymentStatus: "refunded" } }
+  }), /not editable/);
 });

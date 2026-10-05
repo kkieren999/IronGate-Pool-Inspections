@@ -263,7 +263,7 @@ test("admin booking tabs retain availability and limit customer data to authenti
     assert.ok(page.includes('id="panel-' + tab + '"'), tab);
     assert.ok(page.includes('data-tab="' + tab + '"'), tab);
   }
-  assert.ok(main.includes('import "./admin-booking-dashboard.js?v=20261005invoice2"'));
+  assert.ok(main.includes('import "./admin-booking-dashboard.js?v=20261005edit1"'));
   assert.ok(dashboard.includes('onAuthStateChanged(auth'));
   assert.ok(dashboard.includes('orderBy("createdAt", "desc")'));
   assert.ok(dashboard.includes('limit(150)'));
@@ -271,6 +271,7 @@ test("admin booking tabs retain availability and limit customer data to authenti
   assert.ok(dashboard.includes('httpsCallable(functions, "adminReconcileBookingBilling")'));
   assert.ok(dashboard.includes('httpsCallable(functions, "adminIssueBookingInvoice")'));
   assert.ok(dashboard.includes('httpsCallable(functions, "adminPrepareInvoiceStripePayment")'));
+  assert.ok(dashboard.includes('httpsCallable(functions, "adminUpdateBookingDetails")'));
   assert.ok(dashboard.includes("INVOICE100"));
   assert.ok(dashboard.includes("Pay securely with Stripe"));
   assert.ok(!dashboard.includes("BSB:"));

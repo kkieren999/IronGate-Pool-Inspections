@@ -3,14 +3,15 @@ import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/
 import { collection, getDocs, limit, orderBy, query } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
 
-// This module only reads Firestore. All writes, payment and slot operations
-// belong to authenticated backend functions, never browser-side field edits.
+// This module never writes booking records directly from the browser.
+// Booking edits, payment and slot operations go through authenticated backend functions.
 const ADMIN_EMAIL = "irongate.pool.bne@gmail.com";
 const auth = getAuth(app);
 const functions = getFunctions(app, "us-central1");
 const reconcileBookingBilling = httpsCallable(functions, "adminReconcileBookingBilling");
 const issueBookingInvoice = httpsCallable(functions, "adminIssueBookingInvoice");
 const prepareInvoiceStripePayment = httpsCallable(functions, "adminPrepareInvoiceStripePayment");
+const updateBookingDetails = httpsCallable(functions, "adminUpdateBookingDetails");
 const $ = (selector) => document.querySelector(selector);
 const todayBrisbane = () => {
   const parts = new Intl.DateTimeFormat("en-AU", {
@@ -220,6 +221,130 @@ function detailSection(container, title, fields) {
   container.appendChild(heading);
   fieldGrid(container, fields);
 }
+
+const EDITABLE_DETAIL_FIELDS = [
+  { section: "Booking contact", key: "customerName", label: "Full name", required: true, max: 140 },
+  { key: "email", label: "Email", type: "email", required: true, max: 180 },
+  { key: "phone", label: "Phone", type: "tel", required: true, max: 30 },
+  { key: "agencyName", label: "Company / agency", max: 180 },
+  { key: "bookingRelationship", label: "Relationship to property / owner", max: 180 },
+  { section: "Property", key: "propertyAddress", label: "Property address", required: true, max: 400 },
+  { section: "Pool owner", key: "poolOwnerName", label: "Pool owner name", max: 140 },
+  { key: "poolOwnerEmail", label: "Pool owner email", type: "email", max: 180 },
+  { section: "Property access", key: "accessContactName", label: "Access contact name", max: 140 },
+  { key: "accessContactPhone", label: "Access contact phone", type: "tel", max: 30 },
+  { key: "accessContactEmail", label: "Access contact email", type: "email", max: 180 },
+  { key: "accessContactAgency", label: "Access contact agency", max: 180 },
+  { key: "keyCollectionLocation", label: "Key collection / lockbox details", max: 300 },
+  { key: "accessInstructions", label: "Access instructions", max: 1200, multiline: true },
+  { section: "Internal / customer notes", key: "notes", label: "Notes", max: 2000, multiline: true }
+];
+
+function editableValue(booking, key) {
+  if (booking[key] !== undefined && booking[key] !== null) return String(booking[key]);
+  if (key === "poolOwnerName" && booking.isPropertyOwner === true) return String(booking.customerName || "");
+  if (key === "poolOwnerEmail" && booking.isPropertyOwner === true) return String(booking.email || "");
+  if (booking.accessSameAsBooking === true) {
+    if (key === "accessContactName") return String(booking.customerName || "");
+    if (key === "accessContactPhone") return String(booking.phone || "");
+    if (key === "accessContactEmail") return String(booking.email || "");
+  }
+  return "";
+}
+
+function renderBookingEditForm(container, record) {
+  const booking = record.data || {};
+  const wrapper = document.createElement("details");
+  wrapper.className = "booking-edit-details";
+  const summary = document.createElement("summary");
+  summary.textContent = "Edit booking details";
+  wrapper.appendChild(summary);
+
+  const help = document.createElement("p");
+  help.className = "muted-help";
+  help.textContent = "Correct contact, property, owner/access details and notes here. Use Move for appointment time changes; payment and refund fields stay protected.";
+  wrapper.appendChild(help);
+
+  const form = document.createElement("form");
+  form.className = "admin-form";
+  form.autocomplete = "off";
+  const initial = new Map();
+
+  EDITABLE_DETAIL_FIELDS.forEach((field) => {
+    if (field.section) {
+      const heading = document.createElement("h4");
+      heading.textContent = field.section;
+      heading.style.margin = "8px 0 -4px";
+      form.appendChild(heading);
+    }
+    const label = document.createElement("label");
+    label.textContent = field.label;
+    const input = field.multiline ? document.createElement("textarea") : document.createElement("input");
+    if (!field.multiline) input.type = field.type || "text";
+    input.name = field.key;
+    input.maxLength = field.max;
+    input.required = field.required === true;
+    const current = editableValue(booking, field.key);
+    input.value = current;
+    initial.set(field.key, current.trim());
+    label.appendChild(input);
+    form.appendChild(label);
+  });
+
+  const note = document.createElement("p");
+  note.className = "form-note";
+  note.setAttribute("role", "status");
+  note.setAttribute("aria-live", "polite");
+  form.appendChild(note);
+
+  const button = document.createElement("button");
+  button.type = "submit";
+  button.className = "btn btn-primary";
+  button.textContent = "Save booking details";
+  form.appendChild(button);
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!authorized || activeBookingId !== record.id) return;
+    const details = {};
+    EDITABLE_DETAIL_FIELDS.forEach((field) => {
+      const input = form.elements.namedItem(field.key);
+      const next = String(input?.value || "").trim();
+      if (next !== initial.get(field.key)) details[field.key] = next;
+    });
+    if (!Object.keys(details).length) {
+      note.textContent = "No changes to save.";
+      note.dataset.type = "";
+      return;
+    }
+    button.disabled = true;
+    note.textContent = "Saving booking details…";
+    note.dataset.type = "";
+    try {
+      const response = await updateBookingDetails({
+        bookingId: record.id,
+        actionId: crypto.randomUUID(),
+        details
+      });
+      Object.assign(record.data, response.data?.details || details);
+      renderOverview();
+      renderList();
+      renderDetails();
+      value("#bookings-message", response.data?.noChanges
+        ? "No booking detail changes were needed."
+        : "Booking details saved. Calendar details will resync automatically when relevant.");
+    } catch (error) {
+      console.error("Could not update booking details", error);
+      note.textContent = error?.message || "Booking details were not saved.";
+      note.dataset.type = "error";
+      button.disabled = false;
+    }
+  });
+
+  wrapper.appendChild(form);
+  container.appendChild(wrapper);
+}
+
 function renderDetails() {
   const panel = $("#booking-detail");
   if (!panel) return;
@@ -237,6 +362,7 @@ function renderDetails() {
   ref.className = "muted-help";
   ref.textContent = "Booking reference: " + record.id;
   panel.appendChild(ref);
+  renderBookingEditForm(panel, record);
   const actionHost = document.createElement("div");
   actionHost.id = "booking-actions-host";
   panel.appendChild(actionHost);
