@@ -438,7 +438,7 @@ function buildOwnerEmail(bookingId, booking = {}) {
     subject: `Paid IronGate booking - ${clientName}`,
     text,
     html: baseEmailHtml({
-      preheader: `Paid booking received for ${customerName}.`,
+      preheader: `Paid booking received for ${clientName}.`,
       title: "Paid booking received",
       badge: "Owner notification",
       body
