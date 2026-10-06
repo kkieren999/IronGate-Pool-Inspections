@@ -414,8 +414,26 @@ const BARRIERCHECK_ORIGIN = "https://barriercheck.com.au";
 const BARRIERCHECK_IMPORT_URL = BARRIERCHECK_ORIGIN + "/BarrierCheck_APP/app/index.html?from=irongate";
 
 function barrierCheckEligible(booking = {}) {
-  return booking.status === "confirmed" &&
-    ["paid", "no_payment_required", "agency_invoice"].includes(String(booking.paymentStatus || ""));
+  const status = String(booking.status || "").toLowerCase();
+  const inspectionStatus = String(booking.inspectionStatus || "").toLowerCase();
+  const paymentStatus = String(booking.paymentStatus || "").toLowerCase();
+  const billingStatus = String(booking.billingStatus || "").toLowerCase();
+  const stripePaymentStatus = String(booking.stripePaymentStatus || "").toLowerCase();
+
+  const blocked = ["cancelled", "completed", "certificate_issued"].includes(status) ||
+    ["cancelled", "completed", "certificate_issued"].includes(inspectionStatus);
+  if (blocked) return false;
+
+  const paid = ["paid", "no_payment_required", "agency_invoice"].includes(paymentStatus) ||
+    booking.invoiceStatus === "paid" ||
+    stripePaymentStatus === "paid" ||
+    billingStatus.includes("paid");
+
+  const confirmed = status === "confirmed" ||
+    inspectionStatus === "confirmed" ||
+    (paid && Boolean(booking.preferredDate) && Boolean(booking.propertyAddress));
+
+  return paid && confirmed;
 }
 
 function barrierCheckBookingPayload(record) {
