@@ -6,7 +6,7 @@ const { HttpsError } = require("firebase-functions/v2/https");
 const { requireAdmin } = require("./admin-booking-service");
 
 const TARGET_PROJECT_ID = "barriercheck-32290";
-const TARGET_ACCOUNT_EMAIL = "irongate.pool.bne@gmail.com";
+const TARGET_ACCOUNT_EMAIL = "kieren.albuquerque@gmail.com";
 
 function clean(value) {
   return value === undefined || value === null ? "" : String(value).trim();
