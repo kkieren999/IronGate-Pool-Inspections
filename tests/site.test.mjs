@@ -91,7 +91,7 @@ test("single checkout handler and active private-admin module", () => {
   assert.ok(checkout.includes('addEventListener("submit", handleBackendBookingSubmit)'));
   assert.ok(checkout.includes('httpsCallable(functions, "createBookingCheckoutSession")'));
   assert.ok(checkout.includes("handlePrivateBookingCheckout"));
-  assert.ok(admin.includes('src="/js/admin-console.js?v=20261007barrierbutton1"'));
+  assert.ok(admin.includes('src="/js/admin-console.js?v=20261007background1"'));
   assert.ok(adminJs.includes('import "./admin-private-booking.js"'));
   assert.ok(adminJs.includes('from "./firebase-config.js"'));
   assert.ok(!siteRead("js/firebase-config.js").includes('pathname.startsWith("/admin")'));
@@ -263,7 +263,7 @@ test("admin booking tabs retain availability and limit customer data to authenti
     assert.ok(page.includes('id="panel-' + tab + '"'), tab);
     assert.ok(page.includes('data-tab="' + tab + '"'), tab);
   }
-  assert.ok(main.includes('import "./admin-booking-dashboard.js?v=20261007barrierbutton1"'));
+  assert.ok(main.includes('import "./admin-booking-dashboard.js?v=20261007background1"'));
   assert.ok(!dashboard.includes("\\nimport"), "admin dashboard must not contain a literal backslash-n before an import");
   assert.ok(dashboard.includes('onAuthStateChanged(auth'));
   assert.ok(dashboard.includes('orderBy("createdAt", "desc")'));
@@ -274,6 +274,9 @@ test("admin booking tabs retain availability and limit customer data to authenti
   assert.ok(dashboard.includes('httpsCallable(functions, "adminPrepareInvoiceStripePayment")'));
   assert.ok(dashboard.includes('httpsCallable(functions, "adminUpdateBookingDetails")'));
   assert.ok(dashboard.includes("renderBarrierCheckAction(panel, record)"), "selected bookings must render the BarrierCheck action");
+  assert.ok(dashboard.includes('httpsCallable(functions, "adminCreateBarrierCheckInspection")'), "BarrierCheck creation must use the authenticated backend callable");
+  assert.ok(!dashboard.includes("window.open("), "BarrierCheck creation must not open the BarrierCheck app");
+  assert.ok(dashboard.includes("BarrierCheck ready ✓"), "linked inspections should display as ready");
   assert.ok(dashboard.includes('stripePaymentStatus === "paid"'), "legacy paid bookings remain importable into BarrierCheck");
   assert.ok(dashboard.includes('paid && Boolean(booking.preferredDate) && Boolean(booking.propertyAddress)'), "legacy bookings can use paid appointment data when status predates the current schema");
   assert.ok(dashboard.includes("INVOICE100"));
