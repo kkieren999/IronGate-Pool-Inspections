@@ -587,6 +587,7 @@ function renderDetails() {
   ref.textContent = "Booking reference: " + record.id;
   panel.appendChild(ref);
   renderBookingEditForm(panel, record);
+  renderBarrierCheckAction(panel, record);
   const actionHost = document.createElement("div");
   actionHost.id = "booking-actions-host";
   panel.appendChild(actionHost);
