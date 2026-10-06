@@ -1,5 +1,6 @@
 import { app, db } from "./firebase-config.js";
-import { markInvoicePaidByBankTransfer } from "./admin-bank-payment.js";\nimport { saveBarrierCheckInspectionLink } from "./admin-barriercheck-link.js";
+import { markInvoicePaidByBankTransfer } from "./admin-bank-payment.js";
+import { saveBarrierCheckInspectionLink } from "./admin-barriercheck-link.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { collection, getDocs, limit, orderBy, query } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
