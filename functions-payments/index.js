@@ -13,6 +13,7 @@ const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 const db = admin.firestore();
 const { requireAdmin, executeAdminBookingChange, updateAdminBookingDetails } = require("./admin-booking-service");
 const { adminRefundBooking, adminReconcileBookingRefunds, reconcileRefundEvent } = require("./admin-refunds");
+const { createBarrierCheckInspection } = require("./barriercheck-direct");
 
 const INSPECTION_PRICE_CENTS = 14900;
 const INSPECTION_PRICE_DISPLAY = "$149";
@@ -1121,6 +1122,10 @@ exports.adminCancelBooking = onCall({
 exports.adminUpdateBookingDetails = onCall({
   region: "us-central1", timeoutSeconds: 30, memory: "256MiB", invoker: "public"
 }, async (request) => updateAdminBookingDetails(request));
+
+exports.adminCreateBarrierCheckInspection = onCall({
+  region: "us-central1", timeoutSeconds: 30, memory: "256MiB", invoker: "public"
+}, async (request) => createBarrierCheckInspection(request, db));
 
 
 exports.adminRefundBooking = onCall({
