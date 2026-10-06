@@ -1,7 +1,7 @@
 import { app, db } from "./firebase-config.js";
-import { markInvoicePaidByBankTransfer } from "./admin-bank-payment.js";
+import { markInvoicePaidByBankTransfer } from "./admin-bank-payment.js";\nimport { saveBarrierCheckInspectionLink } from "./admin-barriercheck-link.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import { collection, doc, getDocs, limit, orderBy, query, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { collection, getDocs, limit, orderBy, query } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
 
 // Booking edits, Stripe payment reconciliation and slot operations go through authenticated backend functions.
@@ -444,17 +444,10 @@ function barrierCheckBookingPayload(record) {
 }
 
 async function saveBarrierCheckLink(record, result) {
-  const inspectionId = String(result.inspectionId || "").trim();
-  if (!inspectionId) return;
-  await updateDoc(doc(db, "bookings", record.id), {
-    barrierCheckInspectionId: inspectionId,
-    barrierCheckSyncStatus: result.reused ? "manual_reused" : "manual_synced",
-    barrierCheckSyncError: null,
-    barrierCheckSyncedAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  });
-  record.data.barrierCheckInspectionId = inspectionId;
-  record.data.barrierCheckSyncStatus = result.reused ? "manual_reused" : "manual_synced";
+  const saved = await saveBarrierCheckInspectionLink(record.id, result);
+  if (!saved) return;
+  record.data.barrierCheckInspectionId = saved.inspectionId;
+  record.data.barrierCheckSyncStatus = saved.barrierCheckSyncStatus;
 }
 
 function openBarrierCheckInspection(record) {
