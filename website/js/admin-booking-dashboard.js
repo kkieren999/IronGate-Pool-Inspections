@@ -1,6 +1,5 @@
 import { app, db } from "./firebase-config.js";
 import { markInvoicePaidByBankTransfer } from "./admin-bank-payment.js";
-import { saveBarrierCheckInspectionLink } from "./admin-barriercheck-link.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 import { collection, getDocs, limit, orderBy, query } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-functions.js";
@@ -14,6 +13,7 @@ const reconcileBookingBilling = httpsCallable(functions, "adminReconcileBookingB
 const issueBookingInvoice = httpsCallable(functions, "adminIssueBookingInvoice");
 const prepareInvoiceStripePayment = httpsCallable(functions, "adminPrepareInvoiceStripePayment");
 const updateBookingDetails = httpsCallable(functions, "adminUpdateBookingDetails");
+const createBarrierCheckInspection = httpsCallable(functions, "adminCreateBarrierCheckInspection");
 const $ = (selector) => document.querySelector(selector);
 const todayBrisbane = () => {
   const parts = new Intl.DateTimeFormat("en-AU", {
@@ -410,9 +410,6 @@ function renderBookingEditForm(container, record) {
   container.appendChild(wrapper);
 }
 
-const BARRIERCHECK_ORIGIN = "https://barriercheck.com.au";
-const BARRIERCHECK_IMPORT_URL = BARRIERCHECK_ORIGIN + "/BarrierCheck_APP/app/index.html?from=irongate";
-
 function barrierCheckEligible(booking = {}) {
   const status = String(booking.status || "").toLowerCase();
   const inspectionStatus = String(booking.inspectionStatus || "").toLowerCase();
@@ -436,124 +433,65 @@ function barrierCheckEligible(booking = {}) {
   return paid && confirmed;
 }
 
-function barrierCheckBookingPayload(record) {
+async function prepareBarrierCheckInspection(record, button) {
   const b = record.data || {};
-  const keys = [
-    "status", "paymentStatus", "customerName", "email", "phone", "propertyAddress",
-    "propertyPlaceId", "bookingRoleCode", "clientType", "agencyName", "bookingRelationship",
-    "poolOwnerName", "poolOwnerEmail", "poolOwnerPhone", "accessSameAsBooking",
-    "accessContactName", "accessContactPhone", "accessContactEmail", "accessContactAgency",
-    "accessMethod", "keyCollectionLocation", "inspectionReason", "poolType",
-    "existingCertificateStatus", "poolRegisteredStatus", "preferredDate",
-    "preferredDateDisplay", "preferredTimeSlot", "preferredTimeLabel", "preferredTimeStart",
-    "preferredTimeEnd", "preferredTime", "willBeHomeForInspection",
-    "accessPermissionIfNotHome", "animalsOnProperty", "animalsOffLeash",
-    "animalsWillBeSecured", "accessInstructions", "hasPoolExemption", "notes"
-  ];
-  const booking = {};
-  keys.forEach((key) => {
-    if (Object.prototype.hasOwnProperty.call(b, key)) booking[key] = b[key];
-  });
-  return {
-    type: "irongate-create-inspection",
-    version: 1,
-    bookingId: record.id,
-    booking
-  };
-}
-
-async function saveBarrierCheckLink(record, result) {
-  const saved = await saveBarrierCheckInspectionLink(record.id, result);
-  if (!saved) return;
-  record.data.barrierCheckInspectionId = saved.inspectionId;
-  record.data.barrierCheckSyncStatus = saved.barrierCheckSyncStatus;
-}
-
-function openBarrierCheckInspection(record) {
-  const b = record.data || {};
-  if (!b.barrierCheckInspectionId && !barrierCheckEligible(b)) {
-    value("#bookings-message", "BarrierCheck can be created after the booking is confirmed and payment is valid.");
+  if (b.barrierCheckInspectionId) {
+    value("#bookings-message", "BarrierCheck inspection is already prepared.");
+    return;
+  }
+  if (!barrierCheckEligible(b)) {
+    value("#bookings-message", "BarrierCheck can be prepared after the booking is confirmed and payment is valid.");
     return;
   }
 
-  const popup = window.open(BARRIERCHECK_IMPORT_URL, "barriercheck_" + record.id);
-  if (!popup) {
-    value("#bookings-message", "Your browser blocked BarrierCheck. Allow pop-ups for IronGate and try again.");
-    return;
-  }
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Creating in BarrierCheck…";
+  value("#bookings-message", "Preparing the inspection in BarrierCheck…");
 
-  const payload = barrierCheckBookingPayload(record);
-  let finished = false;
-  let fallbackTimer = null;
-  let timeoutTimer = null;
-
-  function cleanup() {
-    window.removeEventListener("message", onMessage);
-    if (fallbackTimer) window.clearTimeout(fallbackTimer);
-    if (timeoutTimer) window.clearTimeout(timeoutTimer);
-  }
-
-  function sendPayload() {
-    if (finished || popup.closed) return;
-    popup.postMessage(payload, BARRIERCHECK_ORIGIN);
-    value("#bookings-message", "Sending booking details to BarrierCheck…");
-  }
-
-  async function onMessage(event) {
-    if (event.origin !== BARRIERCHECK_ORIGIN || event.source !== popup) return;
-    const data = event.data || {};
-
-    if (data.type === "barriercheck-ready") {
-      sendPayload();
-      return;
+  try {
+    const result = await createBarrierCheckInspection({ bookingId: record.id });
+    const data = result?.data || {};
+    if (!data.ok || !data.inspectionId) {
+      throw new Error("BarrierCheck did not return an inspection reference.");
     }
 
-    if (data.type !== "barriercheck-import-result" || data.bookingId !== record.id) return;
-    finished = true;
-    cleanup();
+    record.data.barrierCheckInspectionId = data.inspectionId;
+    record.data.barrierCheckSyncStatus = data.created === false ? "background_reused" : "background_synced";
+    record.data.barrierCheckSyncError = null;
 
-    if (!data.ok) {
-      value("#bookings-message", data.error || "BarrierCheck could not create the inspection.");
-      return;
-    }
-
-    try {
-      await saveBarrierCheckLink(record, data);
-      renderDetails();
-      value("#bookings-message", data.reused
-        ? "Opened the existing BarrierCheck inspection."
-        : "BarrierCheck inspection created and prefilled.");
-    } catch (error) {
-      console.error("BarrierCheck inspection was created but IronGate could not record the link", error);
-      value("#bookings-message", "BarrierCheck inspection created, but IronGate could not save its inspection reference.");
-    }
+    renderDetails();
+    value("#bookings-message", data.created === false
+      ? "BarrierCheck inspection was already ready."
+      : "BarrierCheck inspection created and ready to use.");
+  } catch (error) {
+    console.error("Could not prepare BarrierCheck inspection", error);
+    const message = error?.message || "Could not prepare the BarrierCheck inspection.";
+    value("#bookings-message", message);
+    button.disabled = false;
+    button.textContent = originalText;
   }
-
-  window.addEventListener("message", onMessage);
-  fallbackTimer = window.setTimeout(sendPayload, 1200);
-  timeoutTimer = window.setTimeout(() => {
-    if (finished) return;
-    cleanup();
-    value("#bookings-message", "BarrierCheck did not confirm the import. Sign in to BarrierCheck in the opened window, then click Create in BarrierCheck again.");
-  }, 60000);
 }
 
 function renderBarrierCheckAction(container, record) {
   const b = record.data || {};
+  const linked = Boolean(b.barrierCheckInspectionId);
+  const eligible = barrierCheckEligible(b);
+
   const box = document.createElement("div");
   box.className = "billing-admin-box";
 
   const badge = document.createElement("strong");
-  badge.className = "billing-badge " + (b.barrierCheckInspectionId ? "is-paid" : "");
-  badge.textContent = b.barrierCheckInspectionId ? "BarrierCheck linked" : "BarrierCheck";
+  badge.className = "billing-badge " + (linked ? "is-paid" : "");
+  badge.textContent = linked ? "BarrierCheck ready" : "BarrierCheck";
   box.appendChild(badge);
 
   const note = document.createElement("p");
   note.className = "muted-help";
-  if (b.barrierCheckInspectionId) {
-    note.textContent = "Inspection reference: " + b.barrierCheckInspectionId + ". Opening it again will reuse the same IronGate-linked inspection.";
-  } else if (barrierCheckEligible(b)) {
-    note.textContent = "Create a BarrierCheck inspection with the client, property, appointment and access details already filled in.";
+  if (linked) {
+    note.textContent = "Inspection " + b.barrierCheckInspectionId + " is ready in BarrierCheck.";
+  } else if (eligible) {
+    note.textContent = "Create a ready-to-go BarrierCheck inspection in the background with the booking details prefilled.";
   } else {
     note.textContent = "Available once this booking is confirmed with a valid payment status.";
   }
@@ -562,10 +500,11 @@ function renderBarrierCheckAction(container, record) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "btn btn-primary";
-  button.textContent = b.barrierCheckInspectionId ? "Open in BarrierCheck" : "Create in BarrierCheck";
-  button.disabled = !b.barrierCheckInspectionId && !barrierCheckEligible(b);
-  button.addEventListener("click", () => openBarrierCheckInspection(record));
+  button.textContent = linked ? "BarrierCheck ready ✓" : "Create in BarrierCheck";
+  button.disabled = linked || !eligible;
+  button.addEventListener("click", () => prepareBarrierCheckInspection(record, button));
   box.appendChild(button);
+
   container.appendChild(box);
 }
 
