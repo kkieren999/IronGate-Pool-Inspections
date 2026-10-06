@@ -275,7 +275,7 @@ test("admin booking tabs retain availability and limit customer data to authenti
   assert.ok(dashboard.includes('httpsCallable(functions, "adminUpdateBookingDetails")'));
   assert.ok(dashboard.includes("renderBarrierCheckAction(panel, record)"), "selected bookings must render the BarrierCheck action");
   assert.ok(dashboard.includes('httpsCallable(functions, "adminCreateBarrierCheckInspection")'), "BarrierCheck creation must use the authenticated backend callable");
-  assert.ok(!dashboard.includes("window.open("), "BarrierCheck creation must not open the BarrierCheck app");
+  assert.ok(!dashboard.includes("BARRIERCHECK_IMPORT_URL") && !dashboard.includes("irongate-create-inspection"), "BarrierCheck creation must not use the browser handoff");
   assert.ok(dashboard.includes("BarrierCheck ready ✓"), "linked inspections should display as ready");
   assert.ok(dashboard.includes('stripePaymentStatus === "paid"'), "legacy paid bookings remain importable into BarrierCheck");
   assert.ok(dashboard.includes('paid && Boolean(booking.preferredDate) && Boolean(booking.propertyAddress)'), "legacy bookings can use paid appointment data when status predates the current schema");
