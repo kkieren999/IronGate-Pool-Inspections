@@ -58,6 +58,53 @@ test("legacy slot without explicit available flag is usable unless blocked", () 
     bookingId, "09_00", booking, "2099-01-05", "now"), /buffer is unavailable/);
 });
 
+test("same-day move can use the same booking's following buffer and still reserve a new buffer", () => {
+  const original = {
+    "08_00": regular("08_00", "08:00", "09:00", {
+      available: false, booked: true, locked: true, bookingId
+    }),
+    "09_00": regular("09_00", "09:00", "10:00", {
+      available: false, booked: true, locked: true, bookedByBookingId: bookingId,
+      bufferSlot: true, bufferForSlot: "08_00", bookingCreatedBuffer: false
+    }),
+    "10_00": regular("10_00", "10:00", "11:00")
+  };
+  // Do not reopen the original 8am time, even when its buffer is the target.
+  const released = op.releaseBooking(original, bookingId, "08_00", false);
+  assert.equal(released["09_00"].available, false);
+  const prepared = op.exposeOwnBufferForMove(released, original, bookingId, "08_00", "09_00");
+  assert.equal(prepared["09_00"].available, true);
+  const result = op.reserveBooking(prepared, bookingId, "09_00",
+    { ...booking, preferredTimeSlot: "08_00" }, "2099-01-05", "now");
+  assert.equal(result.slots["09_00"].bufferSlot, false);
+  assert.equal(result.slots["09_00"].bookingId, bookingId);
+  assert.equal(result.slots["10_00"].bufferForSlot, "09_00");
+  assert.equal(result.slots["08_00"].available, false);
+});
+
+test("only its own normal buffer can be made available for a same-day move", () => {
+  const other = "other_booking_1234567";
+  const target = regular("09_00", "09:00", "10:00", {
+    available: false, booked: true, locked: true, bufferSlot: true,
+    bufferForSlot: "08_00", bookingId: other
+  });
+  const released = { "09_00": target, "10_00": regular("10_00", "10:00", "11:00") };
+  const blocked = op.exposeOwnBufferForMove(released, released, bookingId, "08_00", "09_00");
+  assert.equal(blocked["09_00"].booked, true);
+  assert.throws(() => op.reserveBooking(blocked, bookingId, "09_00",
+    booking, "2099-01-05", "now"), /no longer available/);
+  const privateBuffer = { ...target, bookingId, privateInvite: true };
+  const privateRaw = { ...released, "09_00": privateBuffer };
+  assert.equal(op.exposeOwnBufferForMove(privateRaw, privateRaw, bookingId, "08_00", "09_00")
+    ["09_00"].booked, true);
+  const synthetic = { ...target, bookingId, bookingCreatedBuffer: true };
+  const syntheticRaw = { ...released, "09_00": synthetic };
+  const prepared = op.exposeOwnBufferForMove({ "10_00": released["10_00"] },
+    syntheticRaw, bookingId, "08_00", "09_00");
+  assert.equal(prepared["09_00"].available, true);
+  assert.equal(prepared["09_00"].bookingCreatedBuffer, true);
+});
+
 test("planner rejects conflicting target and does not release another booking", () => {
   const other = "another_booking_123456";
   assert.throws(() => op.releaseBooking({
