@@ -3,7 +3,7 @@ const admin = require("firebase-admin");
 const { HttpsError } = require("firebase-functions/v2/https");
 const { randomUUID } = require("node:crypto");
 const {
-  BookingOperationError, releaseBooking, reserveBooking, validateMoveRequest, assertEditable
+  BookingOperationError, releaseBooking, exposeOwnBufferForMove, reserveBooking, validateMoveRequest, assertEditable
 } = require("./admin-booking-operations");
 const db = admin.firestore();
 const ADMIN_EMAIL = "irongate.pool.bne@gmail.com";
@@ -83,7 +83,9 @@ async function executeAdminBookingChange(request, kind) {
       const released = releaseBooking(oldSlots, bookingId, booking.preferredTimeSlot, reopenOldSlot);
       let patch = {};
       if (kind === "move") {
-        const targetRaw = newDate === booking.preferredDate ? released : (newSnap.data() || {}).slots;
+        const targetRaw = newDate === booking.preferredDate
+          ? exposeOwnBufferForMove(released, oldSlots, bookingId, booking.preferredTimeSlot, newSlotId)
+          : (newSnap.data() || {}).slots;
         const result = reserveBooking(targetRaw, bookingId, newSlotId, booking, newDate, reservedAt);
         tx.set(oldRef, {
           slots: newDate === booking.preferredDate ? result.slots : released,
