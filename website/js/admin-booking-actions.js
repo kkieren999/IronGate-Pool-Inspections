@@ -27,6 +27,14 @@ function available(slot) {
   return Boolean(slot && slot.available !== false && slot.booked !== true &&
     slot.locked !== true && slot.reserved !== true);
 }
+function ownFollowingBuffer(slot, date) {
+  // A same-day move may shift this appointment into its OWN reserved buffer.
+  // Never surface another booking's hold, or a private-invitation buffer.
+  return Boolean(selectedId && date === selectedBooking?.preferredDate &&
+    slot?.bufferSlot === true && slot.privateInvite !== true &&
+    slot.bufferForSlot === selectedBooking.preferredTimeSlot &&
+    (slot.bookingId === selectedId || slot.bookedByBookingId === selectedId));
+}
 function shortDateTime(booking) {
   return (booking.preferredDateDisplay || booking.preferredDate || "No date") + ", " +
     (booking.preferredTimeLabel || booking.preferredTime || "No time");
@@ -55,7 +63,7 @@ async function loadAvailableSlots() {
     const snap = await getDoc(doc(db, "availability", date));
     const slots = slotsFor(snap.exists() ? snap.data()?.slots : null);
     const byId = new Map(slots.map((slot) => [idFor(slot), slot]));
-    const freeSlots = slots.filter(available)
+    const freeSlots = slots.filter((slot) => available(slot) || ownFollowingBuffer(slot, date))
       .sort((a, b) => String(a.start || "").localeCompare(String(b.start || "")));
     let selectableCount = 0;
     freeSlots.forEach((slot) => {
@@ -66,7 +74,8 @@ async function loadAvailableSlots() {
       item.value = idFor(slot);
       item.disabled = bufferBlocked;
       item.textContent = (slot.label || (slot.start + " - " + slot.end)) +
-        (bufferBlocked ? " — following hour unavailable for buffer" : "");
+        (bufferBlocked ? " — following hour unavailable for buffer" :
+          ownFollowingBuffer(slot, date) ? " — move into this booking's own buffer" : "");
       dropdown.appendChild(item);
       if (!bufferBlocked) selectableCount += 1;
     });
