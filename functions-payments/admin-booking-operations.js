@@ -60,6 +60,29 @@ function releaseBooking(raw, bookingId, selectedId, reopen) {
   }
   return serialise(slots, raw);
 }
+// The booking owns its following hour as a buffer. For a same-day shift by one
+// hour, that exact buffer may become the new inspection time after the old
+// appointment is released. No unrelated hold can be converted this way.
+function exposeOwnBufferForMove(releasedRaw, originalRaw, bookingId, oldSlotId, targetSlotId) {
+  const original = slotMap(originalRaw).get(targetSlotId);
+  if (!owned(original, bookingId) || original.bufferSlot !== true ||
+      original.bufferForSlot !== oldSlotId || original.privateInvite === true) {
+    return releasedRaw;
+  }
+  const slots = slotMap(releasedRaw);
+  const restored = slots.get(targetSlotId);
+  if (restored && (restored.booked === true || restored.locked === true || restored.reserved === true)) {
+    fail("The appointment buffer could not be safely released.");
+  }
+  const clean = { ...(restored || original), available: true, booked: false,
+    locked: false, reserved: false, bufferSlot: false, bufferForSlot: null,
+    reservationStatus: "released_for_same_booking_move" };
+  for (const key of ["bookingId", "bookedByBookingId", "customerName", "propertyAddress",
+    "paymentStatus", "reservedAt", "privateInvite", "privateInviteToken",
+    "privateInviteOriginal"]) delete clean[key];
+  slots.set(targetSlotId, clean);
+  return serialise(slots, releasedRaw);
+}
 function reserveBooking(raw, bookingId, selectedId, booking, dateKey, reservedAt) {
   const slots = slotMap(raw);
   const selected = slots.get(selectedId);
@@ -119,4 +142,4 @@ function assertEditable(booking) {
   if (!booking.preferredDate || !booking.preferredTimeSlot) fail("This booking has no reserved appointment.");
 }
 module.exports = { BookingOperationError, slotId, slotMap, serialise, free, owned,
-  releaseBooking, reserveBooking, todayKey, validateMoveRequest, assertEditable };
+  releaseBooking, exposeOwnBufferForMove, reserveBooking, todayKey, validateMoveRequest, assertEditable };
