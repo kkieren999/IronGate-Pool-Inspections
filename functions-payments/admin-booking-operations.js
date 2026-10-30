@@ -18,7 +18,8 @@ function owned(slot, id) {
   return Boolean(slot && (slot.bookingId === id || slot.bookedByBookingId === id));
 }
 function free(slot) {
-  return Boolean(slot && slot.available === true && slot.booked !== true &&
+  // Match the public booking calendar: missing "available" is not a closed slot.
+  return Boolean(slot && slot.available !== false && slot.booked !== true &&
     slot.locked !== true && slot.reserved !== true);
 }
 function addHour(time) {
