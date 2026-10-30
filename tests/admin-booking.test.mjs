@@ -43,6 +43,21 @@ test("move planner reserves selected slot plus following buffer and restores old
   assert.equal(result.slots["13_00"].reserved, true);
 });
 
+test("legacy slot without explicit available flag is usable unless blocked", () => {
+  const legacy = regular("09_00", "09:00", "10:00", { available: undefined });
+  const buffer = regular("10_00", "10:00", "11:00", { available: undefined });
+  assert.equal(op.free(legacy), true, "legacy record matches public calendar availability");
+  const result = op.reserveBooking({ "09_00": legacy, "10_00": buffer },
+    bookingId, "09_00", booking, "2099-01-05", "now");
+  assert.equal(result.slots["09_00"].booked, true);
+  assert.equal(result.slots["10_00"].bufferForSlot, "09_00");
+  assert.equal(op.free({ ...legacy, available: false }), false, "explicitly closed stays closed");
+  assert.equal(op.free({ ...legacy, booked: true }), false, "booked stays blocked");
+  assert.throws(() => op.reserveBooking({ "09_00": legacy,
+    "10_00": { ...buffer, available: false } },
+    bookingId, "09_00", booking, "2099-01-05", "now"), /buffer is unavailable/);
+});
+
 test("planner rejects conflicting target and does not release another booking", () => {
   const other = "another_booking_123456";
   assert.throws(() => op.releaseBooking({
