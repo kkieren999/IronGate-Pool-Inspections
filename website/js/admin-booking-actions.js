@@ -23,7 +23,9 @@ function keyForToday() {
 function idFor(slot) { return String(slot?.id || (slot?.start || "").replace(":", "_")); }
 function slotsFor(raw) { return Array.isArray(raw) ? raw : Object.values(raw || {}); }
 function available(slot) {
-  return slot?.available === true && slot.booked !== true && slot.locked !== true && slot.reserved !== true;
+  // Match the public booking calendar: legacy slots may omit "available".
+  return Boolean(slot && slot.available !== false && slot.booked !== true &&
+    slot.locked !== true && slot.reserved !== true);
 }
 function shortDateTime(booking) {
   return (booking.preferredDateDisplay || booking.preferredDate || "No date") + ", " +
@@ -53,19 +55,22 @@ async function loadAvailableSlots() {
     const snap = await getDoc(doc(db, "availability", date));
     const slots = slotsFor(snap.exists() ? snap.data()?.slots : null);
     const byId = new Map(slots.map((slot) => [idFor(slot), slot]));
-    const options = slots.filter((slot) => {
-      if (!available(slot)) return false;
+    const freeSlots = slots.filter(available)
+      .sort((a, b) => String(a.start || "").localeCompare(String(b.start || "")));
+    let selectableCount = 0;
+    freeSlots.forEach((slot) => {
       const nextId = String(slot.end || "").replace(":", "_");
       const next = byId.get(nextId);
-      return !next || available(next);
-    }).sort((a, b) => String(a.start || "").localeCompare(String(b.start || "")));
-    options.forEach((slot) => {
+      const bufferBlocked = Boolean(next && !available(next));
       const item = document.createElement("option");
       item.value = idFor(slot);
-      item.textContent = slot.label || (slot.start + " - " + slot.end);
+      item.disabled = bufferBlocked;
+      item.textContent = (slot.label || (slot.start + " - " + slot.end)) +
+        (bufferBlocked ? " — following hour unavailable for buffer" : "");
       dropdown.appendChild(item);
+      if (!bufferBlocked) selectableCount += 1;
     });
-    if (!options.length) status("No available inspection time plus one-hour buffer on this date.", "error");
+    if (!selectableCount) status("No available inspection time plus one-hour buffer on this date.", "error");
     else status("Select a new time and confirm the change.");
   } catch (error) {
     console.error("Could not load target date", error);
