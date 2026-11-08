@@ -310,3 +310,23 @@ test("admin booking tabs retain availability and limit customer data to authenti
   assert.ok(page.includes('id="finance-invoice-paid"'));
   assert.ok(page.includes('id="day-form"') && page.includes('id="partner-form"'));
 });
+
+test("out-of-area booking message is public, but internal north-bank rule remains private", () => {
+  const form = siteRead("booking/index.html");
+  const ui = siteRead("js/booking.js");
+  const stripe = siteRead("js/booking-stripe.js");
+  const payments = read("functions-payments/index.js");
+  const direct = read("functions-payments/direct-booking.js");
+  assert.match(form, /id="service-area-alert"/);
+  assert.match(form, /tel:0481442260/);
+  assert.match(form, /mailto:irongate.pool.bne@gmail.com/);
+  assert.match(ui, /serviceAreaStatus !== "eligible"/);
+  assert.match(stripe, /checkBookingServiceArea/);
+  assert.match(stripe, /serviceAreaEligibility/);
+  assert.match(payments, /exports.checkBookingServiceArea = onCall/);
+  assert.match(payments, /await assertOnlineBookingArea\(booking.propertyAddress, booking.propertyPlaceId\)/);
+  assert.match(direct, /await checkServiceArea\(bookingInput.propertyAddress, bookingInput.propertyPlaceId\)/);
+  for (const publicFile of ["booking/index.html", "terms/index.html", "privacy/index.html", "refunds/index.html"]) {
+    assert.doesNotMatch(siteRead(publicFile), /north(?:ern)? (?:of the )?Brisbane River|river.bank|north.bank/i);
+  }
+});
