@@ -141,7 +141,7 @@ test("licence number is correct in source, without a runtime patch shim", () => 
   }
 });
 
-test("address autocomplete requests Geoapify, selects a suggestion, and unlocks the pool-register-confirmed form", async () => {
+test("booking address remains gated until both service-area and pool-register checks pass", async () => {
   // Run the actual browser module against a minimal DOM. The calendar's Firebase
   // network request is unrelated to this test and is the only startup call skipped.
   const source = siteRead("js/booking.js");
@@ -188,24 +188,29 @@ test("address autocomplete requests Geoapify, selects a suggestion, and unlocks 
     ? propertySection : null;
   const scheduled = [];
   const calls = [];
+  const documentListeners = new Map();
   const document = {
     querySelector(selector) { return selector === "#pool-register-styles" ? null : byId(selector); },
     createElement() { return element(); },
-    addEventListener() {},
+    addEventListener(type, listener) { documentListeners.set(type, listener); },
+    dispatchEvent(event) { return documentListeners.get(event.type)?.(event); },
     head: { appendChild() {} }
   };
+  class CustomEvent {
+    constructor(type, options = {}) { this.type = type; this.detail = options.detail; }
+  }
   const suggestion = {
-    formatted: "10 Example Street, Paddington QLD 4064, Australia",
+    formatted: "10 Example Street, Mansfield QLD 4122, Australia",
     address_line1: "10 Example Street", housenumber: "10", street: "Example",
-    suburb: "Paddington", postcode: "4064", place_id: "example-place", country: "Australia"
+    suburb: "Mansfield", postcode: "4122", place_id: "example-place", country: "Australia"
   };
   const registerRecord = {
     _id: 1, "Street Number": "10", "Street Name": "EXAMPLE",
-    "Street Type": "STREET", Suburb: "PADDINGTON", "Post Code": "4064",
+    "Street Type": "STREET", Suburb: "MANSFIELD", "Post Code": "4122",
     "Number of Pools": "1"
   };
   const context = {
-    document, URLSearchParams, console,
+    document, CustomEvent, URLSearchParams, console,
     window: {
       clearTimeout() {},
       setTimeout(callback) { scheduled.push(callback); return scheduled.length; }
@@ -228,7 +233,7 @@ test("address autocomplete requests Geoapify, selects a suggestion, and unlocks 
   assert.equal(continueButton.hidden, true, "checkout should initially be gated");
 
   const address = byId("#propertyAddress");
-  address.value = "10 Example Street Paddington";
+  address.value = "10 Example Street Mansfield";
   assert.doesNotThrow(() => address.dispatch("input"), "typing must not throw before scheduling autocomplete");
   assert.equal(scheduled.length, 1, "typing schedules a lookup");
   await scheduled.pop()();
@@ -242,6 +247,23 @@ test("address autocomplete requests Geoapify, selects a suggestion, and unlocks 
   assert.equal(address.value, suggestion.formatted);
   assert.equal(byId("#propertyAddressSelected").value, "true");
   assert.equal(byId("#propertyPlaceId").value, suggestion.place_id);
+  assert.equal(continueButton.hidden, true, "the form must remain locked while coverage is being checked");
+  assert.equal(byId("#serviceAreaEligibility").value, "not_checked");
+  assert.equal(calls.some((url) => url.includes("data.qld.gov.au")), false);
+
+  document.dispatchEvent(new CustomEvent("irongate:service-area-result", {
+    detail: { address: suggestion.formatted, placeId: suggestion.place_id, status: "outside" }
+  }));
+  assert.equal(byId("#service-area-alert").hidden, false, "out-of-area properties show the contact message");
+  assert.equal(continueButton.hidden, true, "out-of-area properties must never proceed");
+  assert.equal(byId("#serviceAreaEligibility").value, "outside");
+
+  document.dispatchEvent(new CustomEvent("irongate:service-area-result", {
+    detail: { address: suggestion.formatted, placeId: suggestion.place_id, status: "eligible" }
+  }));
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(byId("#service-area-alert").hidden, true);
+  assert.equal(byId("#serviceAreaEligibility").value, "eligible");
   assert.ok(calls.some((url) => url.includes("data.qld.gov.au/api/3/action/datastore_search")));
   const poolPanel = byId("#address-status").nextElementSibling;
   assert.equal(poolPanel.dataset.status, "registered", "register details should appear after selection");
