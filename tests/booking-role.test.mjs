@@ -156,6 +156,7 @@ test("frontend constructs the full agency booking payload for the existing Strip
     "#customerName": "Ken Example", "#email": "ken@example.com", "#phone": "0412345678",
     "#propertyAddress": "20 Example Court, Carindale QLD 4152",
     "#propertyAddressSelected": "true", "#propertyPlaceId": "testplace",
+    "#serviceAreaEligibility": "eligible",
     "#poolOwnerStatus": "different", "#poolOwnerName": "Alex Owner",
     "#poolOwnerEmail": "alex@example.com", "#poolOwnerPhone": "0411222333",
     "#accessContactName": "Sam Example",
@@ -170,6 +171,7 @@ test("frontend constructs the full agency booking payload for the existing Strip
     "#informationAccuracyConfirmed", "#termsAccepted"
   ]);
   const context = {
+    document: { querySelector(selector) { return { value: values[selector] || "" }; } },
     privateInvite: null,
     privateInviteToken: "token-test",
     getValue(selector) { return values[selector] || ""; },

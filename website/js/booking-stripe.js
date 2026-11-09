@@ -9,11 +9,34 @@ const message = document.querySelector("#booking-message");
 const priceNotice = document.querySelector("#booking-price-notice");
 const functions = getFunctions(app, "us-central1");
 const createBookingCheckoutSession = httpsCallable(functions, "createBookingCheckoutSession");
+const checkBookingServiceArea = httpsCallable(functions, "checkBookingServiceArea");
 const privateInviteToken = String(new URLSearchParams(window.location.search).get("invite") || "").trim();
 
 let redirectStarted = false;
 let privateInvite = null;
 let privateInviteObserver = null;
+let areaRequestId = 0;
+
+document.addEventListener("irongate:address-cleared", () => {
+  areaRequestId += 1;
+});
+
+document.addEventListener("irongate:address-selected", async (event) => {
+  const id = ++areaRequestId;
+  const address = String(event.detail?.address || "");
+  const placeId = String(event.detail?.placeId || "");
+  let status = "unavailable";
+  try {
+    const result = await checkBookingServiceArea({ address, placeId });
+    status = result?.data?.eligible === true ? "eligible" : "outside";
+  } catch (error) {
+    console.error("Online service-area verification unavailable:", error);
+  }
+  if (id !== areaRequestId) return;
+  document.dispatchEvent(new CustomEvent("irongate:service-area-result", {
+    detail: { address, placeId, status }
+  }));
+});
 
 function setCustomerFacingCopy() {
   if (priceNotice) priceNotice.textContent = "Pool Safety Inspection & Certificate — $149";
@@ -101,6 +124,7 @@ function validateBookingPayload(payload) {
   if (!payload.phone) return "Please enter an Australian contact number.";
   if (!payload.propertyAddress) return "Please enter the inspection property address.";
   if (!payload.propertyAddressSelected) return "Please select the property address from the suggestions.";
+  if (document.querySelector("#serviceAreaEligibility")?.value !== "eligible") return "This address cannot continue to online booking. Please contact IronGate on 0481 442 260 or irongate.pool.bne@gmail.com.";
   if (!payload.inspectionReason) return "Please select the reason for inspection.";
   if (!payload.poolType) return "Please select the pool type.";
 
