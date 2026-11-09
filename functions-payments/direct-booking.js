@@ -447,8 +447,7 @@ async function createBookingAndCheckoutSession({
   serviceName,
   priceCents,
   priceDisplay,
-  currency,
-  checkServiceArea
+  currency
 }) {
   const successUrl = normaliseUrl(request.data?.successUrl);
   const cancelUrl = normaliseUrl(request.data?.cancelUrl);
@@ -459,8 +458,6 @@ async function createBookingAndCheckoutSession({
   }
 
   assertValidBooking(bookingInput);
-  // Always revalidate on the server. Client-side eligibility is only a UI gate.
-  await checkServiceArea(bookingInput.propertyAddress, bookingInput.propertyPlaceId);
 
   const bookingRef = db.collection("bookings").doc();
   const bookingId = bookingRef.id;
