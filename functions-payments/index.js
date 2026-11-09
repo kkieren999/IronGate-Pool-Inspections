@@ -5,10 +5,12 @@ const { defineSecret } = require("firebase-functions/params");
 const Stripe = require("stripe");
 const QRCode = require("qrcode");
 const { createBookingAndCheckoutSession: createDirectBookingAndCheckoutSession } = require("./direct-booking");
+const { evaluateServiceArea } = require("./service-area");
 
 admin.initializeApp();
 
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
+const GEOAPIFY_SERVICE_AREA_KEY = defineSecret("GEOAPIFY_SERVICE_AREA_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 const db = admin.firestore();
 const { requireAdmin, executeAdminBookingChange, updateAdminBookingDetails } = require("./admin-booking-service");
@@ -281,6 +283,37 @@ async function releaseAvailabilityReservation(bookingId, booking = {}) {
   });
 }
 
+async function assertOnlineBookingArea(address, placeId) {
+  const result = await evaluateServiceArea({
+    address, placeId, apiKey: GEOAPIFY_SERVICE_AREA_KEY.value()
+  });
+  if (!result.eligible) {
+    // Keep internal eligibility rules private: no river-bank or time reasons in the UI.
+    throw new HttpsError("failed-precondition",
+      "This property is outside our standard online booking service area. An additional fee may apply. Please contact 0481 442 260 or irongate.pool.bne@gmail.com.");
+  }
+  return result;
+}
+
+exports.checkBookingServiceArea = onCall(
+  { region: "us-central1", timeoutSeconds: 30, memory: "256MiB",
+    invoker: "public", secrets: [GEOAPIFY_SERVICE_AREA_KEY] },
+  async (request) => {
+    try {
+      const result = await evaluateServiceArea({
+        address: request.data?.address,
+        placeId: request.data?.placeId,
+        apiKey: GEOAPIFY_SERVICE_AREA_KEY.value()
+      });
+      return { eligible: result.eligible };
+    } catch (error) {
+      logger.error("Service-area verification unavailable", { message: error.message });
+      throw new HttpsError("unavailable",
+        "We could not confirm online booking availability. Please contact IronGate.");
+    }
+  }
+);
+
 async function createBackendBookingCheckout(request) {
   const result = await createDirectBookingAndCheckoutSession({
     request,
@@ -292,7 +325,8 @@ async function createBackendBookingCheckout(request) {
     serviceName: SERVICE_NAME,
     priceCents: INSPECTION_PRICE_CENTS,
     priceDisplay: INSPECTION_PRICE_DISPLAY,
-    currency: CURRENCY
+    currency: CURRENCY,
+    checkServiceArea: assertOnlineBookingArea
   });
 
   logger.info("Created backend booking and reserved Stripe Checkout Session slot", {
@@ -310,7 +344,7 @@ exports.createBookingCheckoutSession = onCall(
     timeoutSeconds: 30,
     memory: "256MiB",
     invoker: "public",
-    secrets: [STRIPE_SECRET_KEY]
+    secrets: [STRIPE_SECRET_KEY, GEOAPIFY_SERVICE_AREA_KEY]
   },
   async (request) => {
     if (request.data?.booking) {
@@ -349,6 +383,13 @@ exports.createBookingCheckoutSession = onCall(
 
     if (booking.paymentStatus === "paid") {
       throw new HttpsError("failed-precondition", "This booking has already been paid.");
+    }
+
+    // Private invitations must not bypass the same service-area policy.
+    try {
+      await assertOnlineBookingArea(booking.propertyAddress, booking.propertyPlaceId);
+    } catch (error) {
+      throwPublicHttpsError(error, "Could not confirm this private booking area.");
     }
 
     const stripe = getStripe();
