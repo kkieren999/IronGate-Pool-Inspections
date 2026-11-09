@@ -32,7 +32,11 @@ async function check(query, expected) {
     body:JSON.stringify({ data: selection }),
     signal:AbortSignal.timeout(40000)
   });
-  const body = await response.json();
+  const raw = await response.text();
+  let body;
+  try { body = JSON.parse(raw); }
+  catch { throw Error("Callable returned non-JSON HTTP "+response.status+" content-type "+response.headers.get("content-type")+
+    " response preview: "+raw.slice(0,180).replace(/\s+/g," ")); }
   console.log("Callable:",query,"status",response.status,"result",JSON.stringify(body));
   if (!response.ok || typeof body.result?.eligible !== "boolean") {
     throw Error("Live callable is not returning a valid eligibility response for "+query);
