@@ -283,18 +283,7 @@ async function releaseAvailabilityReservation(bookingId, booking = {}) {
   });
 }
 
-async function assertOnlineBookingArea(address, placeId) {
-  const result = await evaluateServiceArea({
-    address, placeId, apiKey: GEOAPIFY_SERVICE_AREA_KEY.value()
-  });
-  if (!result.eligible) {
-    // Keep internal eligibility rules private: no river-bank or time reasons in the UI.
-    throw new HttpsError("failed-precondition",
-      "This property is outside our standard online booking service area. An additional fee may apply. Please contact 0481 442 260 or irongate.pool.bne@gmail.com.");
-  }
-  return result;
-}
-
+// Initial rollout: verify the callable and key before enforcing this rule on payments.
 exports.checkBookingServiceArea = onCall(
   { region: "us-central1", timeoutSeconds: 30, memory: "256MiB",
     invoker: "public", secrets: [GEOAPIFY_SERVICE_AREA_KEY] },
@@ -325,8 +314,7 @@ async function createBackendBookingCheckout(request) {
     serviceName: SERVICE_NAME,
     priceCents: INSPECTION_PRICE_CENTS,
     priceDisplay: INSPECTION_PRICE_DISPLAY,
-    currency: CURRENCY,
-    checkServiceArea: assertOnlineBookingArea
+    currency: CURRENCY
   });
 
   logger.info("Created backend booking and reserved Stripe Checkout Session slot", {
@@ -344,7 +332,7 @@ exports.createBookingCheckoutSession = onCall(
     timeoutSeconds: 30,
     memory: "256MiB",
     invoker: "public",
-    secrets: [STRIPE_SECRET_KEY, GEOAPIFY_SERVICE_AREA_KEY]
+    secrets: [STRIPE_SECRET_KEY]
   },
   async (request) => {
     if (request.data?.booking) {
@@ -383,13 +371,6 @@ exports.createBookingCheckoutSession = onCall(
 
     if (booking.paymentStatus === "paid") {
       throw new HttpsError("failed-precondition", "This booking has already been paid.");
-    }
-
-    // Private invitations must not bypass the same service-area policy.
-    try {
-      await assertOnlineBookingArea(booking.propertyAddress, booking.propertyPlaceId);
-    } catch (error) {
-      throwPublicHttpsError(error, "Could not confirm this private booking area.");
     }
 
     const stripe = getStripe();
