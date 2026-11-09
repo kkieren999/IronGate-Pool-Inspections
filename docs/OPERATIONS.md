@@ -4,6 +4,14 @@
 
 Sign in at /admin/ using the configured Firebase Authentication administrator. Manage one-hour slots and partner records. The private same-day invitation panel reserves the selected hour and its following buffer. The public calendar reads Firestore availability.
 
+## Online booking service-area gate
+
+The public form checks the selected address with the `checkBookingServiceArea` Firebase callable before allowing pool-register confirmation or checkout. The payment backend independently enforces the rule for direct and private-invitation checkout to prevent requests bypassing the form.
+
+Internal rule: Geoapify driving time must be no more than 25 minutes from Mansfield QLD suburb centre; addresses north of the Brisbane River are not eligible for automatic checkout, even inside the time radius. Server code determines river-bank eligibility from crossings of the Brisbane City Council river centreline dataset, including bridge/tunnel routes. Do not describe the river rule on public pages or in customer errors. Public messaging says the property is outside the standard online service area, may be eligible by special arrangement with an extra fee, and provides phone/email contacts. Manual quotes do not get charged by the automated standard checkout.
+
+Service-area checks fail closed on provider errors. See DEPLOYMENT.md for the required backend Geoapify secret, live GIS/route testing and deploy order.
+
 ## Payment and notifications
 
 Stripe Checkout is opened through functions-payments. Its webhook records payment; the separate availability and calendar functions react to booking changes. functions-email sends confirmations and updates using the GMAIL_APP_PASSWORD Firebase secret. Old Firestore mail-queue and SendGrid source paths are retired in this branch; verify and separately decommission any deployed remnants before relying on their absence.

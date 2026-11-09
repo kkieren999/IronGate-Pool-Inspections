@@ -72,6 +72,7 @@ let poolRegisterCheckedAt = null;
 let poolRegisterLooksRight = false;
 let poolRegisterOverrideConfirmed = false;
 let poolRegisterPanel = null;
+let serviceAreaStatus = "not_checked";
 
 if (priceNotice) {
   priceNotice.textContent = `Pool Safety Inspection & Certificate — ${inspectionPriceDisplay}`;
@@ -630,6 +631,7 @@ function getContinuationElements() {
 }
 
 function canContinueAfterPoolRegisterCheck() {
+  if (serviceAreaStatus !== "eligible") return false;
   const addressSelected = addressSelectedInput?.value === "true";
   if (!addressSelected) return false;
   if (poolRegisterStatus === "registered") return poolRegisterLooksRight;
@@ -753,6 +755,7 @@ function renderPoolRegisterPanel() {
         addressInput.select();
       }
       selectedAddress = null;
+      resetServiceArea();
       if (addressSelectedInput) addressSelectedInput.value = "false";
       if (propertyPlaceIdInput) propertyPlaceIdInput.value = "";
       resetPoolRegisterState();
@@ -822,6 +825,41 @@ async function verifyPoolRegistration() {
   }
 }
 
+function resetServiceArea() {
+  serviceAreaStatus = "not_checked";
+  const eligibility = document.querySelector("#serviceAreaEligibility");
+  if (eligibility) eligibility.value = "not_checked";
+  const alert = document.querySelector("#service-area-alert");
+  if (alert) alert.hidden = true;
+  document.dispatchEvent(new CustomEvent("irongate:address-cleared"));
+  updateContinuationVisibility();
+}
+
+document.addEventListener("irongate:service-area-result", (event) => {
+  const detail = event.detail || {};
+  // Discard late responses when a customer edits the address mid-request.
+  if (!selectedAddress || detail.address !== selectedAddress.formattedAddress ||
+      detail.placeId !== selectedAddress.placeId) return;
+  serviceAreaStatus = detail.status === "eligible" ? "eligible" :
+    detail.status === "outside" ? "outside" : "unavailable";
+  const eligibility = document.querySelector("#serviceAreaEligibility");
+  if (eligibility) eligibility.value = serviceAreaStatus;
+  const alert = document.querySelector("#service-area-alert");
+  const alertText = document.querySelector("#service-area-alert-text");
+  if (alert) alert.hidden = serviceAreaStatus === "eligible";
+  if (serviceAreaStatus === "eligible") {
+    setAddressStatus("Address is within the standard online booking service area.", "success");
+    verifyPoolRegistration();
+  } else {
+    if (alertText) alertText.textContent = serviceAreaStatus === "outside"
+      ? "This property is outside our standard service area and cannot be booked online. An additional fee may apply."
+      : "We could not verify online booking availability for this property. Please contact us for assistance.";
+    setAddressStatus("Online booking cannot continue for this address.", "error");
+    resetPoolRegisterState();
+  }
+  updateContinuationVisibility();
+});
+
 function clearAddressSuggestions() {
   if (!addressSuggestions) return;
   addressSuggestions.innerHTML = "";
@@ -848,11 +886,16 @@ function selectGeoapifyAddress(result) {
   };
 
   if (addressInput) addressInput.value = result.formatted;
+  resetServiceArea();
+  serviceAreaStatus = "checking";
   if (addressSelectedInput) addressSelectedInput.value = "true";
   if (propertyPlaceIdInput) propertyPlaceIdInput.value = selectedAddress.placeId;
-  setAddressStatus("Address selected.", "success");
+  setAddressStatus("Checking online booking availability for this address...", "");
   clearAddressSuggestions();
-  verifyPoolRegistration();
+  updateContinuationVisibility();
+  document.dispatchEvent(new CustomEvent("irongate:address-selected", {
+    detail: { address: selectedAddress.formattedAddress, placeId: selectedAddress.placeId }
+  }));
 }
 
 function renderAddressSuggestions(results) {
@@ -910,6 +953,7 @@ function initAddressAutocomplete() {
 
   addressInput.addEventListener("input", () => {
     selectedAddress = null;
+    resetServiceArea();
     if (addressSelectedInput) addressSelectedInput.value = "false";
     if (propertyPlaceIdInput) propertyPlaceIdInput.value = "";
     resetPoolRegisterState();
