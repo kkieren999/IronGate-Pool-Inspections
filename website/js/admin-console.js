@@ -1,6 +1,6 @@
 import "./admin-private-booking.js?v=residential-pricing";
-import "./admin-booking-dashboard.js?v=20261007background1";
-import "./admin-booking-actions.js";
+import "./admin-booking-dashboard.js?v=reinspection";
+import "./admin-booking-actions.js?v=reinspection";
 import "./admin-refund-panel.js";
 import { app, db } from "./firebase-config.js";
     import { collection, deleteDoc, doc, documentId, getDoc, getDocs, query, serverTimestamp, setDoc, where, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";

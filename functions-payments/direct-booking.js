@@ -565,5 +565,9 @@ async function createBookingAndCheckoutSession({
 }
 
 module.exports = {
-  createBookingAndCheckoutSession
+  createBookingAndCheckoutSession,
+  assertBookableDate,
+  comparableSlotId,
+  reserveSelectedSlot,
+  expireCheckoutSession
 };

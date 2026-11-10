@@ -531,6 +531,8 @@ function renderDetails() {
   actionHost.id = "booking-actions-host";
   panel.appendChild(actionHost);
   detailSection(panel, "Appointment", [
+    ["Service", b.serviceName], ["Original booking", b.originalBookingId],
+    ["Reinspection number", b.reinspectionNumber], ["Latest reinspection reference", b.latestReinspectionId],
     ["Status", bookingStatus(b)], ["Inspection status", b.inspectionStatus],
     ["Availability lock", b.availabilityLockStatus], ["Availability issue", b.availabilityLockError],
     ["Date", b.preferredDateDisplay || b.preferredDate], ["Time", b.preferredTimeLabel || b.preferredTime],
