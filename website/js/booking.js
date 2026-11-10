@@ -23,7 +23,7 @@ const animalsOnPropertyInput = document.querySelector("#animalsOnProperty");
 const animalsOffLeashInput = document.querySelector("#animalsOffLeash");
 const animalPanel = document.querySelector("#animal-restraint-panel");
 
-const inspectionPriceDisplay = "$149";
+const inspectionPriceDisplay = "$229";
 const GEOAPIFY_API_KEY = "8d1bacfb41584094b808c255bc8ef70c";
 const QBCC_POOL_REGISTER_URL = "https://my.qbcc.qld.gov.au/myQBCC/s/pool-register";
 const QLD_POOL_REGISTER_RESOURCE_ID = "bb059c35-d826-4ccd-af31-24de4716864a";

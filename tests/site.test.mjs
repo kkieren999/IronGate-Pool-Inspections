@@ -118,7 +118,7 @@ test("obsolete inspection pricing is absent", () => {
     if (!/\.(html|js|css|txt)$/.test(p)) continue;
     assert.ok(!/\$249\b|24900\b/.test(readFileSync(p, "utf8")), relative(site, p) + " has old price");
   }
-  assert.ok(siteRead("booking/index.html").includes("$149"));
+  assert.ok(siteRead("booking/index.html").includes("$229"));
 });
 
 test("all frontend and backend JavaScript parses on Node 22", () => {

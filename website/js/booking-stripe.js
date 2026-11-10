@@ -7,6 +7,9 @@ const form = document.querySelector("#booking-form");
 const submitButton = document.querySelector("#booking-submit");
 const message = document.querySelector("#booking-message");
 const priceNotice = document.querySelector("#booking-price-notice");
+const reinspectionPolicy = document.querySelector("#booking-reinspection-policy");
+const STANDARD_PRICE_CENTS = 22900;
+const LEGACY_PRICE_CENTS = 14900;
 const functions = getFunctions(app, "us-central1");
 const createBookingCheckoutSession = httpsCallable(functions, "createBookingCheckoutSession");
 const checkBookingServiceArea = httpsCallable(functions, "checkBookingServiceArea");
@@ -28,7 +31,9 @@ document.addEventListener("irongate:address-selected", async (event) => {
   let status = "unavailable";
   try {
     const result = await checkBookingServiceArea({ address, placeId });
-    status = result?.data?.eligible === true ? "eligible" : "outside";
+    if (result?.data?.priceCents === STANDARD_PRICE_CENTS || privateInvite?.priceCents === LEGACY_PRICE_CENTS) {
+      status = result?.data?.eligible === true ? "eligible" : "outside";
+    }
   } catch (error) {
     console.error("Online service-area verification unavailable:", error);
   }
@@ -39,7 +44,11 @@ document.addEventListener("irongate:address-selected", async (event) => {
 });
 
 function setCustomerFacingCopy() {
-  if (priceNotice) priceNotice.textContent = "Pool Safety Inspection & Certificate — $149";
+  const priceCents = privateInvite?.priceCents || STANDARD_PRICE_CENTS;
+  if (priceNotice) priceNotice.textContent = `Pool Safety Inspection & Certificate — $${priceCents / 100}`;
+  if (reinspectionPolicy && priceCents === LEGACY_PRICE_CENTS) {
+    reinspectionPolicy.textContent = "The reinspection terms already agreed for this invitation apply.";
+  }
   if (submitButton && !submitButton.disabled) submitButton.textContent = "Continue to Secure Payment";
 }
 
@@ -127,6 +136,10 @@ function validateBookingPayload(payload) {
   if (document.querySelector("#serviceAreaEligibility")?.value !== "eligible") return "This address cannot continue to online booking. Please contact IronGate on 0481 442 260 or irongate.pool.bne@gmail.com.";
   if (!payload.inspectionReason) return "Please select the reason for inspection.";
   if (!payload.poolType) return "Please select the pool type.";
+  if ((payload.poolType === "Shared pool" || payload.inspectionReason === "Reinspection") &&
+      privateInvite?.priceCents !== LEGACY_PRICE_CENTS) {
+    return "Please contact IronGate on 0481 442 260 to arrange a reinspection or get a shared pool quote.";
+  }
 
   if (!payload.preferredDate) return "Please select an inspection date.";
   if (!privateInvite && isTodayOrPastDateKey(payload.preferredDate)) return "Please choose an inspection date from tomorrow onwards.";
@@ -341,7 +354,8 @@ async function loadPrivateInvite() {
     if (invite.date !== todayBusinessDateKey()) throw new Error("This private booking link is no longer valid for today.");
     if (!invite.bookingId || !invite.slotId || !invite.start || !invite.end) throw new Error("This private booking link is incomplete.");
 
-    privateInvite = { token: privateInviteToken, ...invite };
+    privateInvite = { token: privateInviteToken, ...invite, priceCents: invite.priceCents ?? LEGACY_PRICE_CENTS };
+    setCustomerFacingCopy();
     applyPrivateInviteSelection();
     observePrivateSlotDisplay();
     setMessage(`Private session reserved: ${privateInvite.dateDisplay || privateInvite.date}, ${privateInvite.label}. Complete the form to continue to payment.`, "success");
@@ -365,10 +379,14 @@ async function handlePrivateBookingCheckout(booking) {
 
   const result = await createBookingCheckoutSession({
     bookingId: privateInvite.bookingId,
+    expectedPriceCents: privateInvite.priceCents,
     successUrl: buildPageUrl("/success/"),
     cancelUrl: buildPageUrl("/cancelled/")
   });
 
+  if ((result?.data?.priceCents ?? LEGACY_PRICE_CENTS) !== privateInvite.priceCents) {
+    throw new Error("The checkout price does not match this invitation.");
+  }
   const checkoutUrl = result?.data?.checkoutUrl;
   if (!checkoutUrl) throw new Error("Stripe Checkout URL was not returned.");
 
@@ -410,9 +428,13 @@ async function handleBackendBookingSubmit(event) {
     } else {
       const result = await createBookingCheckoutSession({
         booking,
+        expectedPriceCents: STANDARD_PRICE_CENTS,
         successUrl: buildPageUrl("/success/"),
         cancelUrl: buildPageUrl("/cancelled/")
       });
+      if (result?.data?.priceCents !== STANDARD_PRICE_CENTS) {
+        throw new Error("The checkout price does not match the booking page.");
+      }
       checkoutUrl = result?.data?.checkoutUrl || "";
     }
 

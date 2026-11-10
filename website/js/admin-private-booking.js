@@ -15,8 +15,8 @@ import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-aut
 
 const ADMIN_EMAIL = "irongate.pool.bne@gmail.com";
 const SERVICE_NAME = "Pool Safety Inspection & Certificate";
-const PRICE_CENTS = 14900;
-const PRICE_DISPLAY = "$149";
+const PRICE_CENTS = 22900;
+const PRICE_DISPLAY = "$229";
 const CURRENCY = "aud";
 const auth = getAuth(app);
 
@@ -370,6 +370,7 @@ async function generatePrivateBookingLink() {
 
       transaction.set(inviteRef, {
         bookingId: bookingRef.id,
+        priceCents: PRICE_CENTS,
         date: dateKey,
         dateDisplay: displayDate(dateKey),
         slotId: selectedId,
