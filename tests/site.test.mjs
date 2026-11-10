@@ -91,8 +91,12 @@ test("single checkout handler and active private-admin module", () => {
   assert.ok(checkout.includes('addEventListener("submit", handleBackendBookingSubmit)'));
   assert.ok(checkout.includes('httpsCallable(functions, "createBookingCheckoutSession")'));
   assert.ok(checkout.includes("handlePrivateBookingCheckout"));
-  assert.ok(admin.includes('src="/js/admin-console.js?v=20261007background1"'));
-  assert.ok(adminJs.includes('import "./admin-private-booking.js"'));
+  assert.ok(admin.includes('src="/js/admin-console.js?v=residential-pricing"'));
+  assert.ok(adminJs.includes('import "./admin-private-booking.js?v=residential-pricing"'));
+  const booking = siteRead("booking/index.html");
+  for (const file of ["booking.js", "booking-stripe.js"]) {
+    assert.ok(booking.includes(`<script type="module" src="js/${file}?v=residential-pricing"></script>`));
+  }
   assert.ok(adminJs.includes('from "./firebase-config.js"'));
   assert.ok(!siteRead("js/firebase-config.js").includes('pathname.startsWith("/admin")'));
 });

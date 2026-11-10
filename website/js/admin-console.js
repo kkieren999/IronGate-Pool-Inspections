@@ -1,4 +1,4 @@
-import "./admin-private-booking.js";
+import "./admin-private-booking.js?v=residential-pricing";
 import "./admin-booking-dashboard.js?v=20261007background1";
 import "./admin-booking-actions.js";
 import "./admin-refund-panel.js";
