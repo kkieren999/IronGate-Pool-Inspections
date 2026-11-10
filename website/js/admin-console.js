@@ -1,5 +1,5 @@
 import "./admin-private-booking.js?v=residential-pricing";
-import "./admin-booking-dashboard.js?v=reinspection";
+import "./admin-booking-dashboard.js?v=brisbane-regions";
 import "./admin-booking-actions.js?v=reinspection";
 import "./admin-refund-panel.js";
 import { app, db } from "./firebase-config.js";

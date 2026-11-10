@@ -8,7 +8,7 @@ Sign in at /admin/ using the configured Firebase Authentication administrator. M
 
 The public form checks the selected address with the `checkBookingServiceArea` Firebase callable before allowing pool-register confirmation or checkout. The payment backend independently enforces the rule for direct and private-invitation checkout to prevent requests bypassing the form.
 
-Internal rule: Geoapify driving time must be no more than 25 minutes from Mansfield QLD suburb centre; addresses north of the Brisbane River are not eligible for automatic checkout, even inside the time radius. Server code determines river-bank eligibility from crossings of the Brisbane City Council river centreline dataset, including bridge/tunnel routes. Do not describe the river rule on public pages or in customer errors. Public messaging says the property is outside the standard online service area, may be eligible by special arrangement with an extra fee, and provides phone/email contacts. Manual quotes do not get charged by the automated standard checkout.
+Online checkout is available only in the ABS ASGS 2026 SA4 regions Brisbane Inner City (305), Brisbane East (301) and Brisbane South (303). The backend resolves the selected address with Geoapify and checks the bundled ABS polygons. Out-of-area customers see phone and email contact options. The optional referral source is stored on the booking and shown in Admin.
 
 Service-area checks fail closed on provider errors. See DEPLOYMENT.md for the required backend Geoapify secret, live GIS/route testing and deploy order.
 

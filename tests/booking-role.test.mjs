@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
+import referral from "../functions-payments/referral-source.js";
 
 const read = (p) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
 
@@ -85,11 +86,18 @@ function backend() {
   const admin = { firestore: { FieldValue: { serverTimestamp: () => "timestamp" } } };
   const code = read("functions-payments/direct-booking.js");
   const env = { require(name) {
+    if (name === "./referral-source") return referral;
     if (name !== "firebase-admin") throw Error("Unexpected module " + name);
     return admin;
   }, module: { exports: {} } };
   return runInNewContext(code + "\n({ assertValidBooking, publicBookingData });", env);
 }
+test("booking referral source is optional and stores only a listed answer", () => {
+  const { publicBookingData } = backend();
+  assert.equal(publicBookingData({ ...exampleBooking(), referralSource: "Word of mouth" }).referralSource, "Word of mouth");
+  assert.equal(publicBookingData({ ...exampleBooking(), referralSource: "unexpected value" }).referralSource, undefined);
+  assert.equal(publicBookingData(exampleBooking()).referralSource, undefined);
+});
 function exampleBooking() {
   return {
     bookingRoleCode: "agency", agencyName: "Willow Brown",

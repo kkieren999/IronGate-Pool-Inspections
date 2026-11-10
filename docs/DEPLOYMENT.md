@@ -12,13 +12,11 @@ Main-branch workflows deploy payments, email, calendar, availability and Firesto
 
 Reverting a merge restores Git source; it does not undo Stripe payments, Firestore documents, or deployed cloud resources.
 
-## Booking service-area activation (required before merging the service-area PR)
+## Booking service area
 
-- Set a Firebase Secret Manager secret named `GEOAPIFY_SERVICE_AREA_KEY` in project `irongate-pool-inspection-256b4` using a server-capable Geoapify API key enabled for Geocoding and Routing. Do not put the server key in GitHub or website files. If the existing browser key is referrer-restricted, create a distinct server key with suitable quota restrictions.
-- `createBookingCheckoutSession` and the new `checkBookingServiceArea` callable must both have access to that secret. The payments deployment workflow deploys both functions.
-- Before merging, test the new callable against real Mansfield/southside, north-bank and over-25-minute property addresses in a test project. Verify the current Brisbane City Council river GIS endpoint responds with complete GeoJSON geometries. The server deliberately fails closed if routing or waterway checks cannot be verified. A deployment without the secret or a working data provider will prevent normal online bookings.
-- Online eligibility uses a 25-minute Geoapify approximated-traffic driving route from Mansfield suburb centre (not a precise business street address). Backend river-crossing parity is an internal operational restriction; do not disclose it in public pages or error responses. If the business chooses a different origin, update the reference point and regression tests before launch.
-- Check that both the static form and Firebase callable deployments have completed before trying a live test booking. A merge triggers separate deployment workflows, which may finish in either order.
+- The payments functions use the existing Firebase `GEOAPIFY_SERVICE_AREA_KEY` secret for server-side geocoding.
+- The official ABS 2026 SA4 boundaries are bundled locally. To refresh the three approved regions, run `node scripts/update-brisbane-boundaries.cjs` from the repository root and review the geometry and region tests.
+- After Pages and payments deploy, run `node scripts/verify-live-service-area.mjs --regions` to verify addresses inside and outside the new area.
 
 ## Stripe deployment and Artifact Registry
 

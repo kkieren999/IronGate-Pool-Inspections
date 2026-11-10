@@ -852,7 +852,7 @@ document.addEventListener("irongate:service-area-result", (event) => {
     verifyPoolRegistration();
   } else {
     if (alertText) alertText.textContent = serviceAreaStatus === "outside"
-      ? "This property is outside our standard service area and cannot be booked online. An additional fee may apply."
+      ? "Online bookings are only available in Brisbane Inner City, Brisbane East and Brisbane South. Please contact us about this property."
       : "We could not verify online booking availability for this property. Please contact us for assistance.";
     setAddressStatus("Online booking cannot continue for this address.", "error");
     resetPoolRegisterState();

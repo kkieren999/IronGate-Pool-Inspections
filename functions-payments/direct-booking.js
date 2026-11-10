@@ -1,4 +1,5 @@
 const admin = require("firebase-admin");
+const { normaliseReferralSource } = require("./referral-source");
 
 const BOOKING_ALLOWED_FIELDS = [
   "customerName",
@@ -238,6 +239,8 @@ function publicBookingData(rawBooking = {}, config = {}) {
   }
 
   booking.customerName = asString(booking.customerName);
+  const referralSource = normaliseReferralSource(rawBooking.referralSource);
+  if (referralSource) booking.referralSource = referralSource;
   booking.email = asString(booking.email).toLowerCase();
   booking.phone = cleanPhone(booking.phone);
   booking.propertyAddress = asString(booking.propertyAddress);
