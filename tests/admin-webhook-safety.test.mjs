@@ -12,7 +12,7 @@ function getWebhookFns(db) {
   const admin = { firestore: { Timestamp: { now: () => "NOW" },
     FieldValue: { serverTimestamp: () => "NOW" } } };
   const context = {
-    admin, db, CURRENCY: "aud", INSPECTION_PRICE_CENTS: 14900, INVOICE_PROMO_CODE: "INVOICE100", logger: { warn() {}, info() {} },
+    admin, db, CURRENCY: "aud", LEGACY_INSPECTION_PRICE_CENTS: 14900, INVOICE_PROMO_CODE: "INVOICE100", logger: { warn() {}, info() {} },
     isCompletedCheckoutSession: (s) => ["paid","no_payment_required"].includes(s.payment_status),
     comparableSlotId: (slot) => slot.id || slot.start?.replace(":", "_"),
     slotBelongsToBooking: (slot, id) => (slot.bookedByBookingId || slot.bookingId) === id,
@@ -20,8 +20,16 @@ function getWebhookFns(db) {
       { ...slot, bookingId: null, bookedByBookingId: null, booked: false, available: true },
     confirmAvailabilityReservation: async () => { db.confirmCount += 1; }
   };
-  return runInNewContext(code + "\n({ markCheckoutSessionPaid, markInvoicePaymentPaid, markCheckoutSessionExpired, isInvoicePaymentSession });", context);
+  return runInNewContext(code + "\n({ markCheckoutSessionPaid, markInvoicePaymentPaid, markCheckoutSessionExpired, isInvoicePaymentSession, checkoutBillingPatch });", context);
 }
+
+test("checkout billing falls back to the price agreed for the booking", () => {
+  const { checkoutBillingPatch } = getWebhookFns(fakeDb({}));
+  const invoiceSession = { payment_status: "no_payment_required", amount_total: 0 };
+  assert.equal(checkoutBillingPatch(invoiceSession, "INVOICE100", { priceCents: 22900 }).invoiceAmountCents, 22900);
+  assert.equal(checkoutBillingPatch(invoiceSession, "INVOICE100", { priceCents: 14900 }).invoiceAmountCents, 14900);
+  assert.equal(checkoutBillingPatch(invoiceSession, "INVOICE100", {}).invoiceAmountCents, 14900);
+});
 function fakeDb(seed) {
   const store = new Map(Object.entries(seed));
   const db = {

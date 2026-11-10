@@ -113,13 +113,13 @@
           <aside class="booking-summary" aria-label="Booking summary">
             <p class="section-kicker">Inspection Package</p>
             <h2>Pool Safety Inspection &amp; Certificate</h2>
-            <p id="booking-price-notice">Pool Safety Inspection &amp; Certificate — $149</p>
+            <p id="booking-price-notice">Pool Safety Inspection &amp; Certificate — $229</p>
             <ul class="contact-points">
               <li>Full pool barrier inspection</li>
               <li>Gate, latch and hinge check</li>
               <li>Written notes and photos</li>
               <li>Certificate issued if compliant</li>
-              <li>Unlimited reinspections included</li>
+              <li id="booking-reinspection-policy">One on-site reinspection included if needed. Further on-site reinspections are $89 each.</li>
             </ul>
             <p class="booking-note">Available dates and 1-hour inspection times are controlled from your availability manager.</p>
           </aside>
@@ -192,7 +192,7 @@
                     <option value="Selling the property">Selling the property</option>
                     <option value="Renting or leasing the property">Renting or leasing the property</option>
                     <option value="New pool or new barrier">New pool or new barrier</option>
-                    <option value="Reinspection">Reinspection</option>
+                    <option value="Reinspection">Reinspection for an existing booking</option>
                     <option value="General compliance check">General compliance check</option>
                     <option value="Other">Other</option>
                   </select>
@@ -393,6 +393,7 @@
               </div>
             </section>
 
+            <p class="form-note">For an existing booking reinspection or a fixed quote for a shared pool, complex site or out-of-area address, call <a href="tel:0481442260">0481 442 260</a> or email <a href="mailto:irongate.pool.bne@gmail.com">IronGate</a>.</p>
             <button class="btn btn-primary" type="submit" id="booking-submit">
               Continue to Secure Payment
             </button>
@@ -426,7 +427,7 @@
   </footer>
 
   <script src="js/script.js"></script>
-  <script type="module" src="js/booking.js"></script>
-  <script type="module" src="js/booking-stripe.js"></script>
+  <script type="module" src="js/booking.js?v=residential-pricing></script>
+  <script type="module" src="js/booking-stripe.js?v=residential-pricing></script>
 </body>
 </html>

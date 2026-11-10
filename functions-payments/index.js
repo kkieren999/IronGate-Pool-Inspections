@@ -17,8 +17,9 @@ const { requireAdmin, executeAdminBookingChange, updateAdminBookingDetails } = r
 const { adminRefundBooking, adminReconcileBookingRefunds, reconcileRefundEvent } = require("./admin-refunds");
 const { createBarrierCheckInspection } = require("./barriercheck-direct");
 
-const INSPECTION_PRICE_CENTS = 14900;
-const INSPECTION_PRICE_DISPLAY = "$149";
+const LEGACY_INSPECTION_PRICE_CENTS = 14900;
+const INSPECTION_PRICE_CENTS = 22900;
+const INSPECTION_PRICE_DISPLAY = "$229";
 const CURRENCY = "aud";
 const SERVICE_NAME = "Pool Safety Inspection & Certificate";
 const INVOICE_PROMO_CODE = "INVOICE100";
@@ -305,7 +306,7 @@ exports.checkBookingServiceArea = onCall(
         placeId: request.data?.placeId,
         apiKey: GEOAPIFY_SERVICE_AREA_KEY.value()
       });
-      return { eligible: result.eligible };
+      return { eligible: result.eligible, priceCents: INSPECTION_PRICE_CENTS };
     } catch (error) {
       logger.error("Service-area verification unavailable", { message: error.message });
       throw new HttpsError("unavailable",
@@ -315,6 +316,13 @@ exports.checkBookingServiceArea = onCall(
 );
 
 async function createBackendBookingCheckout(request) {
+  if (request.data.expectedPriceCents !== INSPECTION_PRICE_CENTS) {
+    throw new HttpsError("failed-precondition", "Booking pricing has changed. Refresh the booking page and try again.");
+  }
+  const { poolType, inspectionReason } = request.data.booking;
+  if (String(poolType || "").trim() === "Shared pool" || String(inspectionReason || "").trim() === "Reinspection") {
+    throw new HttpsError("failed-precondition", "Contact IronGate to arrange a reinspection or get a shared pool quote.");
+  }
   const result = await createDirectBookingAndCheckoutSession({
     request,
     db,
@@ -335,7 +343,7 @@ async function createBackendBookingCheckout(request) {
     source: "backend_booking_checkout"
   });
 
-  return result;
+  return { ...result, priceCents: INSPECTION_PRICE_CENTS };
 }
 
 exports.createBookingCheckoutSession = onCall(
@@ -381,8 +389,22 @@ exports.createBookingCheckoutSession = onCall(
 
     const booking = bookingSnapshot.data() || {};
 
+    if (booking.source !== "private_booking_invite" || !booking.privateInviteProof ||
+        booking.privateInviteProof !== booking.privateInviteToken) {
+      throw new HttpsError("failed-precondition", "Open the booking page to start a new checkout.");
+    }
+
     if (booking.paymentStatus === "paid") {
       throw new HttpsError("failed-precondition", "This booking has already been paid.");
+    }
+
+    const priceCents = storedInspectionPriceCents(booking);
+    if (priceCents !== LEGACY_INSPECTION_PRICE_CENTS &&
+        (booking.poolType === "Shared pool" || booking.inspectionReason === "Reinspection")) {
+      throw new HttpsError("failed-precondition", "Contact IronGate to arrange a reinspection or get a shared pool quote.");
+    }
+    if ((request.data?.expectedPriceCents ?? LEGACY_INSPECTION_PRICE_CENTS) !== priceCents) {
+      throw new HttpsError("failed-precondition", "The checkout price has changed. Reopen your invitation and try again.");
     }
 
     // Private invitations must not bypass the same service-area policy.
@@ -407,7 +429,7 @@ exports.createBookingCheckoutSession = onCall(
           quantity: 1,
           price_data: {
             currency: CURRENCY,
-            unit_amount: INSPECTION_PRICE_CENTS,
+            unit_amount: priceCents,
             product_data: {
               name: SERVICE_NAME,
               description: bookingSummary(booking)
@@ -438,10 +460,11 @@ exports.createBookingCheckoutSession = onCall(
         status: "pending_payment",
         paymentStatus: "checkout_created",
         paymentMethod: "stripe_checkout",
-        priceDisplay: INSPECTION_PRICE_DISPLAY,
+        priceCents,
+        priceDisplay: `$${priceCents / 100}`,
         stripeCheckoutSessionId: session.id,
         stripeCheckoutUrl: session.url,
-        stripeAmountTotal: INSPECTION_PRICE_CENTS,
+        stripeAmountTotal: priceCents,
         stripeCurrency: CURRENCY,
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       },
@@ -456,7 +479,8 @@ exports.createBookingCheckoutSession = onCall(
 
     return {
       checkoutUrl: session.url,
-      sessionId: session.id
+      sessionId: session.id,
+      priceCents
     };
   }
 );
@@ -531,9 +555,14 @@ async function promotionCodeFromSession(stripe, session = {}) {
   return null;
 }
 
+function storedInspectionPriceCents(booking) {
+  return Number.isSafeInteger(booking.priceCents) && booking.priceCents > 0 ?
+    booking.priceCents : LEGACY_INSPECTION_PRICE_CENTS;
+}
+
 function checkoutBillingPatch(session = {}, promotionCode = null, currentBooking = {}) {
   const subtotal = Number.isSafeInteger(session.amount_subtotal) ? session.amount_subtotal :
-    (Number.isSafeInteger(currentBooking.priceCents) ? currentBooking.priceCents : INSPECTION_PRICE_CENTS);
+    storedInspectionPriceCents(currentBooking);
   const discount = Number.isSafeInteger(session.total_details?.amount_discount) ?
     session.total_details.amount_discount : Number(currentBooking.stripeAmountDiscount || 0);
   const total = Number.isSafeInteger(session.amount_total) ?
@@ -685,7 +714,7 @@ async function markInvoicePaymentPaid(session, stripeClient = null) {
     }
 
     const expectedAmount = Number.isSafeInteger(booking.invoiceAmountCents) && booking.invoiceAmountCents > 0 ?
-      booking.invoiceAmountCents : INSPECTION_PRICE_CENTS;
+      booking.invoiceAmountCents : storedInspectionPriceCents(booking);
     if (amountPaid !== expectedAmount) {
       tx.set(bookingRef, {
         invoicePaymentStatus: "amount_mismatch",
@@ -968,7 +997,7 @@ async function adminIssueBookingInvoice(request) {
     const amountCents = Number.isSafeInteger(booking.invoiceAmountCents) && booking.invoiceAmountCents > 0 ?
       booking.invoiceAmountCents :
       (Number.isSafeInteger(booking.stripeAmountSubtotal) && booking.stripeAmountSubtotal > 0 ?
-        booking.stripeAmountSubtotal : INSPECTION_PRICE_CENTS);
+        booking.stripeAmountSubtotal : storedInspectionPriceCents(booking));
     const invoiceNumber = booking.invoiceNumber ||
       `IG-${issuedDate.slice(0, 4)}-${bookingId.slice(-8).toUpperCase()}`;
     const finalIssuedDate = booking.invoiceIssuedDate || issuedDate;
@@ -1039,12 +1068,12 @@ async function adminPrepareInvoiceStripePayment(request, stripe) {
       invoiceNumber: booking.invoiceNumber,
       invoiceStatus: "paid",
       billingStatus: booking.billingStatus || "invoice_paid_stripe",
-      invoicePaidAmountCents: booking.invoicePaidAmountCents || booking.invoiceAmountCents || INSPECTION_PRICE_CENTS
+      invoicePaidAmountCents: booking.invoicePaidAmountCents || booking.invoiceAmountCents || storedInspectionPriceCents(booking)
     };
   }
 
   const amountCents = Number.isSafeInteger(booking.invoiceAmountCents) && booking.invoiceAmountCents > 0 ?
-    booking.invoiceAmountCents : INSPECTION_PRICE_CENTS;
+    booking.invoiceAmountCents : storedInspectionPriceCents(booking);
 
   let paymentLink = null;
   const existingLinkId = String(booking.stripeInvoicePaymentLinkId || "").trim();
