@@ -212,6 +212,7 @@ function collectBookingPayload() {
     ownerDetailsPending: false,
     inspectionReason: getValue("#inspectionReason"),
     poolType: getValue("#poolType"),
+    referralSource: getValue("#referralSource"),
     existingCertificateStatus: getValue("#existingCertificateStatus") || "Unsure",
     poolRegisteredStatus: getValue("#poolRegisteredStatus") || "Unsure",
 
@@ -379,6 +380,7 @@ async function handlePrivateBookingCheckout(booking) {
 
   const result = await createBookingCheckoutSession({
     bookingId: privateInvite.bookingId,
+    referralSource: booking.referralSource,
     expectedPriceCents: privateInvite.priceCents,
     successUrl: buildPageUrl("/success/"),
     cancelUrl: buildPageUrl("/cancelled/")

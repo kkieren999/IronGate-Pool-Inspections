@@ -17,8 +17,6 @@ jobs:
           node-version: "22"
       - name: Verify source
         run: node --test tests/*.test.mjs
-      - name: Check external Brisbane River geography
-        run: node scripts/verify-service-area-geometry.mjs
       - name: Inspect latest payments deployments
         run: node scripts/inspect-payment-deploy.mjs
       - name: Verify deployed service-area callable with real addresses

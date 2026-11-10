@@ -6,6 +6,7 @@ const Stripe = require("stripe");
 const QRCode = require("qrcode");
 const { createBookingAndCheckoutSession: createDirectBookingAndCheckoutSession } = require("./direct-booking");
 const { evaluateServiceArea } = require("./service-area");
+const { normaliseReferralSource } = require("./referral-source");
 const reinspection = require("./reinspection");
 
 admin.initializeApp();
@@ -290,9 +291,8 @@ async function assertOnlineBookingArea(address, placeId) {
     address, placeId, apiKey: GEOAPIFY_SERVICE_AREA_KEY.value()
   });
   if (!result.eligible) {
-    // Keep internal eligibility rules private: no river-bank or time reasons in the UI.
     throw new HttpsError("failed-precondition",
-      "This property is outside our standard online booking service area. An additional fee may apply. Please contact 0481 442 260 or irongate.pool.bne@gmail.com.");
+      "This address could not be confirmed in our online booking area of Brisbane Inner City, Brisbane East or Brisbane South. Please contact 0481 442 260 or irongate.pool.bne@gmail.com.");
   }
   return result;
 }
@@ -307,7 +307,7 @@ exports.checkBookingServiceArea = onCall(
         placeId: request.data?.placeId,
         apiKey: GEOAPIFY_SERVICE_AREA_KEY.value()
       });
-      return { eligible: result.eligible, priceCents: INSPECTION_PRICE_CENTS };
+      return { eligible: result.eligible, region: result.region || null, priceCents: INSPECTION_PRICE_CENTS };
     } catch (error) {
       logger.error("Service-area verification unavailable", { message: error.message });
       throw new HttpsError("unavailable",
@@ -454,6 +454,7 @@ exports.createBookingCheckoutSession = onCall(
       }
     });
 
+    const referralSource = normaliseReferralSource(request.data?.referralSource);
     await bookingRef.set(
       {
         customerType: "homeowner",
@@ -461,6 +462,7 @@ exports.createBookingCheckoutSession = onCall(
         status: "pending_payment",
         paymentStatus: "checkout_created",
         paymentMethod: "stripe_checkout",
+        ...(referralSource ? { referralSource } : {}),
         priceCents,
         priceDisplay: `$${priceCents / 100}`,
         stripeCheckoutSessionId: session.id,

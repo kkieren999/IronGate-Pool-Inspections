@@ -159,6 +159,19 @@
                   Your relationship to the property
                   <input type="text" id="bookingRelationship" maxlength="140" placeholder="e.g. family member, tenant or authorised representative" />
                 </label>
+                <label class="full-width">
+                  How did you hear about us? (optional)
+                  <select id="referralSource">
+                    <option value="">Select an option</option>
+                    <option>Google / Google Maps</option>
+                    <option>Facebook</option>
+                    <option>Instagram</option>
+                    <option>Word of mouth</option>
+                    <option>Real estate agent / property manager</option>
+                    <option>Other</option>
+                    <option>Prefer not to say</option>
+                  </select>
+                </label>
               </div>
               <div class="option-stack conditional-fields" id="booking-authority-field" hidden>
                 <label class="option-card">
@@ -170,6 +183,7 @@
 
             <section class="form-section" aria-labelledby="property-details-heading">
               <h2 id="property-details-heading">Inspection property</h2>
+              <p class="section-helper">Online bookings are available in Brisbane Inner City, Brisbane East and Brisbane South.</p>
               <div class="field-grid">
                 <label class="full-width address-field-wrap">
                   Property address
@@ -181,7 +195,7 @@
                   <p class="address-status" id="address-status">Start typing and select the property address from the suggestions.</p>
                   <div class="service-area-alert" id="service-area-alert" role="alert" hidden>
                     <strong>Online booking unavailable for this address</strong>
-                    <span id="service-area-alert-text">This property is outside our standard service area and cannot be booked online. An additional fee may apply.</span>
+                    <span id="service-area-alert-text">Online bookings are only available in Brisbane Inner City, Brisbane East and Brisbane South. Please contact us about this property.</span>
                     <span>Please contact <a href="tel:0481442260">0481 442 260</a> or <a href="mailto:irongate.pool.bne@gmail.com">irongate.pool.bne@gmail.com</a> for more information.</span>
                   </div>
                 </label>
@@ -427,7 +441,7 @@
   </footer>
 
   <script src="js/script.js"></script>
-  <script type="module" src="js/booking.js?v=residential-pricing"></script>
-  <script type="module" src="js/booking-stripe.js?v=residential-pricing"></script>
+  <script type="module" src="js/booking.js?v=brisbane-regions"></script>
+  <script type="module" src="js/booking-stripe.js?v=brisbane-regions"></script>
 </body>
 </html>

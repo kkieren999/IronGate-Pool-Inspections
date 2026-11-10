@@ -538,6 +538,7 @@ function renderDetails() {
     ["Date", b.preferredDateDisplay || b.preferredDate], ["Time", b.preferredTimeLabel || b.preferredTime],
     ["Property", b.propertyAddress], ["Pool type", b.poolType],
     ["Reason", b.inspectionReason], ["Pool registered", b.poolRegisteredStatus],
+    ["How did you hear about us?", b.referralSource],
     ["Existing certificate", b.existingCertificateStatus], ["Pool exemption", b.hasPoolExemption === true ? "Yes" : "No"],
     ["Exemption file uploaded", b.exemptionFileUploaded === true ? "Yes" : "No"]
   ]);

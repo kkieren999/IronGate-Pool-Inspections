@@ -46,6 +46,11 @@ async function check(query, expected) {
   }
 }
 await check("Mansfield QLD 4122 Australia", true);
-await check("Brisbane City QLD 4000 Australia", false);
 await check("Ipswich QLD 4305 Australia", false);
+if (process.argv.includes("--regions")) {
+  await check("Brisbane City QLD 4000 Australia", true);
+  await check("Cleveland QLD 4163 Australia", true);
+  await check("Chermside QLD 4032 Australia", false);
+  await check("Kenmore QLD 4069 Australia", false);
+}
 console.log("Live callable service-area sample checks passed.");

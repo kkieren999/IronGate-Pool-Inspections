@@ -91,11 +91,11 @@ test("single checkout handler and active private-admin module", () => {
   assert.ok(checkout.includes('addEventListener("submit", handleBackendBookingSubmit)'));
   assert.ok(checkout.includes('httpsCallable(functions, "createBookingCheckoutSession")'));
   assert.ok(checkout.includes("handlePrivateBookingCheckout"));
-  assert.ok(admin.includes('src="/js/admin-console.js?v=reinspection"'));
+  assert.ok(admin.includes('src="/js/admin-console.js?v=brisbane-regions"'));
   assert.ok(adminJs.includes('import "./admin-private-booking.js?v=residential-pricing"'));
   const booking = siteRead("booking/index.html");
   for (const file of ["booking.js", "booking-stripe.js"]) {
-    assert.ok(booking.includes(`<script type="module" src="js/${file}?v=residential-pricing"></script>`));
+    assert.ok(booking.includes(`<script type="module" src="js/${file}?v=brisbane-regions"></script>`));
   }
   assert.ok(adminJs.includes('from "./firebase-config.js"'));
   assert.ok(!siteRead("js/firebase-config.js").includes('pathname.startsWith("/admin")'));
@@ -289,7 +289,7 @@ test("admin booking tabs retain availability and limit customer data to authenti
     assert.ok(page.includes('id="panel-' + tab + '"'), tab);
     assert.ok(page.includes('data-tab="' + tab + '"'), tab);
   }
-  assert.ok(main.includes('import "./admin-booking-dashboard.js?v=reinspection"'));
+  assert.ok(main.includes('import "./admin-booking-dashboard.js?v=brisbane-regions"'));
   assert.ok(!dashboard.includes("\\nimport"), "admin dashboard must not contain a literal backslash-n before an import");
   assert.ok(dashboard.includes('onAuthStateChanged(auth'));
   assert.ok(dashboard.includes('orderBy("createdAt", "desc")'));
@@ -315,13 +315,14 @@ test("admin booking tabs retain availability and limit customer data to authenti
   assert.ok(page.includes('id="day-form"') && page.includes('id="partner-form"'));
 });
 
-test("out-of-area booking message is public, but internal north-bank rule remains private", () => {
+test("out-of-area booking names the eligible regions and shows contact options", () => {
   const form = siteRead("booking/index.html");
   const ui = siteRead("js/booking.js");
   const stripe = siteRead("js/booking-stripe.js");
   const payments = read("functions-payments/index.js");
   const direct = read("functions-payments/direct-booking.js");
   assert.match(form, /id="service-area-alert"/);
+  assert.match(form, /Brisbane Inner City, Brisbane East and Brisbane South/);
   assert.match(form, /tel:0481442260/);
   assert.match(form, /mailto:irongate.pool.bne@gmail.com/);
   assert.match(ui, /serviceAreaStatus !== "eligible"/);
