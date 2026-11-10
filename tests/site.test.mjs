@@ -91,7 +91,7 @@ test("single checkout handler and active private-admin module", () => {
   assert.ok(checkout.includes('addEventListener("submit", handleBackendBookingSubmit)'));
   assert.ok(checkout.includes('httpsCallable(functions, "createBookingCheckoutSession")'));
   assert.ok(checkout.includes("handlePrivateBookingCheckout"));
-  assert.ok(admin.includes('src="/js/admin-console.js?v=residential-pricing"'));
+  assert.ok(admin.includes('src="/js/admin-console.js?v=reinspection"'));
   assert.ok(adminJs.includes('import "./admin-private-booking.js?v=residential-pricing"'));
   const booking = siteRead("booking/index.html");
   for (const file of ["booking.js", "booking-stripe.js"]) {
@@ -289,7 +289,7 @@ test("admin booking tabs retain availability and limit customer data to authenti
     assert.ok(page.includes('id="panel-' + tab + '"'), tab);
     assert.ok(page.includes('data-tab="' + tab + '"'), tab);
   }
-  assert.ok(main.includes('import "./admin-booking-dashboard.js?v=20261007background1"'));
+  assert.ok(main.includes('import "./admin-booking-dashboard.js?v=reinspection"'));
   assert.ok(!dashboard.includes("\\nimport"), "admin dashboard must not contain a literal backslash-n before an import");
   assert.ok(dashboard.includes('onAuthStateChanged(auth'));
   assert.ok(dashboard.includes('orderBy("createdAt", "desc")'));

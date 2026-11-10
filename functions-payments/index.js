@@ -6,6 +6,7 @@ const Stripe = require("stripe");
 const QRCode = require("qrcode");
 const { createBookingAndCheckoutSession: createDirectBookingAndCheckoutSession } = require("./direct-booking");
 const { evaluateServiceArea } = require("./service-area");
+const reinspection = require("./reinspection");
 
 admin.initializeApp();
 
@@ -485,6 +486,28 @@ exports.createBookingCheckoutSession = onCall(
   }
 );
 
+exports.adminIssueReinspectionLink = onCall({ region: "us-central1" }, async (request) => {
+  await requireAdmin(request);
+  try {
+    return await reinspection.issueLink({ db, admin, bookingId: request.data?.bookingId });
+  } catch (error) {
+    throwPublicHttpsError(error, "Could not generate the reinspection link.");
+  }
+});
+
+exports.reinspectionBooking = onCall({ region: "us-central1", secrets: [STRIPE_SECRET_KEY] }, async (request) => {
+  const { action, token, date, slotId, expectedPriceCents } = request.data || {};
+  try {
+    if (action === "status") return await reinspection.getLink(db, token);
+    if (action === "book") {
+      return await reinspection.bookVisit({ db, admin, getStripe, token, date, slotId, expectedPriceCents });
+    }
+    throw new HttpsError("invalid-argument", "Invalid reinspection action.");
+  } catch (error) {
+    throwPublicHttpsError(error, "Could not process this reinspection. Please try again.");
+  }
+});
+
 exports.createAgencyInvoiceBooking = onCall(
   {
     region: "us-central1",
@@ -613,6 +636,11 @@ async function markCheckoutSessionPaid(session, stripeClient = null) {
       return null;
     }
     const booking = snapshot.data() || {};
+    if (booking.source === "reinspection_link" &&
+        (booking.stripeCheckoutSessionId !== session.id ||
+          (checkoutComplete && (session.amount_total !== booking.priceCents || session.currency !== "aud")))) {
+      return null;
+    }
     // A delayed unpaid event must never downgrade a payment already confirmed.
     if (booking.paymentStatus === "paid" && !checkoutComplete) return null;
     if (booking.stripeCheckoutSessionId && booking.stripeCheckoutSessionId !== session.id) {
@@ -660,7 +688,10 @@ async function markCheckoutSessionPaid(session, stripeClient = null) {
     return { booking, cancelled, slotConflict };
   });
   if (outcome && checkoutComplete && !outcome.cancelled && !outcome.slotConflict) {
-    await confirmAvailabilityReservation(bookingId, outcome.booking, paymentStatus);
+    const booking = outcome.booking.source === "reinspection_link"
+      ? { ...outcome.booking, customerName: "", propertyAddress: "" }
+      : outcome.booking;
+    await confirmAvailabilityReservation(bookingId, booking, paymentStatus);
   }
   logger.info("Stripe booking payment event handled", {
     bookingId, sessionId: session.id, applied: Boolean(outcome), paymentStatus
@@ -793,6 +824,7 @@ async function markCheckoutSessionExpired(session) {
     const bookingSnapshot = await tx.get(bookingRef);
     if (!bookingSnapshot.exists) return;
     const booking = bookingSnapshot.data() || {};
+    if (booking.source === "reinspection_link" && booking.stripeCheckoutSessionId !== session.id) return;
     if (["paid", "no_payment_required", "agency_invoice"].includes(booking.paymentStatus) ||
         ["cancelled", "confirmed", "completed", "certificate_issued"].includes(booking.status) ||
         (booking.stripeCheckoutSessionId && booking.stripeCheckoutSessionId !== session.id)) return;
@@ -825,7 +857,7 @@ async function markCheckoutSessionExpired(session) {
       }
       if (changed) tx.set(availabilityRef, {
         slots, updatedAt: releasedAt, updatedBy: "booking_checkout_expired"
-      }, { merge: true });
+      }, { mergeFields: ["slots", "updatedAt", "updatedBy"] });
     }
     tx.set(bookingRef, {
       status: "payment_expired", paymentStatus: "expired",

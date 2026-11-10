@@ -84,7 +84,7 @@ function eventPrefix(booking = {}) {
   if (booking.status === "completed" || booking.inspectionStatus === "completed") return "Completed Pool Inspection";
   if (booking.status === "certificate_issued" || booking.inspectionStatus === "certificate_issued") return "Certificate Issued";
   if (booking.paymentStatus === "agency_invoice") return "Agency Pool Inspection";
-  return "Pool Safety Inspection";
+  return booking.source === "reinspection_link" ? "Pool Safety Reinspection" : "Pool Safety Inspection";
 }
 
 function buildCalendarEvent(bookingId, booking = {}) {

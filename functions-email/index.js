@@ -10,7 +10,7 @@ const GMAIL_APP_PASSWORD = defineSecret("GMAIL_APP_PASSWORD");
 const ADMIN_EMAIL = "irongate.pool.bne@gmail.com";
 const BUSINESS_PHONE = "0481 442 260";
 const DEFAULT_PRICE_DISPLAY = "$149";
-const CONFIRMED_PAYMENT_STATUSES = new Set(["paid"]);
+const CONFIRMED_PAYMENT_STATUSES = new Set(["paid", "no_payment_required"]);
 const EMAIL_TEMPLATE_VERSION = "payment-confirmation-v1";
 const ADMIN_UPDATE_TEMPLATE_VERSION = "booking-admin-update-v1";
 const BUSINESS_TIME_ZONE = "Australia/Brisbane";
@@ -125,7 +125,7 @@ function foldIcsLine(line) {
 }
 
 function buildCalendarDetails(bookingId, booking = {}) {
-  const title = "Pool Safety Inspection - IronGate";
+  const title = field(booking, "serviceName", "Pool Safety Inspection") + " - IronGate";
   const location = optionalField(booking, "propertyAddress");
   const description = [
     "IronGate Pool Inspections",
@@ -312,6 +312,12 @@ function buildCustomerEmail(bookingId, booking = {}) {
   const date = field(booking, "preferredDateDisplay", field(booking, "preferredDate"));
   const time = field(booking, "preferredTimeLabel", field(booking, "preferredTime"));
   const amount = paymentAmount(booking);
+  const reinspection = booking.source === "reinspection_link";
+  const appointment = reinspection ? "pool safety reinspection" : "pool safety inspection";
+  const paymentMessage = booking.paymentStatus === "no_payment_required"
+    ? "This visit is included in your original booking."
+    : "Your payment has been received securely through Stripe.";
+  const confirmation = `Your IronGate ${appointment} booking is confirmed. ${paymentMessage}`;
   const calendarText = calendarLinksToText(bookingId, booking);
   const calendarHtml = calendarLinksToHtml(bookingId, booking);
 
@@ -327,7 +333,7 @@ function buildCustomerEmail(bookingId, booking = {}) {
   const text = [
     `Hi ${customerName},`,
     "",
-    "Thanks - your IronGate pool safety inspection booking is confirmed and your payment has been received securely through Stripe.",
+    confirmation,
     "",
     detailRowsToText(rows),
     "",
@@ -345,7 +351,7 @@ function buildCustomerEmail(bookingId, booking = {}) {
 
   const body = `
     <p style="margin:0 0 18px;color:#173557;font-size:17px;line-height:1.55;"><strong>Hi ${escapeHtml(customerName)},</strong></p>
-    <p style="margin:0 0 22px;color:#4a5f78;font-size:16px;line-height:1.6;">Thanks - your IronGate pool safety inspection booking is confirmed and your payment has been received securely through Stripe.</p>
+    <p style="margin:0 0 22px;color:#4a5f78;font-size:16px;line-height:1.6;">${escapeHtml(confirmation)}</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#ffffff;border:1px solid #e6eef7;border-radius:16px;overflow:hidden;margin:0 0 24px;">
       ${detailRowsToHtml(rows)}
     </table>
@@ -357,7 +363,7 @@ function buildCustomerEmail(bookingId, booking = {}) {
   `;
 
   return {
-    subject: "Your IronGate pool inspection booking is confirmed",
+    subject: `Your IronGate ${appointment} is confirmed`,
     text,
     html: baseEmailHtml({
       preheader: `Your IronGate booking is confirmed for ${date} at ${time}.`,
@@ -373,9 +379,14 @@ function buildOwnerEmail(bookingId, booking = {}) {
   const customerName = field(booking, "customerName");
   const amount = paymentAmount(booking);
   const discount = amountFromCents(booking.stripeAmountDiscount, "$0.00");
+  const included = booking.paymentStatus === "no_payment_required";
+  const title = included ? "Included reinspection confirmed" : "Paid booking received";
+  const intro = included ? "A client booked a reinspection included in their original booking."
+    : "A client has completed payment through the IronGate website.";
 
   const rows = [
     ["Booking ID", bookingId],
+    ["Original booking", field(booking, "originalBookingId", "N/A")],
     ["Booking status", field(booking, "status")],
     ["Payment status", field(booking, "paymentStatus", "paid")],
     ["Payment method", field(booking, "paymentMethod")],
@@ -416,9 +427,9 @@ function buildOwnerEmail(bookingId, booking = {}) {
   ];
 
   const text = [
-    "Paid IronGate booking received",
+    title,
     "",
-    "A client has completed payment through the IronGate website.",
+    intro,
     "",
     detailRowsToText(rows),
     "",
@@ -426,7 +437,7 @@ function buildOwnerEmail(bookingId, booking = {}) {
   ].join("\n");
 
   const body = `
-    <p style="margin:0 0 22px;color:#4a5f78;font-size:16px;line-height:1.6;">A client has completed payment through the IronGate website. Review the details below before attending.</p>
+    <p style="margin:0 0 22px;color:#4a5f78;font-size:16px;line-height:1.6;">${escapeHtml(intro)} Review the details below before attending.</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#ffffff;border:1px solid #e6eef7;border-radius:16px;overflow:hidden;">
       ${detailRowsToHtml(rows)}
     </table>
@@ -435,11 +446,11 @@ function buildOwnerEmail(bookingId, booking = {}) {
 
   const clientName = field(booking, "poolOwnerName", customerName);
   return {
-    subject: `Paid IronGate booking - ${clientName}`,
+    subject: `IronGate: ${title} - ${clientName}`,
     text,
     html: baseEmailHtml({
-      preheader: `Paid booking received for ${clientName}.`,
-      title: "Paid booking received",
+      preheader: `${title} for ${clientName}.`,
+      title,
       badge: "Owner notification",
       body
     })

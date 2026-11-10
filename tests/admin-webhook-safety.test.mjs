@@ -120,6 +120,25 @@ test("paid checkout without its held slot is flagged, not silently confirmed", a
   assert.equal(db.confirmCount, 0, "must never lock another customer's slot");
 });
 
+test("reinspection only confirms from its own paid $89 Stripe session", async () => {
+  const path = "bookings/" + id;
+  const db = fakeDb({
+    [path]: { source: "reinspection_link", status: "pending_payment", paymentStatus: "checkout_created",
+      priceCents: 8900, stripeCheckoutSessionId: sid, preferredDate: "2099-05-02", preferredTimeSlot: "09_00" },
+    "availability/2099-05-02": { slots: { "09_00": { id: "09_00", bookingId: id } } }
+  });
+  const handlers = getWebhookFns(db);
+  await handlers.markCheckoutSessionExpired({ ...session, id: "cs_old" });
+  await handlers.markCheckoutSessionPaid(session);
+  assert.equal(db.store.get(path).status, "pending_payment");
+  const paid = { ...session, amount_total: 8900, amount_subtotal: 8900 };
+  await handlers.markCheckoutSessionPaid(paid);
+  await handlers.markCheckoutSessionExpired(paid);
+  assert.equal(db.store.get(path).status, "confirmed");
+  assert.equal(db.store.get(path).stripeCashReceivedCents, 8900);
+  assert.equal(db.confirmCount, 1);
+});
+
 
 test("INVOICE100 no-cost checkout is confirmed but recorded as invoice-required with zero Stripe cash received", async () => {
   const db = fakeDb({

@@ -8,6 +8,7 @@ const auth = getAuth(app);
 const functions = getFunctions(app, "us-central1");
 const moveBooking = httpsCallable(functions, "adminMoveBooking");
 const cancelBooking = httpsCallable(functions, "adminCancelBooking");
+const issueReinspectionLink = httpsCallable(functions, "adminIssueReinspectionLink");
 const $ = (selector) => document.querySelector(selector);
 let selectedId = "";
 let selectedBooking = null;
@@ -91,6 +92,11 @@ function renderActions() {
   if (!host) return;
   host.replaceChildren();
   if (!authorised || !selectedBooking) return;
+  if (!selectedBooking.originalBookingId &&
+      ["paid", "agency_invoice", "no_payment_required"].includes(selectedBooking.paymentStatus) &&
+      ![selectedBooking.status, selectedBooking.inspectionStatus].some(status => ["cancelled", "certificate_issued"].includes(status))) {
+    renderReinspectionLink(host);
+  }
   if (!eligible(selectedBooking)) {
     const message = document.createElement("p");
     message.className = "booking-readonly-note";
@@ -99,7 +105,7 @@ function renderActions() {
     return;
   }
   // Static markup only; booking/customer data is never inserted into HTML.
-  host.innerHTML = [
+  host.insertAdjacentHTML("beforeend", [
     '<div class="booking-actions">',
     '<details><summary>Move this booking</summary>',
     '<form id="admin-move-form" class="admin-form">',
@@ -122,11 +128,42 @@ function renderActions() {
     '</form></details>',
     '<p id="booking-action-message" class="form-note" role="status" aria-live="polite"></p>',
     '</div>'
-  ].join("");
+  ].join(""));
   $("#admin-move-date").min = keyForToday();
   $("#admin-move-date").addEventListener("change", loadAvailableSlots);
   $("#admin-move-form").addEventListener("submit", submitMove);
   $("#admin-cancel-form").addEventListener("submit", submitCancel);
+}
+
+function renderReinspectionLink(host) {
+  const panel = document.createElement("section");
+  panel.className = "booking-actions";
+  panel.innerHTML = '<button type="button" class="btn btn-primary">Generate reinspection link</button>' +
+    '<p class="form-note" role="status">For a pool that needs another visit. Copy the link into your non-conformity email.</p>' +
+    '<input type="url" aria-label="Private reinspection link" readonly hidden />';
+  const button = panel.querySelector("button");
+  const result = panel.querySelector("p");
+  const link = panel.querySelector("input");
+  const bookingId = selectedId;
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    try {
+      const { data } = await issueReinspectionLink({ bookingId });
+      link.value = data.url;
+      link.hidden = false;
+      result.textContent = data.priceCents ? "$89 reinspection. Copy the private link below." : "Included reinspection ($0). Copy the private link below.";
+      link.select();
+      try {
+        await navigator.clipboard.writeText(data.url);
+        result.textContent += " Link copied.";
+      } catch { /* The selected link can still be copied manually. */ }
+    } catch (error) {
+      result.textContent = error.message || "Could not create the link.";
+    } finally {
+      button.disabled = false;
+    }
+  });
+  host.appendChild(panel);
 }
 async function sendOperation(callable, payload, button, pendingText) {
   button.disabled = true;
