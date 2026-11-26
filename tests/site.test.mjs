@@ -335,3 +335,35 @@ test("out-of-area booking names the eligible regions and shows contact options",
     assert.doesNotMatch(siteRead(publicFile), /north(?:ern)? (?:of the )?Brisbane River|river.bank|north.bank/i);
   }
 });
+
+test("public search metadata points to the online booking calendar", () => {
+  const landingPages = [
+    ["index.html", "Pool Safety Inspections Brisbane | Book Online | IronGate", "/"],
+    ["pool-safety-inspector-brisbane/index.html", "Pool Safety Inspector Brisbane | Certificates | IronGate", "/pool-safety-inspector-brisbane/"],
+    ["booking/index.html", "Book Pool Safety Inspection Brisbane | IronGate", "/booking/"],
+    ["homeowner-checklist/index.html", "Homeowner Pool Safety Checklist Brisbane | IronGate", "/homeowner-checklist/"]
+  ];
+  for (const [file, title, route] of landingPages) {
+    const html = siteRead(file);
+    assert.ok(html.includes("<title>" + title + "</title>"), file + " title");
+    assert.ok(html.includes('<link rel="canonical" href="https://irongatepool.com.au' + route + '" />'), file + " canonical");
+    assert.match(html, /<meta name="robots" content="index, follow, max-image-preview:large" \/>/);
+    assert.match(html, /<link rel="icon" href="\/assets\/favicon.png" type="image\/png" sizes="96x96" \/>/);
+    assert.match(html, /<meta name="description" content="[^"]{70,}" \/>/);
+    assert.ok(siteRead("sitemap.xml").includes("<loc>https://irongatepool.com.au" + route + "</loc>"), file + " sitemap");
+  }
+  assert.ok(siteRead("index.html").includes('<a href="/booking/">Book Online</a>'));
+  assert.ok(!siteRead("booking/index.html").includes('content="noindex, follow"'));
+  const icon = readFileSync(resolve(site, "assets/favicon.png"));
+  assert.equal(icon.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
+  assert.equal(icon.readUInt32BE(16), 96);
+  assert.equal(icon.readUInt32BE(20), 96);
+  for (const file of ["index.html", "pool-safety-inspector-brisbane/index.html"]) {
+    const html = siteRead(file);
+    const m = html.match(/<script type="application\/ld\+json" id="irongate-structured-data">([^<]+)<\/script>/);
+    assert.ok(m, file + " structured data");
+    const data = JSON.parse(m[1]);
+    assert.ok(data.some((entry) => entry["@type"] === "LocalBusiness" && entry.priceRange === "$229"), file + " price schema");
+    assert.ok(html.includes("https://irongatepool.com.au/booking/"), file + " booking link");
+  }
+});
